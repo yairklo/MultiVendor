@@ -2,14 +2,18 @@
 
 import React, { useState, useEffect } from 'react'
 import { apiClient } from '@/lib/api/apiClient'
+import { getCookie } from 'cookies-next'
 
 export default function Dashboard() {
   const [metrics, setMetrics] = useState<any>(null)
 
   useEffect(() => {
-    apiClient('/api/v1/admin/metrics')
+    const slug = getCookie('tenantSlug') || 'test-tenant'
+    apiClient(`/api/v1/admin/store/${slug}/analytics?start_date=2023-01-01&end_date=2026-12-31`)
       .then(data => setMetrics(data))
-      .catch(() => {})
+      .catch((e) => {
+        console.error("Dashboard failed to load metrics", e)
+      })
   }, [])
 
   if (!metrics) return <div>Loading...</div>

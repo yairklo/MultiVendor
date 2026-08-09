@@ -19,9 +19,15 @@ export default function StorefrontPage(props: { params: Promise<{ tenant_slug: s
   
   useEffect(() => {
     if (!tenantSlug) return
-    apiClient(`/api/v1/products?tenant=${tenantSlug}`)
-      .then(data => setProducts(data))
-      .catch(() => {})
+    apiClient(`/api/v1/store/${tenantSlug}/products`)
+      .then(data => {
+        // Handle pagination response: data.items contains the array
+        setProducts(data.items || [])
+      })
+      .catch((e) => {
+        console.error("Failed to load products:", e)
+        setProducts([])
+      })
   }, [tenantSlug])
 
   if (!tenantSlug) return <div>Loading...</div>
@@ -57,15 +63,8 @@ export default function StorefrontPage(props: { params: Promise<{ tenant_slug: s
           </div>
         ))}
         {products.length === 0 && (
-          <div className="bg-white border border-gray-100 p-5 rounded-xl shadow-md">
-            <h2 className="text-lg font-bold mb-2">Dummy Product</h2>
-            <p className="text-gray-500 mb-4">$9.99</p>
-            <button 
-              className="w-full mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 active:scale-95 transition-all"
-              onClick={() => setCartCount(c => c + 1)}
-            >
-              Add to Cart
-            </button>
+          <div className="col-span-full text-center py-12 text-gray-500">
+            No products available at the moment.
           </div>
         )}
       </div>
