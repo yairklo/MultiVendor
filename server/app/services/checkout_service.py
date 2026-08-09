@@ -44,7 +44,7 @@ async def add_to_cart_service(tenant_slug: str, cart_id: UUID, req: AddToCartReq
     )
     variant = variant_result.scalar_one_or_none()
     if not variant:
-        raise HTTPException(status_code=400, detail="Variant not found or product inactive")
+        raise HTTPException(status_code=404, detail="Variant not found or product inactive")
 
     if variant.stock_quantity < req.quantity:
         raise HTTPException(status_code=400, detail="Not enough stock")

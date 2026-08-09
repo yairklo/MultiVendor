@@ -2,7 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, cast, Date
 from sqlalchemy.orm import joinedload
 from fastapi import HTTPException, status
-from app.models.tenant import Tenant, TenantSettings
+from app.models.tenant import Tenant, TenantSettings, SubscriptionPlan
 from app.models.order import Order
 from app.schemas.tenant_schemas import TenantSettingsSchema, TenantUpdateSchema, TenantResponse
 from datetime import datetime, timezone
@@ -20,10 +20,16 @@ async def update_tenant_service(tenant_slug: str, req: TenantUpdateSchema, db: A
         
     if req.custom_domain:
         tenant.custom_domain = req.custom_domain
-        
+
     await db.commit()
-    await db.refresh(tenant)
-    
+
+    tenant_result = await db.execute(
+        select(Tenant)
+        .options(joinedload(Tenant.plan), joinedload(Tenant.settings))
+        .where(Tenant.id == tenant.id)
+    )
+    tenant = tenant_result.scalar_one()
+
     tenant_data = {
         "id": tenant.id,
         "slug": tenant.slug,
@@ -64,6 +70,40 @@ async def update_store_settings_service(tenant_slug: str, req: TenantSettingsSch
     await db.refresh(settings)
 
     return TenantSettingsSchema.model_validate(settings)
+
+async def upgrade_subscription_service(tenant_slug: str, target_plan_code: str, db: AsyncSession):
+    tenant_result = await db.execute(select(Tenant).where(Tenant.slug == tenant_slug))
+    tenant = tenant_result.scalar_one_or_none()
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    plan_result = await db.execute(select(SubscriptionPlan).where(SubscriptionPlan.code == target_plan_code))
+    plan = plan_result.scalar_one_or_none()
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+
+    tenant.plan_id = plan.id
+    await db.commit()
+
+    return {
+        "plan_code": plan.code,
+        "max_products": plan.max_products,
+        "max_storage_mb": plan.max_storage_mb
+    }
+
+async def get_current_subscription_service(tenant_slug: str, db: AsyncSession):
+    tenant_result = await db.execute(
+        select(Tenant).options(joinedload(Tenant.plan)).where(Tenant.slug == tenant_slug)
+    )
+    tenant = tenant_result.scalar_one_or_none()
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    return {
+        "plan_code": tenant.plan.code,
+        "max_products": tenant.plan.max_products,
+        "max_storage_mb": tenant.plan.max_storage_mb
+    }
 
 async def get_tenant_analytics_service(tenant_slug: str, start_date: str, end_date: str, db: AsyncSession):
     tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))

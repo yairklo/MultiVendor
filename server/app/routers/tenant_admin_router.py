@@ -5,6 +5,7 @@ from fastapi.responses import StreamingResponse
 from app.db.session import get_db
 from app.deps import get_tenant_admin
 from app.models.user import User
+from app.models.tenant import Tenant, SubscriptionPlan
 from app.schemas.catalog_schemas import (
     ProductCreateRequest, ProductUpdateRequest, ProductResponse,
     ProductVariantSchema, CategoryCreateRequest, CategoryResponse,
@@ -17,7 +18,10 @@ from app.services.catalog_service import (
     add_product_variant_service, update_product_variant_service,
     update_review_status_service, export_orders_csv_service
 )
-from app.services.tenant_service import update_store_settings_service, update_tenant_service, get_tenant_analytics_service
+from app.services.tenant_service import (
+    update_store_settings_service, update_tenant_service, get_tenant_analytics_service,
+    upgrade_subscription_service, get_current_subscription_service
+)
 
 # For admin orders, we might need to import order service, but we can put it in catalog or tenant service for now or create order_service
 from app.services.order_service import update_order_status_service
@@ -135,6 +139,30 @@ async def update_tenant_domain(
     db: AsyncSession = Depends(get_db)
 ):
     return await update_tenant_service(tenant_slug, req, db)
+
+# SUBSCRIPTION
+@tenant_admin_router.post(
+    "/subscription/upgrade",
+    summary="Upgrade Subscription Plan"
+)
+async def upgrade_subscription(
+    target_plan_code: str = Query(...),
+    tenant_slug: str = Path(...),
+    admin: User = Depends(get_tenant_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    return await upgrade_subscription_service(tenant_slug, target_plan_code, db)
+
+@tenant_admin_router.get(
+    "/subscription/current",
+    summary="Get Current Subscription Plan"
+)
+async def get_current_subscription(
+    tenant_slug: str = Path(...),
+    admin: User = Depends(get_tenant_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    return await get_current_subscription_service(tenant_slug, db)
 
 # STORE SETTINGS
 @tenant_admin_router.put(

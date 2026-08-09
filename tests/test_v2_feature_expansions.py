@@ -83,11 +83,11 @@ async def test_v2_digital_goods_checkout_bypasses_shipping(async_client: AsyncCl
         headers=cust_headers,
         json={"variant_id": var_id, "quantity": 1}
     )
-    assert add_resp.status_code == 200
-    
+    assert add_resp.status_code == 201
+
     # Checkout without shipping_address
     checkout_resp = await async_client.post(
-        "/api/v1/storefront/tenant-a/checkout",
+        "/api/v1/store/tenant-a/cart/checkout",
         headers=cust_headers,
         json={
             "cart_id": cart_id,
@@ -95,7 +95,7 @@ async def test_v2_digital_goods_checkout_bypasses_shipping(async_client: AsyncCl
             # NO SHIPPING ADDRESS
         }
     )
-    assert checkout_resp.status_code == 200
+    assert checkout_resp.status_code == 201
     order_data = checkout_resp.json()
     assert order_data["order_type"] == "digital"
 
@@ -156,8 +156,8 @@ async def test_v2_bundle_checkout_deducts_components(async_client: AsyncClient, 
             "shipping_address": {"city": "Tel Aviv"}
         }
     )
-    assert checkout_resp.status_code == 200
-    
+    assert checkout_resp.status_code == 201
+
     # 5. Check component stock
     comp_var = await db_session.execute(select(ProductVariant).where(ProductVariant.id == comp_var_id))
     cv = comp_var.scalar_one()
