@@ -1,6 +1,14 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from app.core.config import settings
 import app.models  # Ensure all models are registered with SQLAlchemy
+from app.core.limiter import limiter
+from app.db.session import redis_client
+from sqlalchemy import text
+from app.db.session import AsyncSessionLocal
 
 openapi_tags = [
     {
@@ -36,9 +44,46 @@ app = FastAPI(
     docs_url="/docs",
     openapi_tags=openapi_tags
 )
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
+
+@app.middleware("http")
+async def global_exception_middleware(request: Request, call_next):
+    try:
+        return await call_next(request)
+    except Exception:
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "An internal server error occurred.", "code": "INTERNAL_ERROR"}
+        )
+
 @app.get("/health")
 async def health_check():
-    return {"status": "ok", "environment": settings.APP_ENV}
+    db_status = "connected"
+    redis_status = "connected"
+    
+    try:
+        async with AsyncSessionLocal() as session:
+            await session.execute(text("SELECT 1"))
+    except Exception:
+        db_status = "error"
+        
+    try:
+        await redis_client.ping()
+    except Exception:
+        redis_status = "error"
+        
+    status_code = 200 if db_status == "connected" and redis_status == "connected" else 500
+    return JSONResponse(
+        status_code=status_code,
+        content={"status": "healthy" if status_code == 200 else "unhealthy", "database": db_status, "redis": redis_status}
+    )
+
+@app.get("/health/error_test")
+async def health_error_test():
+    raise Exception("Test error")
+
 
 from app.routers.auth_router import auth_router
 from app.routers.customer_router import customer_router

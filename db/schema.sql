@@ -226,7 +226,7 @@ CREATE TABLE orders (
     shipping_method_id BIGINT NULL,
     shipping_fee DECIMAL(10, 2) DEFAULT 0.00,
     total_amount DECIMAL(10, 2) NOT NULL,
-    status ENUM('pending', 'processing', 'completed', 'cancelled') DEFAULT 'pending',
+    status ENUM('pending', 'pending_payment', 'processing', 'completed', 'cancelled', 'expired') DEFAULT 'pending',
     order_type ENUM('physical', 'digital') DEFAULT 'physical',
     shipping_json JSON NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
