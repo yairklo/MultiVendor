@@ -19,7 +19,7 @@ from datetime import datetime
 from enum import Enum
 from uuid import UUID
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
-from fastapi import FastAPI, APIRouter, Depends, HTTPException, Status, Query, Path, Header, BackgroundTasks, Response
+from fastapi import FastAPI, APIRouter, Depends, HTTPException, status, Query, Path, Header, BackgroundTasks, Response
 
 
 # ================================================================================
@@ -307,7 +307,7 @@ def require_role(allowed_roles: List[UserRole]):
     """Role-Based Access Control (RBAC) Guard."""
     async def role_checker(user: UserResponse = Depends(get_current_user)):
         if user.role not in allowed_roles:
-            raise HTTPException(status_code=Status.HTTP_403_FORBIDDEN, detail="Permission denied")
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Permission denied")
         return user
     return role_checker
 
@@ -319,22 +319,25 @@ def require_role(allowed_roles: List[UserRole]):
 # --- A. AUTHENTICATION & ONBOARDING ROUTER ---
 auth_router = APIRouter(prefix="/api/v1/auth", tags=["Auth & Onboarding"])
 
-@auth_router.post("/register-tenant", response_model=TokenResponse, status_code=Status.HTTP_201_CREATED)
+@auth_router.post("/register-tenant", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 async def register_tenant(req: TenantRegisterRequest, bg_tasks: BackgroundTasks, db=Depends(get_db)):
     """Registers a new tenant business + tenant_admin user."""
     pass
 
-@auth_router.post("/login", response_model=TokenResponse, status_code=Status.HTTP_200_OK)
+@auth_router.post("/login", response_model=TokenResponse, status_code=status.HTTP_200_OK)
 async def login(req: LoginRequest, db=Depends(get_db)):
     """Authenticates SuperAdmin, TenantAdmin, or Customer."""
     pass
 
-@auth_router.post("/register-customer/{tenant_slug}", response_model=UserResponse, status_code=Status.HTTP_201_CREATED)
+class CustomerRegisterRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(..., min_length=8)
+    full_name: str
+
+@auth_router.post("/register-customer/{tenant_slug}", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def register_customer(
     tenant_slug: str, 
-    email: EmailStr = Field(...), 
-    password: str = Field(...), 
-    full_name: str = Field(...), 
+    req: CustomerRegisterRequest, 
     db=Depends(get_db)
 ):
     """Registers a customer under a specific tenant store."""
@@ -390,7 +393,7 @@ async def cancel_customer_order(
     """Cancels a pending order."""
     pass
 
-@customer_router.post("/reviews", response_model=ProductReviewResponse, status_code=Status.HTTP_201_CREATED)
+@customer_router.post("/reviews", response_model=ProductReviewResponse, status_code=status.HTTP_201_CREATED)
 async def submit_product_review(
     req: ProductReviewCreateRequest,
     current_user: UserResponse = Depends(get_current_user),
@@ -503,7 +506,7 @@ async def get_cart(cart_id: UUID, tenant: TenantResponse = Depends(get_current_t
     """Fetches current cart items from Redis/DB."""
     pass
 
-@cart_router.post("/{cart_id}/items", response_model=CartResponse, status_code=Status.HTTP_201_CREATED)
+@cart_router.post("/{cart_id}/items", response_model=CartResponse, status_code=status.HTTP_201_CREATED)
 async def add_to_cart(
     cart_id: UUID, 
     req: AddToCartRequest, 
@@ -523,7 +526,7 @@ async def remove_from_cart(
     """Removes an item from cart."""
     pass
 
-@cart_router.post("/checkout", response_model=OrderResponse, status_code=Status.HTTP_201_CREATED)
+@cart_router.post("/checkout", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
 async def process_checkout(
     req: CheckoutRequest,
     tenant: TenantResponse = Depends(get_current_tenant),
@@ -579,7 +582,7 @@ async def update_store_settings(
     """Updates dynamic CSS, logo, primary color, and store currency."""
     pass
 
-@tenant_admin_router.post("/categories", response_model=CategoryResponse, status_code=Status.HTTP_201_CREATED)
+@tenant_admin_router.post("/categories", response_model=CategoryResponse, status_code=status.HTTP_201_CREATED)
 async def create_category(
     req: CategoryCreateRequest,
     tenant: TenantResponse = Depends(get_current_tenant),
@@ -588,7 +591,7 @@ async def create_category(
     """Creates a new product category."""
     pass
 
-@tenant_admin_router.delete("/categories/{category_id}", status_code=Status.HTTP_204_NO_CONTENT)
+@tenant_admin_router.delete("/categories/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_category(
     category_id: int,
     tenant: TenantResponse = Depends(get_current_tenant),
@@ -597,7 +600,7 @@ async def delete_category(
     """Deletes a product category."""
     pass
 
-@tenant_admin_router.post("/products", response_model=ProductResponse, status_code=Status.HTTP_201_CREATED)
+@tenant_admin_router.post("/products", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)
 async def create_product(
     req: ProductCreateRequest, 
     tenant: TenantResponse = Depends(get_current_tenant), 
@@ -616,7 +619,7 @@ async def update_product(
     """Updates product details and status."""
     pass
 
-@tenant_admin_router.delete("/products/{product_id}", status_code=Status.HTTP_204_NO_CONTENT)
+@tenant_admin_router.delete("/products/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_product(
     product_id: int,
     tenant: TenantResponse = Depends(get_current_tenant),
@@ -668,7 +671,7 @@ async def update_order_status(
     """Updates status of an order."""
     pass
 
-@tenant_admin_router.post("/coupons", response_model=CouponResponse, status_code=Status.HTTP_201_CREATED)
+@tenant_admin_router.post("/coupons", response_model=CouponResponse, status_code=status.HTTP_201_CREATED)
 async def create_coupon(
     req: CouponCreateRequest, 
     tenant: TenantResponse = Depends(get_current_tenant), 
@@ -731,6 +734,6 @@ app.include_router(cart_router)
 app.include_router(tenant_admin_router)
 app.include_router(subscription_router)
 
-@app.get("/health", tags=["System Health"], status_code=Status.HTTP_200_OK)
+@app.get("/health", tags=["System Health"], status_code=status.HTTP_200_OK)
 async def health_check():
     return {"status": "healthy", "timestamp": datetime.now()}
