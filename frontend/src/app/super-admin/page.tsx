@@ -1,15 +1,28 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { getCookie } from 'cookies-next'
 import { apiClient } from '@/lib/api/apiClient'
 
 export default function SuperAdminPage() {
+  const router = useRouter()
+  const [authorized, setAuthorized] = useState(false)
   const [tenants, setTenants] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!getCookie('token')) {
+      router.replace('/admin/login')
+      return
+    }
+    setAuthorized(true)
+  }, [router])
+
+  useEffect(() => {
+    if (!authorized) return
     fetchTenants()
-  }, [])
+  }, [authorized])
 
   const fetchTenants = async () => {
     try {
@@ -36,6 +49,7 @@ export default function SuperAdminPage() {
     }
   }
 
+  if (!authorized) return null
   if (loading) return <div className="p-8 text-center text-gray-500">Loading registry...</div>
 
   return (

@@ -1,13 +1,13 @@
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect, beforeEach } from 'vitest'
-import Dashboard from '../dashboard/page'
+import Dashboard from '../(cms)/dashboard/page'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../../mocks/server'
 
 describe('Admin Dashboard', () => {
   beforeEach(() => {
     server.use(
-      http.get('http://localhost:3000/api/v1/admin/metrics', () => {
+      http.get('http://localhost:8000/api/v1/admin/store/:slug/analytics', () => {
         return HttpResponse.json({
           totalRevenue: 50000,
           aov: 125.5,

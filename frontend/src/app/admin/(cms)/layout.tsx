@@ -1,13 +1,24 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { deleteCookie } from 'cookies-next'
+import { deleteCookie, getCookie } from 'cookies-next'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
+  const [authorized, setAuthorized] = useState(false)
+
+  useEffect(() => {
+    if (!getCookie('token')) {
+      router.replace('/admin/login')
+      return
+    }
+    setAuthorized(true)
+  }, [router])
+
+  if (!authorized) return null
 
   const navItems = [
     { name: 'Dashboard', href: '/admin/dashboard', icon: '📊' },

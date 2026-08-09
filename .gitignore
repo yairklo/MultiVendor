@@ -2,6 +2,8 @@
 .env
 __pycache__/
 *.pyc
+venv/
+test-results/
 debug.py
 extract.py
 extract_ast.py
