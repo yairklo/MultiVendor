@@ -33,14 +33,14 @@ INSERT INTO users (id, tenant_id, email, password_hash, full_name, role) VALUES
 (4, 1, 'customer@tenanta.com', '$2b$12$pYA7SjOOz.QHHGZMMqGqUu6tH9/MiUsyzKD/./VR.1OJJ4yzf8ZNu', 'Customer A', 'customer'),
 (5, 2, 'customer@tenantb.com', '$2b$12$pYA7SjOOz.QHHGZMMqGqUu6tH9/MiUsyzKD/./VR.1OJJ4yzf8ZNu', 'Customer B', 'customer');
 
-INSERT INTO products (id, tenant_id, name, slug, base_price, is_active) VALUES 
-(1, 1, 'Product A1', 'product-a1', 10.00, 1),
-(2, 2, 'Product B1', 'product-b1', 20.00, 1);
+INSERT INTO products (id, tenant_id, name, slug, base_price, is_active) VALUES
+(1, 1, JSON_OBJECT('en', 'Product A1', 'he', 'מוצר א1'), 'product-a1', 10.00, 1),
+(2, 2, JSON_OBJECT('en', 'Product B1', 'he', 'מוצר ב1'), 'product-b1', 20.00, 1);
 
-INSERT INTO orders (id, tenant_id, user_id, order_number, subtotal, total_amount, status) VALUES 
+INSERT INTO orders (id, tenant_id, user_id, order_number, subtotal, total_amount, status) VALUES
 (1, 1, 4, 'ORD-001', 100.00, 100.00, 'pending');
 
-INSERT INTO product_reviews (id, tenant_id, product_id, user_id, rating, comment, approved) VALUES 
+INSERT INTO product_reviews (id, tenant_id, product_id, user_id, rating, comment, is_approved) VALUES
 (1, 1, 1, 4, 5, 'Great product', 0);
 INSERT INTO product_variants (id, tenant_id, product_id, sku, stock_quantity) VALUES 
 (1, 1, 1, 'SKU-A1-1', 10);

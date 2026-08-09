@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 from uuid import UUID
 from app.db.session import get_db
-from app.deps import get_optional_user, get_current_customer
+from app.deps import get_optional_user, get_tenant_customer
 from app.models.user import User
 from app.schemas.order_schemas import (
     AddToCartRequest, CartResponse, CheckoutRequest, OrderResponse, CartItemResponse
@@ -102,7 +102,7 @@ async def validate_coupon(
 async def checkout(
     req: CheckoutRequest,
     tenant_slug: str = Path(...),
-    user: User = Depends(get_current_customer),
+    user: User = Depends(get_tenant_customer),
     db: AsyncSession = Depends(get_db)
 ):
     return await checkout_service(tenant_slug, req, user.id, db)

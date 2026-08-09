@@ -266,7 +266,25 @@ async def update_product_variant_service(tenant_slug: str, variant_id: int, req:
     pass
 
 async def update_review_status_service(tenant_slug: str, review_id: int, status: str, db: AsyncSession) -> ProductReviewResponse:
-    pass
+    tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
+    tenant_id = tenant_result.scalar_one_or_none()
+    if not tenant_id:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    if status not in ("approved", "rejected", "pending"):
+        raise HTTPException(status_code=422, detail="Invalid status")
+
+    review_result = await db.execute(
+        select(ProductReview).where(ProductReview.id == review_id, ProductReview.tenant_id == tenant_id)
+    )
+    review = review_result.scalar_one_or_none()
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+
+    review.is_approved = (status == "approved")
+    await db.commit()
+    await db.refresh(review)
+    return ProductReviewResponse.model_validate(review)
 
 async def export_orders_csv_service(tenant_slug: str, db: AsyncSession):
     f = StringIO()

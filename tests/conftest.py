@@ -109,7 +109,8 @@ async def auto_clear_db():
             
         await conn.execute(text('SET FOREIGN_KEY_CHECKS=1;'))
 
-    with open('../db/seed.sql', 'r', encoding='utf-8') as f:
+    seed_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'db', 'seed.sql')
+    with open(seed_path, 'r', encoding='utf-8') as f:
         sql = f.read()
     
     statements = [s.strip() for s in sql.split(';') if s.strip()]
@@ -118,7 +119,7 @@ async def auto_clear_db():
         for stmt in statements:
             try:
                 await conn.execute(text(stmt))
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"[auto_clear_db] seed statement failed: {stmt[:80]}... -> {e}")
         await conn.execute(text('SET FOREIGN_KEY_CHECKS=1;'))
     await engine.dispose()

@@ -5,7 +5,7 @@ from httpx import AsyncClient
 async def test_create_product_within_subscription_limit(async_client: AsyncClient, seed_tokens):
     headers = {"Authorization": seed_tokens["tenant_admin_a"]}
     payload = {
-        "name": {"en": "New Product"},
+        "name": {"en": "New Product", "he": "מוצר חדש"},
         "slug": "new-product",
         "base_price": "100.00",
         "is_active": True,
