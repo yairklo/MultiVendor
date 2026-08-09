@@ -19,6 +19,7 @@ class CartItemResponse(BaseModel):
     id: int
     variant_id: int
     product_name: str
+    product_type: str
     sku: str
     attributes: Dict[str, Any]
     unit_price: Decimal

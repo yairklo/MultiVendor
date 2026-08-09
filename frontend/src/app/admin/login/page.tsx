@@ -65,8 +65,9 @@ export default function AdminLoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium mb-2">Email Address</label>
+            <label htmlFor="email" className="block text-sm font-medium mb-2">Email Address</label>
             <input
+              id="email"
               type="email"
               required
               className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-600 outline-none transition-all"
@@ -76,8 +77,9 @@ export default function AdminLoginPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">Password</label>
+            <label htmlFor="password" className="block text-sm font-medium mb-2">Password</label>
             <input
+              id="password"
               type="password"
               required
               className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-600 outline-none transition-all"
@@ -87,8 +89,9 @@ export default function AdminLoginPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">Store Slug (Optional)</label>
+            <label htmlFor="tenantSlug" className="block text-sm font-medium mb-2">Store Slug (Optional)</label>
             <input
+              id="tenantSlug"
               type="text"
               className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-600 outline-none transition-all"
               value={tenantSlug}

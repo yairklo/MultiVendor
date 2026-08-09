@@ -2,6 +2,14 @@
 
 import React, { useState, useEffect } from 'react'
 import { apiClient } from '@/lib/api/apiClient'
+import { addItemToCart } from '@/lib/cart'
+
+type Lang = 'en' | 'he'
+
+const strings: Record<Lang, { cart: string; addToCart: string; noProducts: string; switcherLabel: string }> = {
+  en: { cart: 'Cart', addToCart: 'Add to Cart', noProducts: 'No products available at the moment.', switcherLabel: 'עברית' },
+  he: { cart: 'עגלה', addToCart: 'הוסף לעגלה', noProducts: 'אין מוצרים זמינים כרגע.', switcherLabel: 'English' },
+}
 
 export default function StorefrontPage(props: { params: Promise<{ tenant_slug: string }> | { tenant_slug: string } }) {
   // Handle both promise and plain object for testing flexibility
@@ -16,13 +24,15 @@ export default function StorefrontPage(props: { params: Promise<{ tenant_slug: s
 
   const [products, setProducts] = useState<any[]>([])
   const [cartCount, setCartCount] = useState(0)
+  const [lang, setLang] = useState<Lang>('en')
+  const t = strings[lang]
   
   useEffect(() => {
     if (!tenantSlug) return
     apiClient(`/api/v1/store/${tenantSlug}/products`)
       .then(data => {
-        // Handle pagination response: data.items contains the array
-        setProducts(data.items || [])
+        // Pagination response shape: { meta, data }
+        setProducts(data.data || [])
       })
       .catch((e) => {
         console.error("Failed to load products:", e)
@@ -30,41 +40,56 @@ export default function StorefrontPage(props: { params: Promise<{ tenant_slug: s
       })
   }, [tenantSlug])
 
+  const handleAddToCart = async (product: any) => {
+    const variantId = product.variants?.[0]?.id
+    if (!variantId || !tenantSlug) return
+    try {
+      await addItemToCart(tenantSlug, variantId, 1)
+      setCartCount(c => c + 1)
+    } catch (e) {
+      console.error('Failed to add item to cart:', e)
+    }
+  }
+
   if (!tenantSlug) return <div>Loading...</div>
 
   return (
-    <div className="p-4 bg-gray-50 min-h-screen text-gray-900">
+    <div dir={lang === 'he' ? 'rtl' : 'ltr'} className="p-4 bg-gray-50 min-h-screen text-gray-900">
       <header className="flex justify-between items-center mb-8 bg-white p-4 shadow-sm rounded-lg">
         <div data-testid="tenant-logo" className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
           Logo
         </div>
-        <div data-testid="language-switcher" className="cursor-pointer font-medium hover:text-blue-600 transition-colors">
-          EN
-        </div>
+        <button
+          data-testid="language-switcher"
+          className="cursor-pointer font-medium hover:text-blue-600 transition-colors"
+          onClick={() => setLang(l => (l === 'en' ? 'he' : 'en'))}
+        >
+          {t.switcherLabel}
+        </button>
       </header>
 
       <div className="mb-6 flex justify-end">
         <div className="bg-blue-600 text-white px-4 py-2 rounded-full font-semibold shadow-md flex items-center gap-2">
-          <span>Cart ({cartCount})</span>
+          <span>{t.cart} ({cartCount})</span>
         </div>
       </div>
 
       <div data-testid="product-grid" className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {products.map((p, i) => (
           <div key={i} className="bg-white border border-gray-100 p-5 rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300">
-            <h2 className="text-lg font-bold mb-2">{p.name}</h2>
-            <p className="text-gray-500 mb-4">${p.price}</p>
-            <button 
+            <h2 className="text-lg font-bold mb-2">{typeof p.name === 'object' ? (p.name?.[lang] || p.name?.en || p.name?.he) : p.name}</h2>
+            <p className="text-gray-500 mb-4">${p.base_price || p.price}</p>
+            <button
               className="w-full mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 active:scale-95 transition-all"
-              onClick={() => setCartCount(c => c + 1)}
+              onClick={() => handleAddToCart(p)}
             >
-              Add to Cart
+              {t.addToCart}
             </button>
           </div>
         ))}
         {products.length === 0 && (
           <div className="col-span-full text-center py-12 text-gray-500">
-            No products available at the moment.
+            {t.noProducts}
           </div>
         )}
       </div>

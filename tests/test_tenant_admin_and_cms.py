@@ -1,5 +1,7 @@
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import select
+from app.models.tenant import Tenant, SubscriptionPlan
 
 @pytest.mark.asyncio
 async def test_create_product_within_subscription_limit(async_client: AsyncClient, seed_tokens):
@@ -27,18 +29,29 @@ async def test_create_product_validation_failures(async_client: AsyncClient, see
     assert response.status_code == 422
 
 @pytest.mark.asyncio
-async def test_create_product_exceeding_subscription_limit(async_client: AsyncClient, seed_tokens):
+async def test_create_product_exceeding_subscription_limit(async_client: AsyncClient, seed_tokens, db_session):
     headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+
+    # tenant-a is seeded with 1 product already. Cap its plan at 1 product so the
+    # next creation attempt is guaranteed to exceed the limit.
+    tenant_result = await db_session.execute(select(Tenant).where(Tenant.slug == "tenant-a"))
+    tenant = tenant_result.scalar_one()
+    plan_result = await db_session.execute(select(SubscriptionPlan).where(SubscriptionPlan.id == tenant.plan_id))
+    plan = plan_result.scalar_one()
+    plan.max_products = 1
+    await db_session.commit()
+
     payload = {
-        "name": "Limit Product",
+        "name": {"en": "Limit Product", "he": "מוצר גבול"},
         "slug": "limit-product",
         "base_price": "100.00",
         "is_active": True,
-        "variants": [],
+        "variants": [{"sku": "LIMIT-1", "stock_quantity": 5}],
         "images": []
     }
     response = await async_client.post("/api/v1/admin/store/tenant-a/products", json=payload, headers=headers)
-    assert response.status_code in (201, 403, 422)
+    assert response.status_code == 403
+    assert "Maximum number of products" in response.text
 
 @pytest.mark.asyncio
 async def test_update_order_status(async_client: AsyncClient, seed_tokens):

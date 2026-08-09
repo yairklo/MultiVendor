@@ -1,14 +1,15 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
+import { setCookie, deleteCookie } from 'cookies-next'
 import { apiClient, ApiError } from '../apiClient'
 
 describe('API Client', () => {
   afterEach(() => {
-    localStorage.clear()
+    deleteCookie('token')
     vi.restoreAllMocks()
   })
 
   it('should automatically attach JWT Bearer token', async () => {
-    localStorage.setItem('token', 'test-token')
+    setCookie('token', 'test-token')
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -17,7 +18,7 @@ describe('API Client', () => {
 
     await apiClient('/api/test')
 
-    expect(global.fetch).toHaveBeenCalledWith('http://localhost:3000/api/test', expect.objectContaining({
+    expect(global.fetch).toHaveBeenCalledWith('http://localhost:8000/api/test', expect.objectContaining({
       headers: expect.any(Headers)
     }))
     

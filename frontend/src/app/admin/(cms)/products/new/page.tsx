@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import { useProducts } from '@/hooks/useProducts'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { ApiError } from '@/lib/api/apiClient'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import * as z from 'zod'
@@ -37,6 +38,7 @@ export default function NewProductPage() {
   const { createProduct } = useProducts()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [limitReached, setLimitReached] = useState(false)
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -54,6 +56,7 @@ export default function NewProductPage() {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setLoading(true)
     setError('')
+    setLimitReached(false)
     try {
       // Transform flat form data to match backend ProductCreateRequest schema
       const payload = {
@@ -76,7 +79,11 @@ export default function NewProductPage() {
       await createProduct(payload)
       router.push('/admin/products')
     } catch (err: any) {
-      setError(err.message || 'Failed to create product')
+      if (err instanceof ApiError && err.status === 403) {
+        setLimitReached(true)
+      } else {
+        setError(err.message || 'Failed to create product')
+      }
     } finally {
       setLoading(false)
     }
@@ -94,6 +101,15 @@ export default function NewProductPage() {
       {error && (
         <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-lg border border-red-100">
           {error}
+        </div>
+      )}
+
+      {limitReached && (
+        <div data-testid="upgrade-prompt" className="mb-6 p-4 bg-amber-50 text-amber-800 rounded-lg border border-amber-200 flex items-center justify-between gap-4">
+          <span>You&apos;ve reached your plan&apos;s product limit. Upgrade your plan to add more products.</span>
+          <Link href="/admin/settings" className={buttonVariants({ variant: 'default', size: 'sm' })}>
+            Upgrade Plan
+          </Link>
         </div>
       )}
 

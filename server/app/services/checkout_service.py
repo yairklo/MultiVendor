@@ -90,10 +90,13 @@ async def get_cart_service(tenant_slug: str, cart_id: UUID, db: AsyncSession) ->
         total_price = unit_price * item.quantity
         subtotal += total_price
         
+        product_name = product.name.get('en') or next(iter(product.name.values())) if isinstance(product.name, dict) else str(product.name)
+
         items.append(CartItemResponse(
             id=item.id,
             variant_id=variant.id,
-            product_name=str(product.name), # It's a dict now, convert to string or handle appropriately. We'll stringify.
+            product_name=product_name,
+            product_type=product.product_type,
             sku=variant.sku,
             attributes=variant.attributes_json or {},
             unit_price=unit_price,
