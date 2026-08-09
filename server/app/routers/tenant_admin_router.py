@@ -45,6 +45,21 @@ async def create_category(
 ):
     return await create_category_service(tenant_slug, req, db)
 
+@tenant_admin_router.get("/categories")
+async def get_categories(
+    tenant_slug: str = Path(...),
+    admin: User = Depends(get_tenant_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    from sqlalchemy import select
+    from app.models.catalog import Category
+    tenant_result = await db.execute(select(Tenant).where(Tenant.slug == tenant_slug))
+    tenant = tenant_result.scalar_one_or_none()
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+    result = await db.execute(select(Category).where(Category.tenant_id == tenant.id))
+    return result.scalars().all()
+
 @tenant_admin_router.delete("/categories/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_category(
     category_id: int = Path(...),

@@ -70,7 +70,7 @@ async def login_service(req: LoginRequest, db: AsyncSession) -> TokenResponse:
         user = user_result.scalar_one_or_none()
     else:
         # Super admin
-        user_result = await db.execute(select(User).where(User.email == req.email, User.tenant_id == None))
+        user_result = await db.execute(select(User).where(User.email == req.email, User.tenant_id.is_(None)))
         user = user_result.scalar_one_or_none()
         tenant = None
 

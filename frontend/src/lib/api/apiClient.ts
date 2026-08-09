@@ -1,3 +1,5 @@
+import { getCookie, deleteCookie } from 'cookies-next'
+
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
     super(message)
@@ -6,7 +8,7 @@ export class ApiError extends Error {
 }
 
 export const apiClient = async (url: string, options: RequestInit = {}) => {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+  const token = getCookie('token')
   const headers = new Headers(options.headers)
 
   if (token) {
@@ -17,8 +19,8 @@ export const apiClient = async (url: string, options: RequestInit = {}) => {
     headers.set('Content-Type', 'application/json')
   }
 
-  // Handle relative URLs in Node/Test environment
-  const fullUrl = url.startsWith('/') ? `http://localhost:3000${url}` : url
+  // Handle relative URLs to hit the live FastAPI backend
+  const fullUrl = url.startsWith('/') ? `http://localhost:8000${url}` : url
 
   const response = await fetch(fullUrl, { ...options, headers })
 

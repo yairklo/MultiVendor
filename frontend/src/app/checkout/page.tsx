@@ -5,15 +5,18 @@ import { apiClient } from '@/lib/api/apiClient'
 
 export default function CheckoutPage() {
   const [status, setStatus] = useState<string>('')
-
+  const [error, setError] = useState<string>('')
+  
   const handleCheckout = async () => {
     try {
+      setError('')
       await apiClient('/api/v1/cart/checkout', {
         method: 'POST',
         body: JSON.stringify({ items: [], shipping: 'standard', coupon: '' })
       })
       setStatus('Order placed successfully!')
-    } catch (e) {
+    } catch (e: any) {
+      setError(e.message || 'Failed to place order.')
       console.error(e)
     }
   }
@@ -22,6 +25,18 @@ export default function CheckoutPage() {
     <div className="max-w-4xl mx-auto p-6 bg-gray-50 min-h-screen">
       <h1 className="text-3xl font-bold mb-8 text-gray-900 border-b pb-4">Checkout</h1>
       
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-lg border border-red-100">
+          {error}
+        </div>
+      )}
+
+      {status && (
+        <div className="mb-6 p-4 bg-green-50 text-green-700 rounded-lg border border-green-100">
+          {status}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="md:col-span-2 space-y-6">
           <div data-testid="item-summary" className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
