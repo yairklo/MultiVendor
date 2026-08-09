@@ -8,23 +8,16 @@ import os
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from multivendor_fastapi_api_routes_skeleton import app
-from datetime import datetime
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+import redis.asyncio as redis
 
-class MockAsyncSession:
-    async def commit(self): pass
-    async def rollback(self): pass
-    async def close(self): pass
-    async def execute(self, *args, **kwargs): return None
+# Setup Database connection
+DATABASE_URL = "mysql+aiomysql://root:rootpassword@127.0.0.1:3306/multivendor_db"
+engine = create_async_engine(DATABASE_URL, echo=False)
+AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
-class MockAsyncRedis:
-    def __init__(self):
-        self.data = {}
-    async def get(self, key):
-        return self.data.get(key)
-    async def set(self, key, val):
-        self.data[key] = val
-    async def delete(self, key):
-        self.data.pop(key, None)
+# Setup Redis connection
+REDIS_URL = "redis://127.0.0.1:6379/0"
 
 @pytest.fixture(scope="session")
 def event_loop():
@@ -44,14 +37,15 @@ async def async_client() -> AsyncGenerator[AsyncClient, None]:
 
 @pytest.fixture
 async def db_session():
-    session = MockAsyncSession()
-    yield session
-    await session.rollback()
+    async with AsyncSessionLocal() as session:
+        yield session
+        await session.rollback()
 
 @pytest.fixture
 async def redis_client():
-    redis = MockAsyncRedis()
-    yield redis
+    r = redis.from_url(REDIS_URL)
+    yield r
+    await r.close()
 
 @pytest.fixture
 def seed_subscription_plans():
