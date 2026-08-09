@@ -4,6 +4,8 @@ from app.db.session import get_db
 from app.schemas.tenant_schemas import TenantRegisterRequest
 from app.schemas.auth_schemas import TokenResponse, LoginRequest, CustomerRegisterRequest, UserResponse
 from app.services.auth_service import register_tenant_service, login_service, register_customer_service
+from fastapi import Request
+from app.core.limiter import limiter
 
 auth_router = APIRouter(prefix="/api/v1/auth", tags=["Authentication & Onboarding"])
 
@@ -19,7 +21,8 @@ auth_router = APIRouter(prefix="/api/v1/auth", tags=["Authentication & Onboardin
         422: {"description": "Validation error in request payload."}
     }
 )
-async def register_tenant(req: TenantRegisterRequest, bg_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
+@limiter.limit("10/minute")
+async def register_tenant(request: Request, req: TenantRegisterRequest, bg_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
     return await register_tenant_service(req, db)
 
 @auth_router.post(
@@ -33,7 +36,8 @@ async def register_tenant(req: TenantRegisterRequest, bg_tasks: BackgroundTasks,
         401: {"description": "Invalid email or password."}
     }
 )
-async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit("10/minute")
+async def login(request: Request, req: LoginRequest, db: AsyncSession = Depends(get_db)):
     return await login_service(req, db)
 
 @auth_router.post(
@@ -48,5 +52,6 @@ async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
         404: {"description": "Tenant store not found."}
     }
 )
-async def register_customer(tenant_slug: str, req: CustomerRegisterRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit("10/minute")
+async def register_customer(request: Request, tenant_slug: str, req: CustomerRegisterRequest, db: AsyncSession = Depends(get_db)):
     return await register_customer_service(tenant_slug, req, db)

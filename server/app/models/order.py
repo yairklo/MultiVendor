@@ -45,7 +45,7 @@ class Order(Base):
     shipping_method_id = Column(BigInteger, ForeignKey("shipping_methods.id", ondelete="SET NULL"), nullable=True)
     shipping_fee = Column(Numeric(10, 2), default=0.00)
     total_amount = Column(Numeric(10, 2), nullable=False)
-    status = Column(Enum('pending', 'processing', 'completed', 'cancelled'), default='pending')
+    status = Column(Enum('pending', 'pending_payment', 'processing', 'completed', 'cancelled', 'expired'), default='pending')
     order_type = Column(Enum('physical', 'digital'), default='physical')
     shipping_json = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=func.now())

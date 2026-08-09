@@ -12,6 +12,8 @@ from app.services.checkout_service import (
     add_to_cart_service, get_cart_service, remove_from_cart_service,
     checkout_service, validate_coupon_service
 )
+from fastapi import Request
+from app.core.limiter import limiter
 
 cart_router = APIRouter(prefix="/api/v1/store/{tenant_slug}", tags=["Cart & Checkout"])
 
@@ -99,7 +101,9 @@ async def validate_coupon(
         409: {"description": "Concurrency Conflict. Another user is currently purchasing this item."}
     }
 )
+@limiter.limit("20/minute")
 async def checkout(
+    request: Request,
     req: CheckoutRequest,
     tenant_slug: str = Path(...),
     user: User = Depends(get_tenant_customer),
