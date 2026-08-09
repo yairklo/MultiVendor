@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Enum, DateTime, ForeignKey, Numeric, Text, JSON
+from sqlalchemy import Column, Integer, String, Enum, DateTime, ForeignKey, Numeric, Text, JSON, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.base_class import Base
@@ -23,7 +23,7 @@ class Tenant(Base):
     name = Column(String(255), nullable=False)
     plan_id = Column(Integer, ForeignKey("subscription_plans.id"), nullable=False)
     status = Column(Enum('active', 'suspended', 'cancelled'), nullable=False, default='active')
-    custom_domain = Column(String(255), nullable=True)
+    custom_domain = Column(String(255), nullable=True, unique=True)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
@@ -41,5 +41,9 @@ class TenantSettings(Base):
     currency = Column(String(3), default="ILS")
     custom_css = Column(Text, nullable=True)
     support_email = Column(String(255), nullable=True)
+    supported_languages = Column(JSON, nullable=True)
+    default_language = Column(String(10), default="he")
+    review_moderation_enabled = Column(Boolean, default=False)
+    allow_unverified_reviews = Column(Boolean, default=True)
 
     tenant = relationship("Tenant", back_populates="settings")

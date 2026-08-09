@@ -1,5 +1,5 @@
 from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, ConfigDict
 from datetime import datetime
 from decimal import Decimal
 from app.schemas.common_schemas import PlanCode, PaginatedResponse
@@ -11,6 +11,19 @@ class TenantRegisterRequest(BaseModel):
     admin_password: str = Field(..., min_length=8)
     admin_full_name: str
     plan_code: PlanCode = PlanCode.FREE
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "store_name": "Nike Israel",
+            "store_slug": "nike-israel",
+            "admin_email": "owner@nike.co.il",
+            "admin_password": "securePassword123!",
+            "admin_full_name": "Nike Owner",
+            "plan_code": "pro"
+        }
+    })
+
+class TenantUpdateSchema(BaseModel):
+    custom_domain: Optional[str] = None
 
 class TenantSettingsSchema(BaseModel):
     logo_url: Optional[str] = None
@@ -19,6 +32,24 @@ class TenantSettingsSchema(BaseModel):
     currency: str = "ILS"
     custom_css: Optional[str] = None
     support_email: Optional[EmailStr] = None
+    supported_languages: List[str] = ["he"]
+    default_language: str = "he"
+    review_moderation_enabled: bool = False
+    allow_unverified_reviews: bool = True
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "logo_url": "https://example.com/logo.png",
+            "primary_color": "#FF0000",
+            "banner_url": "https://example.com/banner.png",
+            "currency": "ILS",
+            "custom_css": "body { font-family: Arial; }",
+            "support_email": "support@nike.co.il",
+            "supported_languages": ["he", "en"],
+            "default_language": "he",
+            "review_moderation_enabled": False,
+            "allow_unverified_reviews": True
+        }
+    }, from_attributes=True)
 
 class TenantResponse(BaseModel):
     id: int
@@ -27,7 +58,9 @@ class TenantResponse(BaseModel):
     plan_code: PlanCode
     status: str
     created_at: datetime
+    custom_domain: Optional[str] = None
     settings: Optional[TenantSettingsSchema] = None
+    model_config = ConfigDict(from_attributes=True)
 
 class PaginatedTenantResponse(PaginatedResponse):
     data: List[TenantResponse]

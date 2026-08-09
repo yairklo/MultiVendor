@@ -10,8 +10,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from app.db.session import redis_client
 from app.models.tenant import Tenant
-from app.models.catalog import ProductVariant, Product
-from app.models.order import Cart, CartItem, Order, OrderItem
+from app.models.catalog import ProductVariant, Product, ProductBundleItem
+from app.models.order import Cart, CartItem, Order, OrderItem, ShippingMethod
 from app.models.coupon import Coupon
 from app.schemas.order_schemas import (
     AddToCartRequest, CartResponse, CartItemResponse, 
@@ -33,7 +33,6 @@ async def add_to_cart_service(tenant_slug: str, cart_id: UUID, req: AddToCartReq
         db.add(cart)
         await db.flush()
 
-    # Check variant validity
     variant_result = await db.execute(
         select(ProductVariant)
         .join(Product)
@@ -50,7 +49,6 @@ async def add_to_cart_service(tenant_slug: str, cart_id: UUID, req: AddToCartReq
     if variant.stock_quantity < req.quantity:
         raise HTTPException(status_code=400, detail="Not enough stock")
 
-    # Add or update item
     item_result = await db.execute(select(CartItem).where(CartItem.cart_id == str(cart_id), CartItem.variant_id == req.variant_id))
     item = item_result.scalar_one_or_none()
     
@@ -95,7 +93,7 @@ async def get_cart_service(tenant_slug: str, cart_id: UUID, db: AsyncSession) ->
         items.append(CartItemResponse(
             id=item.id,
             variant_id=variant.id,
-            product_name=product.name,
+            product_name=str(product.name), # It's a dict now, convert to string or handle appropriately. We'll stringify.
             sku=variant.sku,
             attributes=variant.attributes_json or {},
             unit_price=unit_price,
@@ -160,44 +158,75 @@ async def checkout_service(tenant_slug: str, req: CheckoutRequest, user_id: int,
     if not cart or not cart.items:
         raise HTTPException(status_code=400, detail="Cart is empty or not found")
 
-    # Lock logic using redis
+    # Analyze order type and gather variants to lock
+    is_entirely_digital = True
+    variants_to_lock = [] # List of tuples (variant_id, qty_needed)
+    
+    for item in cart.items:
+        product = item.variant.product
+        if product.product_type != 'digital':
+            is_entirely_digital = False
+            
+        if product.is_bundle:
+            # Fetch bundle components
+            bundle_res = await db.execute(select(ProductBundleItem).where(ProductBundleItem.bundle_product_id == product.id))
+            components = bundle_res.scalars().all()
+            for comp in components:
+                variants_to_lock.append((comp.component_variant_id, item.quantity * comp.quantity))
+        else:
+            variants_to_lock.append((item.variant.id, item.quantity))
+            
+    if not is_entirely_digital and not req.shipping_address:
+        raise HTTPException(status_code=400, detail="Shipping address is required for physical goods")
+
+    shipping_fee = Decimal("0.00")
+    if req.shipping_method_id and not is_entirely_digital:
+        sm_res = await db.execute(select(ShippingMethod).where(ShippingMethod.id == req.shipping_method_id, ShippingMethod.tenant_id == tenant_id))
+        sm = sm_res.scalar_one_or_none()
+        if sm:
+            shipping_fee = sm.price # basic logic
+
+    # Sort variants to prevent deadlocks
+    variants_to_lock.sort(key=lambda x: x[0])
+    
+    # Consolidate quantities for same variant
+    consolidated_locks = {}
+    for vid, qty in variants_to_lock:
+        consolidated_locks[vid] = consolidated_locks.get(vid, 0) + qty
+
     locks = []
-    
-    # Sort items by variant_id to prevent deadlocks
-    sorted_items = sorted(cart.items, key=lambda i: i.variant_id)
-    
     try:
         # Acquire locks
-        for item in sorted_items:
-            lock_key = f"lock:tenant:{tenant_id}:variant:{item.variant_id}"
-            lock = redis_client.lock(lock_key, timeout=10) # 10 seconds TTL
+        for vid in consolidated_locks.keys():
+            lock_key = f"lock:tenant:{tenant_id}:variant:{vid}"
+            lock = redis_client.lock(lock_key, timeout=10)
             acquired = await lock.acquire(blocking=False)
             if not acquired:
-                raise HTTPException(status_code=409, detail=f"Variant {item.variant_id} is currently being checked out by someone else")
+                raise HTTPException(status_code=409, detail=f"Variant {vid} is currently being checked out by someone else")
             locks.append(lock)
 
-        # Re-fetch stock after lock acquired
+        # Re-fetch stock and calculate subtotal
         subtotal = Decimal("0.00")
         order_items_data = []
-        for item in sorted_items:
-            # Need fresh variant data
-            variant_result = await db.execute(select(ProductVariant).options(selectinload(ProductVariant.product)).where(ProductVariant.id == item.variant_id))
+        
+        # Deduct consolidated stocks
+        for vid, qty in consolidated_locks.items():
+            variant_result = await db.execute(select(ProductVariant).where(ProductVariant.id == vid))
             variant = variant_result.scalar_one()
+            if variant.stock_quantity < qty:
+                raise HTTPException(status_code=400, detail=f"Not enough stock for variant {vid}")
+            variant.stock_quantity -= qty
             
-            if variant.stock_quantity < item.quantity:
-                raise HTTPException(status_code=400, detail=f"Not enough stock for variant {item.variant_id}")
-
-            # Deduct stock immediately
-            variant.stock_quantity -= item.quantity
-            
-            unit_price = variant.price_override if variant.price_override is not None else variant.product.base_price
+        # Calculate totals from cart items
+        for item in cart.items:
+            unit_price = item.variant.price_override if item.variant.price_override is not None else item.variant.product.base_price
             total_price = unit_price * item.quantity
             subtotal += total_price
             
             order_items_data.append({
-                "variant_id": variant.id,
-                "product_name": variant.product.name,
-                "sku": variant.sku,
+                "variant_id": item.variant.id,
+                "product_name": str(item.variant.product.name),
+                "sku": item.variant.sku,
                 "unit_price": unit_price,
                 "quantity": item.quantity
             })
@@ -218,10 +247,9 @@ async def checkout_service(tenant_slug: str, req: CheckoutRequest, user_id: int,
                 
                 coupon.used_count += 1
             except HTTPException as e:
-                # If coupon validation failed, rollback
                 raise e
 
-        total_amount = subtotal - discount_amt
+        total_amount = subtotal - discount_amt + shipping_fee
         if total_amount < Decimal("0.00"):
             total_amount = Decimal("0.00")
 
@@ -233,9 +261,12 @@ async def checkout_service(tenant_slug: str, req: CheckoutRequest, user_id: int,
             order_number=f"ORD-{uuid.uuid4().hex[:8].upper()}",
             subtotal=subtotal,
             discount_amt=discount_amt,
+            shipping_method_id=req.shipping_method_id if not is_entirely_digital else None,
+            shipping_fee=shipping_fee,
             total_amount=total_amount,
             status='pending',
-            shipping_json=req.shipping_address
+            order_type='digital' if is_entirely_digital else 'physical',
+            shipping_json=req.shipping_address if not is_entirely_digital else None
         )
         db.add(order)
         await db.flush()
@@ -252,9 +283,7 @@ async def checkout_service(tenant_slug: str, req: CheckoutRequest, user_id: int,
             )
             db.add(order_item)
 
-        # Clear cart
         await db.delete(cart)
-        
         await db.commit()
         await db.refresh(order)
         
@@ -265,8 +294,11 @@ async def checkout_service(tenant_slug: str, req: CheckoutRequest, user_id: int,
             order_number=order.order_number,
             subtotal=order.subtotal,
             discount_amt=order.discount_amt,
+            shipping_method_id=order.shipping_method_id,
+            shipping_fee=order.shipping_fee,
             total_amount=order.total_amount,
             status=order.status,
+            order_type=order.order_type,
             shipping_info=order.shipping_json or {},
             created_at=order.created_at,
             items=[OrderItemResponse(

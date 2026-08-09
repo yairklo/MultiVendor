@@ -73,3 +73,6 @@ def get_tenant_customer(current_user: User = Depends(require_role([UserRole.CUST
     return current_user
 
 get_current_customer = require_role([UserRole.CUSTOMER])
+
+def get_super_admin(current_user: User = Depends(require_role([UserRole.SUPER_ADMIN]))) -> User:
+    return current_user

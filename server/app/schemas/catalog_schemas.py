@@ -1,5 +1,5 @@
-from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field
+from typing import Optional, List, Dict, Any, Literal
+from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 from decimal import Decimal
 from app.schemas.common_schemas import PaginatedResponse, ReviewStatus
@@ -7,52 +7,127 @@ from app.schemas.common_schemas import PaginatedResponse, ReviewStatus
 class ProductVariantSchema(BaseModel):
     id: Optional[int] = None
     sku: str
-    attributes_json: Dict[str, Any]
+    attributes_json: Optional[Dict[str, Any]] = Field(default_factory=dict)
     price_override: Optional[Decimal] = None
     stock_quantity: int = Field(..., ge=0)
+    model_config = ConfigDict(from_attributes=True, json_schema_extra={
+        "example": {
+            "sku": "TSHIRT-RED-M",
+            "attributes_json": {"color": "red", "size": "M"},
+            "price_override": 29.99,
+            "stock_quantity": 50
+        }
+    })
+
+class ProductBundleItemSchema(BaseModel):
+    component_variant_id: int
+    quantity: int = Field(default=1, gt=0)
+    model_config = ConfigDict(from_attributes=True)
 
 class ProductCreateRequest(BaseModel):
     category_id: Optional[int] = None
-    name: str = Field(..., min_length=2, max_length=255)
+    name: Dict[str, str] = Field(...)
     slug: str = Field(..., pattern="^[a-z0-9-]+$")
-    description: Optional[str] = None
+    description: Optional[Dict[str, str]] = None
     base_price: Decimal = Field(..., gt=0)
     is_active: bool = True
+    product_type: Literal['physical', 'digital', 'service'] = 'physical'
+    digital_file_url: Optional[str] = None
+    download_limit: Optional[int] = None
+    is_bundle: bool = False
+    bundle_items: Optional[List[ProductBundleItemSchema]] = None
     variants: List[ProductVariantSchema]
     images: List[str]
+    model_config = ConfigDict(from_attributes=True, json_schema_extra={
+        "example": {
+            "category_id": 1,
+            "name": {"he": "חולצה קלאסית", "en": "Classic T-Shirt"},
+            "slug": "classic-tshirt",
+            "description": {"he": "100% כותנה", "en": "100% Cotton classic fit t-shirt."},
+            "base_price": 25.00,
+            "is_active": True,
+            "variants": [
+                {
+                    "sku": "TSHIRT-RED-M",
+                    "attributes_json": {"color": "red", "size": "M"},
+                    "stock_quantity": 50
+                }
+            ],
+            "images": ["https://example.com/images/tshirt1.png"]
+        }
+    })
 
 class ProductUpdateRequest(BaseModel):
     category_id: Optional[int] = None
-    name: Optional[str] = Field(None, min_length=2, max_length=255)
-    description: Optional[str] = None
+    name: Optional[Dict[str, str]] = None
+    description: Optional[Dict[str, str]] = None
     base_price: Optional[Decimal] = Field(None, gt=0)
     is_active: Optional[bool] = None
+    product_type: Optional[Literal['physical', 'digital', 'service']] = None
+    digital_file_url: Optional[str] = None
+    download_limit: Optional[int] = None
+    is_bundle: Optional[bool] = None
+    bundle_items: Optional[List[ProductBundleItemSchema]] = None
 
 class ProductResponse(BaseModel):
     id: int
     tenant_id: int
     category_id: Optional[int]
-    name: str
+    name: Any
     slug: str
-    description: Optional[str]
+    description: Any
     base_price: Decimal
     is_active: bool
+    product_type: str
+    digital_file_url: Optional[str]
+    download_limit: Optional[int]
+    is_bundle: bool
+    bundle_items: Optional[List[ProductBundleItemSchema]] = None
     variants: List[ProductVariantSchema]
     primary_image_url: Optional[str]
     images: List[str]
     created_at: datetime
+    model_config = ConfigDict(from_attributes=True, json_schema_extra={
+        "example": {
+            "id": 100,
+            "tenant_id": 1,
+            "name": {"he": "חולצה קלאסית", "en": "Classic T-Shirt"},
+            "slug": "classic-tshirt",
+            "description": {"en": "100% Cotton"},
+            "base_price": 25.00,
+            "is_active": True,
+            "primary_image_url": "https://example.com/images/tshirt1.png",
+            "images": ["https://example.com/images/tshirt1.png"],
+            "variants": [
+                {
+                    "id": 50,
+                    "sku": "TSHIRT-RED-M",
+                    "attributes_json": {"color": "red", "size": "M"},
+                    "price_override": 29.99,
+                    "stock_quantity": 50
+                }
+            ],
+            "created_at": "2026-08-09T10:00:00Z"
+        }
+    })
 
 class PaginatedProductResponse(PaginatedResponse):
     data: List[ProductResponse]
 
 class CategoryCreateRequest(BaseModel):
-    name: str = Field(..., min_length=2, max_length=100)
+    name: Dict[str, str] = Field(...)
     slug: str = Field(..., pattern="^[a-z0-9-]+$")
     parent_id: Optional[int] = None
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "name": {"en": "Men's Clothing", "he": "בגדי גברים"},
+            "slug": "mens-clothing"
+        }
+    })
 
 class CategoryResponse(BaseModel):
     id: int
-    name: str
+    name: Any
     slug: str
     parent_id: Optional[int] = None
 
@@ -67,8 +142,10 @@ class ProductReviewResponse(BaseModel):
     user_id: int
     rating: int
     comment: Optional[str]
-    status: ReviewStatus
+    is_approved: bool
+    is_verified_buyer: bool
     created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
 
 class PaginatedReviewResponse(PaginatedResponse):
     data: List[ProductReviewResponse]

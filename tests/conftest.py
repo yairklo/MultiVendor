@@ -92,3 +92,33 @@ def seed_products():
         {"id": 1, "tenant_id": 1, "name": "Product A1", "slug": "product-a1", "base_price": 10.00, "is_active": True},
         {"id": 2, "tenant_id": 2, "name": "Product B1", "slug": "product-b1", "base_price": 20.00, "is_active": True}
     ]
+
+@pytest.fixture(autouse=True, scope='function')
+async def auto_clear_db():
+    from sqlalchemy.ext.asyncio import create_async_engine
+    from sqlalchemy import text
+    import asyncio
+    engine = create_async_engine('mysql+aiomysql://root:rootpassword@127.0.0.1:3306/multivendor_db', echo=False)
+    async with engine.begin() as conn:
+        await conn.execute(text('SET FOREIGN_KEY_CHECKS=0;'))
+        
+        result = await conn.execute(text('SHOW TABLES'))
+        tables = [row[0] for row in result.all()]
+        for table in tables:
+            await conn.execute(text(f'TRUNCATE TABLE {table}'))
+            
+        await conn.execute(text('SET FOREIGN_KEY_CHECKS=1;'))
+
+    with open('../db/seed.sql', 'r', encoding='utf-8') as f:
+        sql = f.read()
+    
+    statements = [s.strip() for s in sql.split(';') if s.strip()]
+    async with engine.begin() as conn:
+        await conn.execute(text('SET FOREIGN_KEY_CHECKS=0;'))
+        for stmt in statements:
+            try:
+                await conn.execute(text(stmt))
+            except Exception:
+                pass
+        await conn.execute(text('SET FOREIGN_KEY_CHECKS=1;'))
+    await engine.dispose()

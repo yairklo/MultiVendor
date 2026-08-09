@@ -1,7 +1,16 @@
-from sqlalchemy import Column, Integer, BigInteger, String, Enum, DateTime, ForeignKey, Numeric, JSON
+from sqlalchemy import Column, Integer, BigInteger, String, Enum, DateTime, ForeignKey, Numeric, JSON, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.base_class import Base
+
+class ShippingMethod(Base):
+    __tablename__ = "shipping_methods"
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String(100), nullable=False)
+    price = Column(Numeric(10, 2), nullable=False)
+    free_shipping_threshold = Column(Numeric(10, 2), nullable=True)
+    is_active = Column(Boolean, default=True)
 
 class Cart(Base):
     __tablename__ = "carts"
@@ -33,8 +42,11 @@ class Order(Base):
     order_number = Column(String(50), nullable=False)
     subtotal = Column(Numeric(10, 2), nullable=False)
     discount_amt = Column(Numeric(10, 2), default=0.00)
+    shipping_method_id = Column(BigInteger, ForeignKey("shipping_methods.id", ondelete="SET NULL"), nullable=True)
+    shipping_fee = Column(Numeric(10, 2), default=0.00)
     total_amount = Column(Numeric(10, 2), nullable=False)
     status = Column(Enum('pending', 'processing', 'completed', 'cancelled'), default='pending')
+    order_type = Column(Enum('physical', 'digital'), default='physical')
     shipping_json = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=func.now())
     

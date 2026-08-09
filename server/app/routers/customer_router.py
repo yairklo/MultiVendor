@@ -11,12 +11,28 @@ from app.services.order_service import (
 
 customer_router = APIRouter(prefix="/api/v1/customer", tags=["Customer Portal"])
 
-@customer_router.get("/me", response_model=UserResponse)
+@customer_router.get(
+    "/me", 
+    response_model=UserResponse,
+    summary="Get Customer Profile",
+    description="Returns the currently authenticated customer's profile details. Requires a valid JWT bearer token.",
+    responses={
+        200: {"description": "Customer profile retrieved."},
+        401: {"description": "Unauthorized. Missing or invalid token."}
+    }
+)
 async def get_customer_profile(current_user: User = Depends(get_current_user)):
-    """Returns currently authenticated customer details."""
     return current_user
 
-@customer_router.get("/orders", response_model=PaginatedOrderResponse)
+@customer_router.get(
+    "/orders", 
+    response_model=PaginatedOrderResponse,
+    summary="List Customer Orders",
+    description="Lists all past and present orders for the authenticated customer. Includes pagination.",
+    responses={
+        200: {"description": "List of orders successfully retrieved."}
+    }
+)
 async def list_orders(
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=100),
@@ -25,7 +41,16 @@ async def list_orders(
 ):
     return await list_customer_orders_service(current_user.id, page, page_size, db)
 
-@customer_router.get("/orders/{order_id}", response_model=OrderResponse)
+@customer_router.get(
+    "/orders/{order_id}", 
+    response_model=OrderResponse,
+    summary="Get Order Details",
+    description="Retrieves full details of a specific order belonging to the authenticated customer. Access is restricted to the order owner.",
+    responses={
+        200: {"description": "Order details successfully retrieved."},
+        404: {"description": "Order not found or does not belong to the user."}
+    }
+)
 async def get_order(
     order_id: int = Path(...),
     current_user: User = Depends(get_current_customer),
@@ -33,7 +58,16 @@ async def get_order(
 ):
     return await get_customer_order_service(current_user.id, order_id, db)
 
-@customer_router.delete("/orders/{order_id}")
+@customer_router.delete(
+    "/orders/{order_id}",
+    summary="Cancel Pending Order",
+    description="Cancels an order if it is still in the 'pending' status. Orders in 'processing' or 'completed' states cannot be cancelled by the customer.",
+    responses={
+        200: {"description": "Order successfully cancelled."},
+        400: {"description": "Order is no longer in a pending state and cannot be cancelled."},
+        404: {"description": "Order not found."}
+    }
+)
 async def cancel_order(
     order_id: int = Path(...),
     current_user: User = Depends(get_current_customer),

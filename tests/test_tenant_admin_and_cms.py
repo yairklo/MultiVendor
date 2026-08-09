@@ -5,7 +5,7 @@ from httpx import AsyncClient
 async def test_create_product_within_subscription_limit(async_client: AsyncClient, seed_tokens):
     headers = {"Authorization": seed_tokens["tenant_admin_a"]}
     payload = {
-        "name": "New Product",
+        "name": {"en": "New Product"},
         "slug": "new-product",
         "base_price": "100.00",
         "is_active": True,
@@ -17,7 +17,7 @@ async def test_create_product_within_subscription_limit(async_client: AsyncClien
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("invalid_payload", [
-    {"name": "A", "slug": "slug", "base_price": "100", "is_active": True, "variants": [], "images": []}, # Name too short
+    {"name": {"en": "A"}, "slug": "slug", "base_price": "100", "is_active": True, "variants": [], "images": []}, # Name too short
     {"name": "Valid", "slug": "slug", "base_price": "-10.00", "is_active": True, "variants": [], "images": []}, # Negative price
     {"name": "Valid", "slug": "slug", "base_price": "0", "is_active": True, "variants": [], "images": []}, # Zero price
 ])

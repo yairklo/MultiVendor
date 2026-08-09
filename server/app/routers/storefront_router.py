@@ -8,15 +8,32 @@ from app.services.catalog_service import get_store_config_service, list_public_p
 
 storefront_router = APIRouter(prefix="/api/v1/store", tags=["Public Storefront"])
 
-@storefront_router.get("/{tenant_slug}/config", response_model=TenantSettingsSchema)
+@storefront_router.get(
+    "/{tenant_slug}/config", 
+    response_model=TenantSettingsSchema,
+    summary="Get Public Storefront Configuration",
+    description="Retrieves the public settings for a store (e.g., branding colors, logo URL, currency, tax rates). Used by the frontend to dynamically style the shop.",
+    responses={
+        200: {"description": "Store configuration successfully retrieved."},
+        404: {"description": "Tenant store not found."}
+    }
+)
 async def get_store_config(
     tenant_slug: str = Path(..., title="Tenant Slug"),
     db: AsyncSession = Depends(get_db)
 ):
-    """Fetch public configuration (colors, logo, currency) for a storefront."""
     return await get_store_config_service(tenant_slug, db)
 
-@storefront_router.get("/{tenant_slug}/products", response_model=PaginatedProductResponse)
+@storefront_router.get(
+    "/{tenant_slug}/products", 
+    response_model=PaginatedProductResponse,
+    summary="List Public Storefront Products",
+    description="Lists active products for a specific storefront. Includes pagination, optional search query matching, and category filtering.",
+    responses={
+        200: {"description": "Successfully retrieved a paginated list of active products."},
+        404: {"description": "Tenant store not found."}
+    }
+)
 async def list_products(
     tenant_slug: str = Path(..., title="Tenant Slug"),
     page: int = Query(1, ge=1),
@@ -25,14 +42,21 @@ async def list_products(
     category_id: Optional[int] = Query(None),
     db: AsyncSession = Depends(get_db)
 ):
-    """List active products for a specific storefront with pagination and search."""
     return await list_public_products_service(tenant_slug, page, page_size, q, category_id, db)
 
-@storefront_router.get("/{tenant_slug}/products/{product_slug}", response_model=ProductResponse)
+@storefront_router.get(
+    "/{tenant_slug}/products/{product_slug}", 
+    response_model=ProductResponse,
+    summary="Get Product Details",
+    description="Fetches full details of a single active product, including all associated product variants, current stock levels, and product images.",
+    responses={
+        200: {"description": "Product details successfully retrieved."},
+        404: {"description": "Product or Tenant store not found."}
+    }
+)
 async def get_product(
     tenant_slug: str = Path(..., title="Tenant Slug"),
     product_slug: str = Path(..., title="Product Slug"),
     db: AsyncSession = Depends(get_db)
 ):
-    """Get full details of a single product including variants and images."""
     return await get_public_product_service(tenant_slug, product_slug, db)

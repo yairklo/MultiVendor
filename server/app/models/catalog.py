@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, BigInteger, String, Boolean, DateTime, ForeignKey, Numeric, Text, JSON, CheckConstraint
+from sqlalchemy import Column, Integer, BigInteger, String, Boolean, DateTime, ForeignKey, Numeric, Text, JSON, CheckConstraint, Enum
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.base_class import Base
@@ -8,7 +8,7 @@ class Category(Base):
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
     parent_id = Column(BigInteger, ForeignKey("categories.id", ondelete="SET NULL"), nullable=True)
-    name = Column(String(100), nullable=False)
+    name = Column(JSON, nullable=False)
     slug = Column(String(100), nullable=False)
 
 class Product(Base):
@@ -16,11 +16,15 @@ class Product(Base):
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
     category_id = Column(BigInteger, ForeignKey("categories.id", ondelete="SET NULL"), nullable=True)
-    name = Column(String(255), nullable=False)
+    name = Column(JSON, nullable=False)
     slug = Column(String(255), nullable=False)
-    description = Column(Text, nullable=True)
+    description = Column(JSON, nullable=True)
     base_price = Column(Numeric(10, 2), nullable=False)
     is_active = Column(Boolean, default=True)
+    product_type = Column(Enum('physical', 'digital', 'service'), default='physical')
+    digital_file_url = Column(String(512), nullable=True)
+    download_limit = Column(Integer, nullable=True)
+    is_bundle = Column(Boolean, default=False)
     created_at = Column(DateTime, default=func.now())
     
     tenant = relationship("Tenant", back_populates="products")
@@ -59,7 +63,15 @@ class ProductReview(Base):
     user_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     rating = Column(Integer, CheckConstraint('rating BETWEEN 1 AND 5'), nullable=False)
     comment = Column(Text, nullable=True)
-    approved = Column(Boolean, default=False)
+    is_approved = Column(Boolean, default=True)
+    is_verified_buyer = Column(Boolean, default=False)
     created_at = Column(DateTime, default=func.now())
 
     product = relationship("Product", back_populates="reviews")
+
+class ProductBundleItem(Base):
+    __tablename__ = "product_bundle_items"
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    bundle_product_id = Column(BigInteger, ForeignKey("products.id", ondelete="CASCADE"), nullable=False)
+    component_variant_id = Column(BigInteger, ForeignKey("product_variants.id", ondelete="CASCADE"), nullable=False)
+    quantity = Column(Integer, nullable=False, default=1)

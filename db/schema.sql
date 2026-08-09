@@ -24,7 +24,7 @@ CREATE TABLE tenants (
     name VARCHAR(255) NOT NULL,
     plan_id INT NOT NULL,
     status ENUM('active', 'suspended', 'cancelled') NOT NULL DEFAULT 'active',
-    custom_domain VARCHAR(255) NULL,
+    custom_domain VARCHAR(255) UNIQUE NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (plan_id) REFERENCES subscription_plans(id)
@@ -38,6 +38,10 @@ CREATE TABLE tenant_settings (
     currency VARCHAR(3) DEFAULT 'ILS',
     custom_css TEXT NULL,
     support_email VARCHAR(255) NULL,
+    supported_languages JSON NULL,
+    default_language VARCHAR(10) DEFAULT 'he',
+    review_moderation_enabled BOOLEAN DEFAULT FALSE,
+    allow_unverified_reviews BOOLEAN DEFAULT TRUE,
     FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
@@ -89,7 +93,7 @@ CREATE TABLE categories (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     tenant_id INT NOT NULL,
     parent_id BIGINT NULL,
-    name VARCHAR(100) NOT NULL,
+    name JSON NOT NULL,
     slug VARCHAR(100) NOT NULL,
     FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
     FOREIGN KEY (parent_id) REFERENCES categories(id) ON DELETE SET NULL,
@@ -100,11 +104,15 @@ CREATE TABLE products (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     tenant_id INT NOT NULL,
     category_id BIGINT NULL,
-    name VARCHAR(255) NOT NULL,
+    name JSON NOT NULL,
     slug VARCHAR(255) NOT NULL,
-    description TEXT NULL,
+    description JSON NULL,
     base_price DECIMAL(10, 2) NOT NULL,
     is_active BOOLEAN DEFAULT TRUE,
+    product_type ENUM('physical', 'digital', 'service') DEFAULT 'physical',
+    digital_file_url VARCHAR(512) NULL,
+    download_limit INT NULL,
+    is_bundle BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
     FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
@@ -142,11 +150,21 @@ CREATE TABLE product_reviews (
     user_id BIGINT NOT NULL,
     rating INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
     comment TEXT NULL,
-    approved BOOLEAN DEFAULT FALSE,
+    is_approved BOOLEAN DEFAULT TRUE,
+    is_verified_buyer BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
     FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE product_bundle_items (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    bundle_product_id BIGINT NOT NULL,
+    component_variant_id BIGINT NOT NULL,
+    quantity INT NOT NULL DEFAULT 1,
+    FOREIGN KEY (bundle_product_id) REFERENCES products(id) ON DELETE CASCADE,
+    FOREIGN KEY (component_variant_id) REFERENCES product_variants(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 -- ================================================================================
@@ -164,6 +182,16 @@ CREATE TABLE coupons (
     valid_until TIMESTAMP NOT NULL,
     FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
     CONSTRAINT uq_coupons_tenant_code UNIQUE (tenant_id, code)
+) ENGINE=InnoDB;
+
+CREATE TABLE shipping_methods (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    tenant_id INT NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    price DECIMAL(10, 2) NOT NULL,
+    free_shipping_threshold DECIMAL(10, 2) NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 CREATE TABLE carts (
@@ -195,13 +223,17 @@ CREATE TABLE orders (
     order_number VARCHAR(50) NOT NULL,
     subtotal DECIMAL(10, 2) NOT NULL,
     discount_amt DECIMAL(10, 2) DEFAULT 0.00,
+    shipping_method_id BIGINT NULL,
+    shipping_fee DECIMAL(10, 2) DEFAULT 0.00,
     total_amount DECIMAL(10, 2) NOT NULL,
     status ENUM('pending', 'processing', 'completed', 'cancelled') DEFAULT 'pending',
+    order_type ENUM('physical', 'digital') DEFAULT 'physical',
     shipping_json JSON NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (coupon_id) REFERENCES coupons(id) ON DELETE SET NULL,
+    FOREIGN KEY (shipping_method_id) REFERENCES shipping_methods(id) ON DELETE SET NULL,
     CONSTRAINT uq_orders_tenant_number UNIQUE (tenant_id, order_number)
 ) ENGINE=InnoDB;
 
