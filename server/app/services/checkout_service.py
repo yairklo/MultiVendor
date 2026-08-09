@@ -1,0 +1,287 @@
+import asyncio
+import uuid
+import json
+from decimal import Decimal
+from typing import Optional
+from uuid import UUID
+from fastapi import HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
+from app.db.session import redis_client
+from app.models.tenant import Tenant
+from app.models.catalog import ProductVariant, Product
+from app.models.order import Cart, CartItem, Order, OrderItem
+from app.models.coupon import Coupon
+from app.schemas.order_schemas import (
+    AddToCartRequest, CartResponse, CartItemResponse, 
+    CheckoutRequest, OrderResponse, OrderItemResponse
+)
+from datetime import datetime, timezone
+
+async def add_to_cart_service(tenant_slug: str, cart_id: UUID, req: AddToCartRequest, user_id: Optional[int], db: AsyncSession):
+    tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
+    tenant_id = tenant_result.scalar_one_or_none()
+    if not tenant_id:
+        raise HTTPException(status_code=404, detail="Store not found")
+
+    cart_result = await db.execute(select(Cart).where(Cart.id == str(cart_id)))
+    cart = cart_result.scalar_one_or_none()
+    
+    if not cart:
+        cart = Cart(id=str(cart_id), tenant_id=tenant_id, user_id=user_id)
+        db.add(cart)
+        await db.flush()
+
+    # Check variant validity
+    variant_result = await db.execute(
+        select(ProductVariant)
+        .join(Product)
+        .where(
+            ProductVariant.id == req.variant_id, 
+            ProductVariant.tenant_id == tenant_id,
+            Product.is_active == True
+        )
+    )
+    variant = variant_result.scalar_one_or_none()
+    if not variant:
+        raise HTTPException(status_code=400, detail="Variant not found or product inactive")
+
+    if variant.stock_quantity < req.quantity:
+        raise HTTPException(status_code=400, detail="Not enough stock")
+
+    # Add or update item
+    item_result = await db.execute(select(CartItem).where(CartItem.cart_id == str(cart_id), CartItem.variant_id == req.variant_id))
+    item = item_result.scalar_one_or_none()
+    
+    if item:
+        item.quantity += req.quantity
+    else:
+        item = CartItem(
+            tenant_id=tenant_id,
+            cart_id=str(cart_id),
+            variant_id=req.variant_id,
+            quantity=req.quantity
+        )
+        db.add(item)
+
+    await db.commit()
+    return {"status": "ok"}
+
+async def get_cart_service(tenant_slug: str, cart_id: UUID, db: AsyncSession) -> CartResponse:
+    tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
+    tenant_id = tenant_result.scalar_one_or_none()
+    if not tenant_id:
+        raise HTTPException(status_code=404, detail="Store not found")
+
+    cart_result = await db.execute(
+        select(Cart)
+        .where(Cart.id == str(cart_id))
+        .options(selectinload(Cart.items).selectinload(CartItem.variant).selectinload(ProductVariant.product))
+    )
+    cart = cart_result.scalar_one_or_none()
+    if not cart:
+        return CartResponse(cart_id=cart_id, tenant_id=tenant_id, items=[], subtotal=Decimal("0.00"))
+
+    items = []
+    subtotal = Decimal("0.00")
+    for item in cart.items:
+        variant = item.variant
+        product = variant.product
+        unit_price = variant.price_override if variant.price_override is not None else product.base_price
+        total_price = unit_price * item.quantity
+        subtotal += total_price
+        
+        items.append(CartItemResponse(
+            id=item.id,
+            variant_id=variant.id,
+            product_name=product.name,
+            sku=variant.sku,
+            attributes=variant.attributes_json or {},
+            unit_price=unit_price,
+            quantity=item.quantity,
+            total_price=total_price
+        ))
+
+    return CartResponse(
+        cart_id=cart_id,
+        tenant_id=cart.tenant_id,
+        items=items,
+        subtotal=subtotal
+    )
+
+async def remove_from_cart_service(tenant_slug: str, cart_id: UUID, item_id: int, db: AsyncSession):
+    item_result = await db.execute(
+        select(CartItem).join(Cart).where(Cart.id == str(cart_id), CartItem.id == item_id)
+    )
+    item = item_result.scalar_one_or_none()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    await db.delete(item)
+    await db.commit()
+    return {"status": "ok"}
+
+async def validate_coupon_service(tenant_slug: str, coupon_code: str, db: AsyncSession):
+    tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
+    tenant_id = tenant_result.scalar_one_or_none()
+    if not tenant_id:
+        raise HTTPException(status_code=404, detail="Store not found")
+
+    coupon_result = await db.execute(
+        select(Coupon).where(Coupon.tenant_id == tenant_id, Coupon.code == coupon_code)
+    )
+    coupon = coupon_result.scalar_one_or_none()
+    
+    if not coupon:
+        raise HTTPException(status_code=400, detail="Invalid coupon")
+        
+    if coupon.valid_until and coupon.valid_until.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
+        raise HTTPException(status_code=400, detail="Coupon expired")
+        
+    if coupon.usage_limit and coupon.used_count >= coupon.usage_limit:
+        raise HTTPException(status_code=400, detail="Coupon usage limit reached")
+
+    return coupon
+
+async def checkout_service(tenant_slug: str, req: CheckoutRequest, user_id: int, db: AsyncSession) -> OrderResponse:
+    tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
+    tenant_id = tenant_result.scalar_one_or_none()
+    if not tenant_id:
+        raise HTTPException(status_code=404, detail="Store not found")
+
+    cart_result = await db.execute(
+        select(Cart)
+        .where(Cart.id == str(req.cart_id))
+        .options(selectinload(Cart.items).selectinload(CartItem.variant).selectinload(ProductVariant.product))
+    )
+    cart = cart_result.scalar_one_or_none()
+    
+    if not cart or not cart.items:
+        raise HTTPException(status_code=400, detail="Cart is empty or not found")
+
+    # Lock logic using redis
+    locks = []
+    
+    # Sort items by variant_id to prevent deadlocks
+    sorted_items = sorted(cart.items, key=lambda i: i.variant_id)
+    
+    try:
+        # Acquire locks
+        for item in sorted_items:
+            lock_key = f"lock:tenant:{tenant_id}:variant:{item.variant_id}"
+            lock = redis_client.lock(lock_key, timeout=10) # 10 seconds TTL
+            acquired = await lock.acquire(blocking=False)
+            if not acquired:
+                raise HTTPException(status_code=409, detail=f"Variant {item.variant_id} is currently being checked out by someone else")
+            locks.append(lock)
+
+        # Re-fetch stock after lock acquired
+        subtotal = Decimal("0.00")
+        order_items_data = []
+        for item in sorted_items:
+            # Need fresh variant data
+            variant_result = await db.execute(select(ProductVariant).options(selectinload(ProductVariant.product)).where(ProductVariant.id == item.variant_id))
+            variant = variant_result.scalar_one()
+            
+            if variant.stock_quantity < item.quantity:
+                raise HTTPException(status_code=400, detail=f"Not enough stock for variant {item.variant_id}")
+
+            # Deduct stock immediately
+            variant.stock_quantity -= item.quantity
+            
+            unit_price = variant.price_override if variant.price_override is not None else variant.product.base_price
+            total_price = unit_price * item.quantity
+            subtotal += total_price
+            
+            order_items_data.append({
+                "variant_id": variant.id,
+                "product_name": variant.product.name,
+                "sku": variant.sku,
+                "unit_price": unit_price,
+                "quantity": item.quantity
+            })
+
+        # Process coupon
+        discount_amt = Decimal("0.00")
+        coupon = None
+        if req.coupon_code:
+            try:
+                coupon = await validate_coupon_service(tenant_slug, req.coupon_code, db)
+                if subtotal < coupon.min_order_amt:
+                    raise HTTPException(status_code=400, detail=f"Minimum order amount is {coupon.min_order_amt}")
+                
+                if coupon.discount_type == 'percentage':
+                    discount_amt = subtotal * (coupon.discount_val / 100)
+                else:
+                    discount_amt = coupon.discount_val
+                
+                coupon.used_count += 1
+            except HTTPException as e:
+                # If coupon validation failed, rollback
+                raise e
+
+        total_amount = subtotal - discount_amt
+        if total_amount < Decimal("0.00"):
+            total_amount = Decimal("0.00")
+
+        # Create Order
+        order = Order(
+            tenant_id=tenant_id,
+            user_id=user_id,
+            coupon_id=coupon.id if coupon else None,
+            order_number=f"ORD-{uuid.uuid4().hex[:8].upper()}",
+            subtotal=subtotal,
+            discount_amt=discount_amt,
+            total_amount=total_amount,
+            status='pending',
+            shipping_json=req.shipping_address
+        )
+        db.add(order)
+        await db.flush()
+
+        for data in order_items_data:
+            order_item = OrderItem(
+                tenant_id=tenant_id,
+                order_id=order.id,
+                variant_id=data["variant_id"],
+                product_name=data["product_name"],
+                sku=data["sku"],
+                unit_price=data["unit_price"],
+                quantity=data["quantity"]
+            )
+            db.add(order_item)
+
+        # Clear cart
+        await db.delete(cart)
+        
+        await db.commit()
+        await db.refresh(order)
+        
+        return OrderResponse(
+            id=order.id,
+            tenant_id=order.tenant_id,
+            customer_id=order.user_id,
+            order_number=order.order_number,
+            subtotal=order.subtotal,
+            discount_amt=order.discount_amt,
+            total_amount=order.total_amount,
+            status=order.status,
+            shipping_info=order.shipping_json or {},
+            created_at=order.created_at,
+            items=[OrderItemResponse(
+                id=i.id,
+                variant_id=i.variant_id,
+                product_name=i.product_name,
+                sku=i.sku,
+                unit_price=i.unit_price,
+                quantity=i.quantity
+            ) for i in await db.scalars(select(OrderItem).where(OrderItem.order_id == order.id))]
+        )
+        
+    finally:
+        for lock in locks:
+            try:
+                await lock.release()
+            except Exception:
+                pass

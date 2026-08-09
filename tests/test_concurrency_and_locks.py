@@ -9,8 +9,10 @@ async def test_concurrent_checkout_overselling_prevention(async_client: AsyncCli
     
     # Simulating 5 concurrent requests
     async def checkout_request():
+        cart_id = str(uuid.uuid4())
+        await async_client.post(f"/api/v1/store/tenant-a/cart/{cart_id}/items", json={"variant_id": 1, "quantity": 1})
         payload = {
-            "cart_id": str(uuid.uuid4()),
+            "cart_id": cart_id,
             "coupon_code": None,
             "shipping_address": {"city": "Tel Aviv"},
             "payment_token": str(uuid.uuid4())

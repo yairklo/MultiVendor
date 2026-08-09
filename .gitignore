@@ -1,2 +1,12 @@
 
 .env
+__pycache__/
+*.pyc
+debug.py
+extract.py
+extract_ast.py
+filter.py
+gen_hash.py
+gen_tokens.py
+test_conflict.py
+test_hash.py

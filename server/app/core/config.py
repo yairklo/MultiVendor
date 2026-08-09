@@ -1,0 +1,31 @@
+from pydantic_settings import BaseSettings, SettingsConfigDict
+import os
+
+class Settings(BaseSettings):
+    APP_ENV: str = "development"
+    SECRET_KEY: str = "super_secret_random_string_change_me_in_prod"
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    
+    DB_HOST: str = "localhost"
+    DB_PORT: int = 3306
+    DB_USER: str = "root"
+    DB_PASSWORD: str = "rootpassword"
+    DB_NAME: str = "multivendor_db"
+    DATABASE_URL: str = "mysql+aiomysql://root:rootpassword@127.0.0.1:3306/multivendor_db"
+    
+    REDIS_URL: str = "redis://127.0.0.1:6379/0"
+    
+    STORAGE_TYPE: str = "local"
+    UPLOAD_DIR: str = "./uploads"
+
+    SMTP_HOST: str | None = None
+    SMTP_PORT: int | None = None
+    SMTP_USER: str | None = None
+    SMTP_PASSWORD: str | None = None
+    EMAILS_FROM_EMAIL: str | None = None
+
+    model_config = SettingsConfigDict(env_file=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), ".env"), env_file_encoding="utf-8", extra="ignore")
+
+settings = Settings()

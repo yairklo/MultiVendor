@@ -39,6 +39,7 @@ async def test_add_to_cart_quantity_validation(async_client: AsyncClient, seed_t
 async def test_coupon_validation(async_client: AsyncClient, seed_tokens, coupon_code, expected_status):
     headers = {"Authorization": seed_tokens["customer_a"]}
     cart_id = str(uuid.uuid4())
+    await async_client.post(f"/api/v1/store/tenant-a/cart/{cart_id}/items", json={"variant_id": 1, "quantity": 1})
     payload = {
         "cart_id": cart_id,
         "coupon_code": coupon_code,
@@ -64,6 +65,7 @@ async def test_checkout_invalid_uuid(async_client: AsyncClient, seed_tokens):
 async def test_checkout_success_creates_order_and_snapshot(async_client: AsyncClient, seed_tokens):
     headers = {"Authorization": seed_tokens["customer_a"]}
     cart_id = str(uuid.uuid4())
+    await async_client.post(f"/api/v1/store/tenant-a/cart/{cart_id}/items", json={"variant_id": 1, "quantity": 1})
     payload = {
         "cart_id": cart_id,
         "coupon_code": None,

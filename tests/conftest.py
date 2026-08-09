@@ -6,10 +6,14 @@ import json
 import sys
 import os
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from multivendor_fastapi_api_routes_skeleton import app
+if sys.platform == 'win32':
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'server'))
+from app.main import app
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 import redis.asyncio as redis
+from app.core.security import create_access_token
 
 # Setup Database connection
 DATABASE_URL = "mysql+aiomysql://root:rootpassword@127.0.0.1:3306/multivendor_db"
@@ -75,11 +79,11 @@ def seed_users():
 @pytest.fixture
 def seed_tokens():
     return {
-        "super_admin": "Bearer token_super_admin",
-        "tenant_admin_a": "Bearer token_tenant_admin_a",
-        "tenant_admin_b": "Bearer token_tenant_admin_b",
-        "customer_a": "Bearer token_customer_a",
-        "customer_b": "Bearer token_customer_b"
+        "super_admin": f"Bearer {create_access_token('1', 'super_admin')}",
+        "tenant_admin_a": f"Bearer {create_access_token('2', 'tenant_admin')}",
+        "tenant_admin_b": f"Bearer {create_access_token('3', 'tenant_admin')}",
+        "customer_a": f"Bearer {create_access_token('4', 'customer')}",
+        "customer_b": f"Bearer {create_access_token('5', 'customer')}"
     }
 
 @pytest.fixture
