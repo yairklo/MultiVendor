@@ -27,15 +27,30 @@ test.describe('Storefront & Checkout Flow', () => {
     await expect(page.locator('text=Cart (1)').first()).toBeVisible();
   });
 
-  test('Checkout flow', async ({ page }) => {
+  test('Checkout flow', async ({ page, request }) => {
+    // Checking out is allowed for a tenant_admin (a store owner testing
+    // their own store), but paying is customer-only — switch off the
+    // shared admin session (used elsewhere for speed, see global-setup.ts)
+    // to the seeded customer account for this flow.
+    const loginResponse = await request.post('http://localhost:8000/api/v1/auth/login', {
+      data: { email: 'customer@gmail.com', password: 'customer123', tenant_slug: tenantSlug },
+    });
+    const { access_token } = await loginResponse.json();
+    await page.context().addCookies([
+      { name: 'token', value: access_token, domain: 'localhost', path: '/' },
+      { name: 'tenantSlug', value: tenantSlug, domain: 'localhost', path: '/' },
+    ]);
+
     await page.goto(`/store/${tenantSlug}`);
-    
-    // add to cart first
+
+    // add to cart first — wait for the add to actually land server-side
+    // before navigating away, or /checkout can find an empty cart.
     await page.getByRole('button', { name: /add to cart/i }).first().click();
-    
+    await expect(page.locator('text=Cart (1)').first()).toBeVisible();
+
     // go to checkout
     await page.goto('/checkout');
-    
+
     // fill details
     await page.getByLabel(/name|first name/i).first().fill('John Doe');
     await page.getByLabel(/email/i).first().fill('john@example.com');
@@ -43,7 +58,12 @@ test.describe('Storefront & Checkout Flow', () => {
     
     // submit
     await page.getByRole('button', { name: /place order|submit/i }).click();
-    
+
+    // Checkout no longer finalizes the order outright — it creates it
+    // awaiting a (mock) payment step, which has to be completed too.
+    await expect(page.getByTestId('pending-payment')).toBeVisible({ timeout: 10000 });
+    await page.getByRole('button', { name: /pay now/i }).click();
+
     // Verify success
     await expect(page.locator('text=/success|thank you|confirmed/i').first()).toBeVisible({ timeout: 10000 });
   });
