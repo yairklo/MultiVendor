@@ -4,13 +4,16 @@ import React, { useState } from 'react'
 import { apiClient } from '@/lib/api/apiClient'
 import { getActiveCart } from '@/lib/cart'
 import { useCart } from '@/context/CartContext'
+import { useOrders } from '@/hooks/useOrders'
 
 export default function CheckoutPage() {
   const { cart, loading, clear } = useCart()
-  const [status, setStatus] = useState<string>('')
+  const { payOrder, cancelOrder } = useOrders()
   const [error, setError] = useState<string>('')
   const [submitting, setSubmitting] = useState(false)
-  const [orderPlaced, setOrderPlaced] = useState(false)
+  const [payingOrder, setPayingOrder] = useState<any>(null)
+  const [paymentDone, setPaymentDone] = useState(false)
+  const [payBusy, setPayBusy] = useState(false)
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [address, setAddress] = useState('')
@@ -39,13 +42,12 @@ export default function CheckoutPage() {
         }
       }
 
-      await apiClient(`/api/v1/store/${activeCart.tenantSlug}/cart/checkout`, {
+      const order = await apiClient(`/api/v1/store/${activeCart.tenantSlug}/cart/checkout`, {
         method: 'POST',
         body: JSON.stringify(payload),
       })
 
-      setStatus('Order placed successfully!')
-      setOrderPlaced(true)
+      setPayingOrder(order)
       clear()
     } catch (e: any) {
       if (e.status === 401) {
@@ -58,15 +60,84 @@ export default function CheckoutPage() {
     }
   }
 
+  const handlePay = async () => {
+    if (!payingOrder) return
+    setPayBusy(true)
+    setError('')
+    try {
+      await payOrder(payingOrder.id)
+      setPaymentDone(true)
+    } catch (e: any) {
+      setError(e.message || 'Payment failed.')
+    } finally {
+      setPayBusy(false)
+    }
+  }
+
+  const handleCancelPending = async () => {
+    if (!payingOrder) return
+    setPayBusy(true)
+    setError('')
+    try {
+      await cancelOrder(payingOrder.id)
+      setPayingOrder(null)
+    } catch (e: any) {
+      setError(e.message || 'Failed to cancel order.')
+    } finally {
+      setPayBusy(false)
+    }
+  }
+
   if (loading) {
     return <div className="max-w-4xl mx-auto p-6 text-gray-600">Loading your cart...</div>
   }
 
-  if (orderPlaced) {
+  if (payingOrder && paymentDone) {
     return (
       <div className="max-w-4xl mx-auto p-6 bg-gray-50 min-h-screen">
         <h1 className="text-3xl font-bold mb-4 text-gray-900 border-b pb-4">Checkout</h1>
-        <div className="p-4 bg-green-50 text-green-700 rounded-lg border border-green-100">{status}</div>
+        <div className="p-4 bg-green-50 text-green-700 rounded-lg border border-green-100">
+          Payment successful! Order {payingOrder.order_number} is now being processed.
+        </div>
+      </div>
+    )
+  }
+
+  if (payingOrder) {
+    return (
+      <div className="max-w-4xl mx-auto p-6 bg-gray-50 min-h-screen">
+        <h1 className="text-3xl font-bold mb-4 text-gray-900 border-b pb-4">Checkout</h1>
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-lg border border-red-100">{error}</div>
+        )}
+        <div data-testid="pending-payment" className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-4">
+          <div>
+            <h2 className="text-xl font-semibold">Order {payingOrder.order_number} is awaiting payment</h2>
+            <p className="text-gray-600 mt-1">
+              Total: <span className="font-bold">${Number(payingOrder.total_amount).toFixed(2)}</span>
+            </p>
+            <p className="text-sm text-amber-700 mt-2">
+              This is a development environment — payment is simulated. Unpaid orders are automatically
+              cancelled and their stock released if left pending too long.
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={handlePay}
+              disabled={payBusy}
+              className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 disabled:opacity-70"
+            >
+              {payBusy ? 'Processing...' : 'Pay Now'}
+            </button>
+            <button
+              onClick={handleCancelPending}
+              disabled={payBusy}
+              className="px-6 py-3 text-red-600 border border-red-200 rounded-xl font-medium hover:bg-red-50 disabled:opacity-70"
+            >
+              Cancel Order
+            </button>
+          </div>
+        </div>
       </div>
     )
   }

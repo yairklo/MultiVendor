@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { apiClient } from '@/lib/api/apiClient'
 import { getCookie } from 'cookies-next'
+import { orderStatusClass, orderStatusLabel } from '@/lib/orderStatus'
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<any[]>([])
@@ -49,13 +50,18 @@ export default function OrdersPage() {
             {orders.map(order => (
               <tr key={order.id} className="border-b border-gray-50 hover:bg-gray-50">
                 <td className="p-4 font-medium">#{order.id}</td>
-                <td className="p-4">{order.customer_email || 'Guest'}</td>
+                <td className="p-4">
+                  <div className="font-medium text-gray-900">{order.customer_name || 'Guest'}</div>
+                  {order.customer_email && (
+                    <div className="text-sm text-gray-500">{order.customer_email}</div>
+                  )}
+                </td>
                 <td className="p-4">${order.total_amount}</td>
                 <td className="p-4">
                   <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                    order.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                    orderStatusClass[order.status] || 'bg-gray-100 text-gray-700'
                   }`}>
-                    {order.status || 'Pending'}
+                    {orderStatusLabel[order.status] || order.status || 'Pending'}
                   </span>
                 </td>
               </tr>

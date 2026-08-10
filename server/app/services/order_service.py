@@ -5,8 +5,69 @@ from sqlalchemy.orm import selectinload
 from fastapi import HTTPException
 from app.models.tenant import Tenant
 from app.models.order import Order, OrderItem
+from app.models.user import User
 from app.models.catalog import ProductVariant, Product, ProductBundleItem
 from app.schemas.order_schemas import PaginatedOrderResponse, OrderResponse, OrderItemResponse
+
+def _order_to_response(order: Order, customer: User | None = None) -> OrderResponse:
+    return OrderResponse(
+        id=order.id,
+        tenant_id=order.tenant_id,
+        customer_id=order.user_id,
+        customer_name=customer.full_name if customer else None,
+        customer_email=customer.email if customer else None,
+        order_number=order.order_number,
+        subtotal=order.subtotal,
+        discount_amt=order.discount_amt,
+        shipping_method_id=order.shipping_method_id,
+        shipping_fee=order.shipping_fee,
+        total_amount=order.total_amount,
+        status=order.status,
+        order_type=order.order_type,
+        shipping_info=order.shipping_json or {},
+        created_at=order.created_at,
+        items=[OrderItemResponse(
+            id=i.id,
+            variant_id=i.variant_id,
+            product_name=i.product_name,
+            sku=i.sku,
+            unit_price=i.unit_price,
+            quantity=i.quantity
+        ) for i in order.items]
+    )
+
+async def list_tenant_orders_service(tenant_slug: str, db: AsyncSession) -> list[OrderResponse]:
+    tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
+    tenant_id = tenant_result.scalar_one_or_none()
+    if not tenant_id:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    result = await db.execute(
+        select(Order, User)
+        .join(User, User.id == Order.user_id)
+        .where(Order.tenant_id == tenant_id)
+        .options(selectinload(Order.items))
+        .order_by(Order.created_at.desc())
+    )
+    return [_order_to_response(order, customer) for order, customer in result.all()]
+
+async def get_tenant_order_service(tenant_slug: str, order_id: int, db: AsyncSession) -> OrderResponse:
+    tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
+    tenant_id = tenant_result.scalar_one_or_none()
+    if not tenant_id:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    result = await db.execute(
+        select(Order, User)
+        .join(User, User.id == Order.user_id)
+        .where(Order.tenant_id == tenant_id, Order.id == order_id)
+        .options(selectinload(Order.items))
+    )
+    row = result.first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Order not found")
+    order, customer = row
+    return _order_to_response(order, customer)
 
 async def restore_stock_for_order(order: Order, db: AsyncSession):
     # Determine variants to restore
@@ -63,33 +124,9 @@ async def list_customer_orders_service(user_id: int, page: int, page_size: int, 
     query = query.offset((page - 1) * page_size).limit(page_size)
     result = await db.execute(query)
     orders = result.scalars().all()
-    
-    order_responses = []
-    for order in orders:
-        order_responses.append(OrderResponse(
-            id=order.id,
-            tenant_id=order.tenant_id,
-            customer_id=order.user_id,
-            order_number=order.order_number,
-            subtotal=order.subtotal,
-            discount_amt=order.discount_amt,
-            shipping_method_id=order.shipping_method_id,
-            shipping_fee=order.shipping_fee,
-            total_amount=order.total_amount,
-            status=order.status,
-            order_type=order.order_type,
-            shipping_info=order.shipping_json or {},
-            created_at=order.created_at,
-            items=[OrderItemResponse(
-                id=i.id,
-                variant_id=i.variant_id,
-                product_name=i.product_name,
-                sku=i.sku,
-                unit_price=i.unit_price,
-                quantity=i.quantity
-            ) for i in order.items]
-        ))
-        
+
+    order_responses = [_order_to_response(order) for order in orders]
+
     total_pages = math.ceil(total / page_size) if total > 0 else 1
     return PaginatedOrderResponse(
         meta={"page": page, "page_size": page_size, "total": total, "total_pages": total_pages},
@@ -105,42 +142,36 @@ async def get_customer_order_service(user_id: int, order_id: int, db: AsyncSessi
     order = result.scalar_one_or_none()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
-        
-    return OrderResponse(
-        id=order.id,
-        tenant_id=order.tenant_id,
-        customer_id=order.user_id,
-        order_number=order.order_number,
-        subtotal=order.subtotal,
-        discount_amt=order.discount_amt,
-        shipping_method_id=order.shipping_method_id,
-        shipping_fee=order.shipping_fee,
-        total_amount=order.total_amount,
-        status=order.status,
-        order_type=order.order_type,
-        shipping_info=order.shipping_json or {},
-        created_at=order.created_at,
-        items=[OrderItemResponse(
-            id=i.id,
-            variant_id=i.variant_id,
-            product_name=i.product_name,
-            sku=i.sku,
-            unit_price=i.unit_price,
-            quantity=i.quantity
-        ) for i in order.items]
-    )
+
+    return _order_to_response(order)
 
 async def cancel_customer_order_service(user_id: int, order_id: int, db: AsyncSession):
     result = await db.execute(select(Order).options(selectinload(Order.items)).where(Order.id == order_id, Order.user_id == user_id))
     order = result.scalar_one_or_none()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
-        
-    if order.status != 'pending':
-        raise HTTPException(status_code=400, detail="Only pending orders can be cancelled")
-        
+
+    if order.status not in ('pending', 'pending_payment'):
+        raise HTTPException(status_code=400, detail="Only orders awaiting payment can be cancelled")
+
     order.status = 'cancelled'
     await restore_stock_for_order(order, db)
-    
+
     await db.commit()
     return {"status": "ok"}
+
+async def pay_order_service(user_id: int, order_id: int, db: AsyncSession) -> OrderResponse:
+    result = await db.execute(select(Order).options(selectinload(Order.items)).where(Order.id == order_id, Order.user_id == user_id))
+    order = result.scalar_one_or_none()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    if order.status != 'pending_payment':
+        raise HTTPException(status_code=400, detail="Order is not awaiting payment")
+
+    # Mock payment gateway: for local/dev use, "paying" always succeeds immediately.
+    order.status = 'processing'
+    await db.commit()
+    await db.refresh(order)
+
+    return _order_to_response(order)

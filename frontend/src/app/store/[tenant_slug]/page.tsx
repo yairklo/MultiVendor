@@ -1,14 +1,17 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { getCookie } from 'cookies-next'
 import { apiClient } from '@/lib/api/apiClient'
 import { useCart } from '@/context/CartContext'
+import { totalStock } from '@/lib/stock'
 
 type Lang = 'en' | 'he'
 
-const strings: Record<Lang, { cart: string; addToCart: string; noProducts: string; switcherLabel: string }> = {
-  en: { cart: 'Cart', addToCart: 'Add to Cart', noProducts: 'No products available at the moment.', switcherLabel: 'עברית' },
-  he: { cart: 'עגלה', addToCart: 'הוסף לעגלה', noProducts: 'אין מוצרים זמינים כרגע.', switcherLabel: 'English' },
+const strings: Record<Lang, { cart: string; addToCart: string; outOfStock: string; inStock: string; noProducts: string; switcherLabel: string; myOrders: string; login: string }> = {
+  en: { cart: 'Cart', addToCart: 'Add to Cart', outOfStock: 'Out of stock', inStock: 'in stock', noProducts: 'No products available at the moment.', switcherLabel: 'עברית', myOrders: 'My Orders', login: 'Login' },
+  he: { cart: 'עגלה', addToCart: 'הוסף לעגלה', outOfStock: 'אזל מהמלאי', inStock: 'במלאי', noProducts: 'אין מוצרים זמינים כרגע.', switcherLabel: 'English', myOrders: 'ההזמנות שלי', login: 'התחברות' },
 }
 
 export default function StorefrontPage(props: { params: Promise<{ tenant_slug: string }> | { tenant_slug: string } }) {
@@ -23,11 +26,12 @@ export default function StorefrontPage(props: { params: Promise<{ tenant_slug: s
   }, [props.params, isPromise])
 
   const [products, setProducts] = useState<any[]>([])
+  const [quantities, setQuantities] = useState<Record<number, number>>({})
   const [lang, setLang] = useState<Lang>('en')
   const t = strings[lang]
   const { cart, addItem, openDrawer } = useCart()
   const cartCount = cart?.items.reduce((sum, item) => sum + item.quantity, 0) ?? 0
-  
+
   useEffect(() => {
     if (!tenantSlug) return
     apiClient(`/api/v1/store/${tenantSlug}/products`)
@@ -41,11 +45,19 @@ export default function StorefrontPage(props: { params: Promise<{ tenant_slug: s
       })
   }, [tenantSlug])
 
+  const getQuantity = (productId: number) => quantities[productId] ?? 1
+
+  const setQuantity = (productId: number, qty: number, max: number) => {
+    const clamped = Math.max(1, Math.min(qty, Math.max(max, 1)))
+    setQuantities(prev => ({ ...prev, [productId]: clamped }))
+  }
+
   const handleAddToCart = async (product: any) => {
     const variantId = product.variants?.[0]?.id
     if (!variantId || !tenantSlug) return
     try {
-      await addItem(tenantSlug, variantId, 1)
+      await addItem(tenantSlug, variantId, getQuantity(product.id))
+      setQuantities(prev => ({ ...prev, [product.id]: 1 }))
     } catch (e) {
       console.error('Failed to add item to cart:', e)
     }
@@ -68,7 +80,14 @@ export default function StorefrontPage(props: { params: Promise<{ tenant_slug: s
         </button>
       </header>
 
-      <div className="mb-6 flex justify-end">
+      <div className="mb-6 flex justify-end items-center gap-3">
+        <Link
+          data-testid="account-link"
+          href={getCookie('token') ? '/account/orders' : '/login'}
+          className="font-medium text-gray-600 hover:text-blue-600 transition-colors"
+        >
+          {getCookie('token') ? t.myOrders : t.login}
+        </Link>
         <button
           data-testid="cart-icon"
           onClick={openDrawer}
@@ -79,18 +98,61 @@ export default function StorefrontPage(props: { params: Promise<{ tenant_slug: s
       </div>
 
       <div data-testid="product-grid" className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {products.map((p, i) => (
+        {products.map((p, i) => {
+          const stock = totalStock(p.variants)
+          const stockKnown = Number.isFinite(stock)
+          const outOfStock = stockKnown && stock <= 0
+          const qty = getQuantity(p.id)
+          return (
           <div key={i} className="bg-white border border-gray-100 p-5 rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300">
             <h2 className="text-lg font-bold mb-2">{typeof p.name === 'object' ? (p.name?.[lang] || p.name?.en || p.name?.he) : p.name}</h2>
-            <p className="text-gray-500 mb-4">${p.base_price || p.price}</p>
+            <p className="text-gray-500 mb-1">${p.base_price || p.price}</p>
+            {stockKnown && (
+              <p className={`text-sm mb-4 ${outOfStock ? 'text-red-600 font-medium' : 'text-gray-400'}`}>
+                {outOfStock ? t.outOfStock : `${stock} ${t.inStock}`}
+              </p>
+            )}
+
+            {!outOfStock && (
+              <div className="flex items-center gap-2 mb-3">
+                <button
+                  type="button"
+                  aria-label="Decrease quantity"
+                  onClick={() => setQuantity(p.id, qty - 1, stock)}
+                  className="w-8 h-8 border rounded-lg text-gray-700 hover:bg-gray-100"
+                >
+                  &minus;
+                </button>
+                <input
+                  type="number"
+                  aria-label="Quantity"
+                  min={1}
+                  max={stockKnown ? stock : undefined}
+                  value={qty}
+                  onChange={e => setQuantity(p.id, Number(e.target.value) || 1, stock)}
+                  className="w-12 text-center border rounded-lg py-1"
+                />
+                <button
+                  type="button"
+                  aria-label="Increase quantity"
+                  onClick={() => setQuantity(p.id, qty + 1, stock)}
+                  className="w-8 h-8 border rounded-lg text-gray-700 hover:bg-gray-100"
+                >
+                  +
+                </button>
+              </div>
+            )}
+
             <button
-              className="w-full mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 active:scale-95 transition-all"
+              className="w-full mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-600"
               onClick={() => handleAddToCart(p)}
+              disabled={outOfStock}
             >
-              {t.addToCart}
+              {outOfStock ? t.outOfStock : t.addToCart}
             </button>
           </div>
-        ))}
+          )
+        })}
         {products.length === 0 && (
           <div className="col-span-full text-center py-12 text-gray-500">
             {t.noProducts}

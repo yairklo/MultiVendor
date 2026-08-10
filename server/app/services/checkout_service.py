@@ -19,6 +19,11 @@ from app.schemas.order_schemas import (
 )
 from datetime import datetime, timezone
 
+def _resolve_product_name(name) -> str:
+    if isinstance(name, dict):
+        return name.get('en') or next(iter(name.values()), '')
+    return str(name)
+
 async def add_to_cart_service(tenant_slug: str, cart_id: UUID, req: AddToCartRequest, user_id: Optional[int], db: AsyncSession):
     tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
     tenant_id = tenant_result.scalar_one_or_none()
@@ -95,7 +100,7 @@ async def get_cart_service(tenant_slug: str, cart_id: UUID, db: AsyncSession) ->
         total_price = unit_price * item.quantity
         subtotal += total_price
         
-        product_name = product.name.get('en') or next(iter(product.name.values())) if isinstance(product.name, dict) else str(product.name)
+        product_name = _resolve_product_name(product.name)
 
         image_url = next((img.image_url for img in product.images if img.is_primary), None)
         if not image_url and product.images:
@@ -255,7 +260,7 @@ async def checkout_service(tenant_slug: str, req: CheckoutRequest, user_id: int,
             
             order_items_data.append({
                 "variant_id": item.variant.id,
-                "product_name": str(item.variant.product.name),
+                "product_name": _resolve_product_name(item.variant.product.name),
                 "sku": item.variant.sku,
                 "unit_price": unit_price,
                 "quantity": item.quantity
@@ -294,7 +299,7 @@ async def checkout_service(tenant_slug: str, req: CheckoutRequest, user_id: int,
             shipping_method_id=req.shipping_method_id if not is_entirely_digital else None,
             shipping_fee=shipping_fee,
             total_amount=total_amount,
-            status='pending',
+            status='pending_payment',
             order_type='digital' if is_entirely_digital else 'physical',
             shipping_json=req.shipping_address if not is_entirely_digital else None
         )

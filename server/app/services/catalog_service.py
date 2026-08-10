@@ -348,10 +348,52 @@ async def delete_product_service(tenant_slug: str, product_id: int, db: AsyncSes
     await db.commit()
 
 async def add_product_variant_service(tenant_slug: str, product_id: int, req: ProductVariantSchema, db: AsyncSession) -> ProductVariantSchema:
-    pass
+    tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
+    tenant_id = tenant_result.scalar_one_or_none()
+    if not tenant_id:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    product_result = await db.execute(select(Product).where(Product.id == product_id, Product.tenant_id == tenant_id))
+    product = product_result.scalar_one_or_none()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    variant = ProductVariant(
+        tenant_id=tenant_id,
+        product_id=product.id,
+        sku=req.sku,
+        attributes_json=req.attributes_json,
+        price_override=req.price_override,
+        stock_quantity=req.stock_quantity
+    )
+    db.add(variant)
+    await db.commit()
+    await db.refresh(variant)
+
+    return ProductVariantSchema.model_validate(variant)
 
 async def update_product_variant_service(tenant_slug: str, variant_id: int, req: ProductVariantSchema, db: AsyncSession) -> ProductVariantSchema:
-    pass
+    tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
+    tenant_id = tenant_result.scalar_one_or_none()
+    if not tenant_id:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    variant_result = await db.execute(
+        select(ProductVariant).where(ProductVariant.id == variant_id, ProductVariant.tenant_id == tenant_id)
+    )
+    variant = variant_result.scalar_one_or_none()
+    if not variant:
+        raise HTTPException(status_code=404, detail="Variant not found")
+
+    variant.sku = req.sku
+    variant.attributes_json = req.attributes_json
+    variant.price_override = req.price_override
+    variant.stock_quantity = req.stock_quantity
+
+    await db.commit()
+    await db.refresh(variant)
+
+    return ProductVariantSchema.model_validate(variant)
 
 async def update_review_status_service(tenant_slug: str, review_id: int, status: str, db: AsyncSession) -> ProductReviewResponse:
     tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))

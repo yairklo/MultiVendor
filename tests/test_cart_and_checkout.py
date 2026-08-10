@@ -113,3 +113,92 @@ async def test_checkout_success_creates_order_and_snapshot(async_client: AsyncCl
     }
     response = await async_client.post(f"/api/v1/store/tenant-a/cart/checkout", json=payload, headers=headers)
     assert response.status_code == 201
+
+
+async def _checkout_one_item(async_client: AsyncClient, headers: dict) -> dict:
+    cart_id = str(uuid.uuid4())
+    await async_client.post(f"/api/v1/store/tenant-a/cart/{cart_id}/items", json={"variant_id": 1, "quantity": 1})
+    payload = {
+        "cart_id": cart_id,
+        "coupon_code": None,
+        "shipping_address": {"city": "Tel Aviv"},
+        "payment_token": str(uuid.uuid4())
+    }
+    response = await async_client.post(f"/api/v1/store/tenant-a/cart/checkout", json=payload, headers=headers)
+    assert response.status_code == 201
+    return response.json()
+
+
+@pytest.mark.asyncio
+async def test_checkout_order_item_has_resolved_product_name(async_client: AsyncClient, seed_tokens):
+    # product.name is an i18n dict ({"en": ..., "he": ...}); the order item
+    # snapshot used to store str(dict) verbatim (e.g. "{'en': 'Product A1', ...}")
+    # instead of resolving it to a plain display string.
+    headers = {"Authorization": seed_tokens["customer_a"]}
+    order = await _checkout_one_item(async_client, headers)
+    assert order["items"][0]["product_name"] == "Product A1"
+
+
+@pytest.mark.asyncio
+async def test_checkout_creates_order_awaiting_mock_payment(async_client: AsyncClient, seed_tokens):
+    # Checkout reserves stock and creates the order, but it isn't "placed" until
+    # the (mock) payment step completes — otherwise there's nothing for the
+    # abandoned-checkout expiry job to ever find.
+    headers = {"Authorization": seed_tokens["customer_a"]}
+    order = await _checkout_one_item(async_client, headers)
+    assert order["status"] == "pending_payment"
+
+
+@pytest.mark.asyncio
+async def test_pay_order_marks_it_processing(async_client: AsyncClient, seed_tokens):
+    headers = {"Authorization": seed_tokens["customer_a"]}
+    order = await _checkout_one_item(async_client, headers)
+
+    response = await async_client.post(f"/api/v1/customer/orders/{order['id']}/pay", headers=headers)
+    assert response.status_code == 200
+    assert response.json()["status"] == "processing"
+
+    get_resp = await async_client.get(f"/api/v1/customer/orders/{order['id']}", headers=headers)
+    assert get_resp.json()["status"] == "processing"
+
+
+@pytest.mark.asyncio
+async def test_pay_order_twice_fails(async_client: AsyncClient, seed_tokens):
+    headers = {"Authorization": seed_tokens["customer_a"]}
+    order = await _checkout_one_item(async_client, headers)
+
+    first = await async_client.post(f"/api/v1/customer/orders/{order['id']}/pay", headers=headers)
+    assert first.status_code == 200
+
+    second = await async_client.post(f"/api/v1/customer/orders/{order['id']}/pay", headers=headers)
+    assert second.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_pay_order_requires_ownership(async_client: AsyncClient, seed_tokens):
+    headers_a = {"Authorization": seed_tokens["customer_a"]}
+    order = await _checkout_one_item(async_client, headers_a)
+
+    headers_b = {"Authorization": seed_tokens["customer_b"]}
+    response = await async_client.post(f"/api/v1/customer/orders/{order['id']}/pay", headers=headers_b)
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_cancel_order_awaiting_payment_restores_stock(async_client: AsyncClient, seed_tokens, db_session):
+    from sqlalchemy import select
+    from app.models.catalog import ProductVariant
+
+    headers = {"Authorization": seed_tokens["customer_a"]}
+
+    variant_before = (await db_session.execute(select(ProductVariant).where(ProductVariant.id == 1))).scalar_one()
+    stock_before = variant_before.stock_quantity
+
+    order = await _checkout_one_item(async_client, headers)
+    assert order["status"] == "pending_payment"
+
+    response = await async_client.delete(f"/api/v1/customer/orders/{order['id']}", headers=headers)
+    assert response.status_code == 200
+
+    variant_after = (await db_session.execute(select(ProductVariant).where(ProductVariant.id == 1))).scalar_one()
+    assert variant_after.stock_quantity == stock_before
