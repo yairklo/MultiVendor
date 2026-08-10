@@ -4,10 +4,12 @@ import React, { useState, useEffect } from 'react'
 import { apiClient } from '@/lib/api/apiClient'
 import { getCookie } from 'cookies-next'
 import { orderStatusClass, orderStatusLabel } from '@/lib/orderStatus'
+import { useToast } from '@/context/ToastContext'
 
 const MANUAL_STATUSES = ['pending', 'processing', 'completed', 'cancelled']
 
 export default function OrdersPage() {
+  const { showToast } = useToast()
   const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
@@ -45,7 +47,7 @@ export default function OrdersPage() {
       URL.revokeObjectURL(url)
     } catch (e) {
       console.error('Failed to export orders CSV:', e)
-      alert('Failed to export orders.')
+      showToast('Failed to export orders.', 'error')
     } finally {
       setExporting(false)
     }
@@ -58,9 +60,10 @@ export default function OrdersPage() {
         method: 'PATCH',
       })
       await fetchOrders()
+      showToast(`Order #${orderId} updated to ${orderStatusLabel[status] || status}`, 'success')
     } catch (e) {
       console.error('Failed to update order status:', e)
-      alert('Failed to update order status.')
+      showToast('Failed to update order status.', 'error')
     } finally {
       setUpdatingId(null)
     }

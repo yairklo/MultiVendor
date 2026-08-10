@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import CheckoutPage from '../page'
 import { CartProvider } from '@/context/CartContext'
+import { ToastProvider } from '@/context/ToastContext'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../../mocks/server'
 import type { Cart } from '@/lib/cart'
@@ -44,6 +45,8 @@ vi.mock('@/lib/cart', async () => {
   }
 })
 
+const renderCheckout = () => render(<ToastProvider><CartProvider><CheckoutPage /></CartProvider></ToastProvider>)
+
 describe('CheckoutPage', () => {
   beforeEach(() => {
     mockedCart = physicalCart
@@ -59,7 +62,7 @@ describe('CheckoutPage', () => {
   })
 
   it('renders item summary, shipping methods, coupon inputs, and shipping address for a physical cart', async () => {
-    render(<CartProvider><CheckoutPage /></CartProvider>)
+    renderCheckout()
     expect(await screen.findByTestId('item-summary')).toBeInTheDocument()
     expect(screen.getByText(/Premium Product/i)).toBeInTheDocument()
     expect(screen.getByTestId('shipping-methods')).toBeInTheDocument()
@@ -69,14 +72,14 @@ describe('CheckoutPage', () => {
 
   it('hides shipping address fields when the cart is digital-only', async () => {
     mockedCart = digitalCart
-    render(<CartProvider><CheckoutPage /></CartProvider>)
+    renderCheckout()
     expect(await screen.findByTestId('item-summary')).toBeInTheDocument()
     expect(screen.queryByTestId('shipping-address-fields')).not.toBeInTheDocument()
   })
 
   it('submits checkout, then completes the mock payment step', async () => {
     const user = userEvent.setup()
-    render(<CartProvider><CheckoutPage /></CartProvider>)
+    renderCheckout()
 
     await screen.findByTestId('item-summary')
     const submitButton = screen.getByRole('button', { name: /place order/i })
@@ -92,5 +95,23 @@ describe('CheckoutPage', () => {
     await user.click(payButton)
 
     expect(await screen.findByText(/payment successful/i)).toBeInTheDocument()
+  })
+
+  it('applies a coupon and reflects the discount in the total', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.post('http://localhost:8000/api/v1/store/test-tenant/coupons/validate', () => {
+        return HttpResponse.json({ id: 1, code: 'SAVE10', discount_type: 'percentage', discount_val: 10, used_count: 0, valid_until: '2037-01-01T00:00:00Z' })
+      })
+    )
+    renderCheckout()
+
+    await screen.findByTestId('item-summary')
+    await user.type(screen.getByPlaceholderText(/enter code/i), 'SAVE10')
+    await user.click(screen.getByRole('button', { name: /apply/i }))
+
+    expect(await screen.findByText(/SAVE10 applied/i)).toBeInTheDocument()
+    expect(screen.getByText('-$9.90')).toBeInTheDocument()
+    expect(screen.getByText('$89.10')).toBeInTheDocument()
   })
 })

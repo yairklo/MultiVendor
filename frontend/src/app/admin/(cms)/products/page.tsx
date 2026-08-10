@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react'
 import { useProducts } from '@/hooks/useProducts'
 import Link from 'next/link'
+import { useToast } from '@/context/ToastContext'
+import { useConfirm } from '@/context/ConfirmContext'
 
 import { Button, buttonVariants } from '@/components/ui/button'
 import {
@@ -14,30 +16,45 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { totalStock, stockLevel, stockLevelLabel, stockLevelClass } from '@/lib/stock'
+import { PaginationControls, PaginationMeta } from '@/components/ui/pagination-controls'
+import { TableRowSkeleton } from '@/components/ui/skeleton'
 
 export default function ProductsPage() {
   const { fetchProducts, deleteProduct } = useProducts()
+  const { showToast } = useToast()
+  const { confirm } = useConfirm()
   const [products, setProducts] = useState<any[]>([])
+  const [meta, setMeta] = useState<PaginationMeta | null>(null)
+  const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    loadProducts()
-  }, [])
+    loadProducts(page)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page])
 
-  const loadProducts = async () => {
+  const loadProducts = async (pageToLoad = page) => {
     setLoading(true)
-    const data = await fetchProducts()
+    const { data, meta } = await fetchProducts(pageToLoad)
     setProducts(data)
+    setMeta(meta)
     setLoading(false)
   }
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this product?')) return
+    const ok = await confirm({
+      title: 'Delete this product?',
+      description: 'This cannot be undone.',
+      confirmLabel: 'Delete',
+      variant: 'destructive',
+    })
+    if (!ok) return
     try {
       await deleteProduct(id)
       await loadProducts()
+      showToast('Product deleted', 'success')
     } catch (e: any) {
-      alert(e.message || 'Failed to delete product')
+      showToast(e.message || 'Failed to delete product', 'error')
     }
   }
 
@@ -63,9 +80,7 @@ export default function ProductsPage() {
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-8">Loading...</TableCell>
-              </TableRow>
+              Array.from({ length: 5 }, (_, i) => <TableRowSkeleton key={i} columns={5} />)
             ) : products.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-8 text-gray-500">No products found.</TableCell>
@@ -115,6 +130,7 @@ export default function ProductsPage() {
             )}
           </TableBody>
         </Table>
+        <PaginationControls meta={meta} onPageChange={setPage} />
       </div>
     </div>
   )

@@ -2,9 +2,17 @@ from fastapi import APIRouter, Depends, Query, Path
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 from app.db.session import get_db
+from app.deps import get_tenant_customer
+from app.models.user import User
 from app.schemas.tenant_schemas import TenantSettingsSchema
-from app.schemas.catalog_schemas import PaginatedProductResponse, ProductResponse
-from app.services.catalog_service import get_store_config_service, list_public_products_service, get_public_product_service
+from app.schemas.catalog_schemas import (
+    PaginatedProductResponse, ProductResponse, ProductReviewResponse, ProductReviewCreateRequest,
+    CategoryResponse
+)
+from app.services.catalog_service import (
+    get_store_config_service, list_public_products_service, get_public_product_service,
+    list_product_reviews_service, create_product_review_service, list_public_categories_service
+)
 
 storefront_router = APIRouter(prefix="/api/v1/store", tags=["Public Storefront"])
 
@@ -25,7 +33,23 @@ async def get_store_config(
     return await get_store_config_service(tenant_slug, db)
 
 @storefront_router.get(
-    "/{tenant_slug}/products", 
+    "/{tenant_slug}/categories",
+    response_model=list[CategoryResponse],
+    summary="List Storefront Categories",
+    description="Lists categories for a storefront's category filter/navigation.",
+    responses={
+        200: {"description": "Categories successfully retrieved."},
+        404: {"description": "Tenant store not found."}
+    }
+)
+async def get_public_categories(
+    tenant_slug: str = Path(..., title="Tenant Slug"),
+    db: AsyncSession = Depends(get_db)
+):
+    return await list_public_categories_service(tenant_slug, db)
+
+@storefront_router.get(
+    "/{tenant_slug}/products",
     response_model=PaginatedProductResponse,
     summary="List Public Storefront Products",
     description="Lists active products for a specific storefront. Includes pagination, optional search query matching, and category filtering.",
@@ -60,3 +84,40 @@ async def get_product(
     db: AsyncSession = Depends(get_db)
 ):
     return await get_public_product_service(tenant_slug, product_slug, db)
+
+@storefront_router.get(
+    "/{tenant_slug}/products/{product_slug}/reviews",
+    response_model=list[ProductReviewResponse],
+    summary="List Approved Product Reviews",
+    description="Lists approved reviews for a product, with resolved customer names.",
+    responses={
+        200: {"description": "Reviews successfully retrieved."},
+        404: {"description": "Product or Tenant store not found."}
+    }
+)
+async def get_product_reviews(
+    tenant_slug: str = Path(..., title="Tenant Slug"),
+    product_slug: str = Path(..., title="Product Slug"),
+    db: AsyncSession = Depends(get_db)
+):
+    return await list_product_reviews_service(tenant_slug, product_slug, db)
+
+@storefront_router.post(
+    "/{tenant_slug}/reviews",
+    response_model=ProductReviewResponse,
+    status_code=201,
+    summary="Submit a Product Review",
+    description="Authenticated customers can leave one review per product. Reviews are auto-approved unless the store has review moderation enabled, and are flagged as verified-buyer if the customer has a paid order containing the product.",
+    responses={
+        201: {"description": "Review submitted."},
+        400: {"description": "Already reviewed this product."},
+        404: {"description": "Product or Tenant store not found."}
+    }
+)
+async def submit_product_review(
+    req: ProductReviewCreateRequest,
+    tenant_slug: str = Path(..., title="Tenant Slug"),
+    user: User = Depends(get_tenant_customer),
+    db: AsyncSession = Depends(get_db)
+):
+    return await create_product_review_service(tenant_slug, user.id, req, db)

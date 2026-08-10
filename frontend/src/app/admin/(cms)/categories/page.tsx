@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react'
 import { useCategories } from '@/hooks/useCategories'
+import { useToast } from '@/context/ToastContext'
+import { useConfirm } from '@/context/ConfirmContext'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import * as z from 'zod'
@@ -32,6 +34,8 @@ const formSchema = z.object({
 
 export default function CategoriesPage() {
   const { fetchCategories, createCategory, deleteCategory } = useCategories()
+  const { showToast } = useToast()
+  const { confirm } = useConfirm()
   const [categories, setCategories] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
 
@@ -62,20 +66,27 @@ export default function CategoriesPage() {
       await createCategory(payload)
       form.reset()
       await loadCategories()
+      showToast('Category created', 'success')
     } catch (error: any) {
-      alert(error.message || 'Failed to create category')
+      showToast(error.message || 'Failed to create category', 'error')
     } finally {
       setLoading(false)
     }
   }
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Delete this category?')) return
+    const ok = await confirm({
+      title: 'Delete this category?',
+      confirmLabel: 'Delete',
+      variant: 'destructive',
+    })
+    if (!ok) return
     try {
       await deleteCategory(id)
       await loadCategories()
+      showToast('Category deleted', 'success')
     } catch (error: any) {
-      alert(error.message || 'Failed to delete category')
+      showToast(error.message || 'Failed to delete category', 'error')
     }
   }
 

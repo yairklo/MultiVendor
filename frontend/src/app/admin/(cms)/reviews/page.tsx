@@ -2,10 +2,13 @@
 
 import React, { useState, useEffect } from 'react'
 import { useReviews } from '@/hooks/useReviews'
+import { useToast } from '@/context/ToastContext'
 import { Button } from '@/components/ui/button'
+import { StarRating } from '@/components/ui/star-rating'
 
 export default function ReviewsPage() {
   const { fetchReviews, updateReviewStatus } = useReviews()
+  const { showToast } = useToast()
   const [reviews, setReviews] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [busyId, setBusyId] = useState<number | null>(null)
@@ -27,8 +30,9 @@ export default function ReviewsPage() {
     try {
       await updateReviewStatus(reviewId, status)
       await loadReviews()
+      showToast(status === 'approved' ? 'Review approved' : 'Review rejected', 'success')
     } catch (e: any) {
-      alert(e.message || 'Failed to update review')
+      showToast(e.message || 'Failed to update review', 'error')
     } finally {
       setBusyId(null)
     }
@@ -54,9 +58,7 @@ export default function ReviewsPage() {
                   <div className="text-sm text-gray-500">by {review.customer_name}</div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-amber-500 font-semibold">
-                    {'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}
-                  </span>
+                  <StarRating rating={review.rating} />
                   <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                     review.is_approved ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
                   }`}>

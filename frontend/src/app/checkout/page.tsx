@@ -5,10 +5,12 @@ import { apiClient } from '@/lib/api/apiClient'
 import { getActiveCart } from '@/lib/cart'
 import { useCart } from '@/context/CartContext'
 import { useOrders } from '@/hooks/useOrders'
+import { useToast } from '@/context/ToastContext'
 
 export default function CheckoutPage() {
   const { cart, loading, clear } = useCart()
   const { payOrder, cancelOrder } = useOrders()
+  const { showToast } = useToast()
   const [error, setError] = useState<string>('')
   const [submitting, setSubmitting] = useState(false)
   const [payingOrder, setPayingOrder] = useState<any>(null)
@@ -17,8 +19,41 @@ export default function CheckoutPage() {
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [address, setAddress] = useState('')
+  const [couponInput, setCouponInput] = useState('')
+  const [appliedCoupon, setAppliedCoupon] = useState<any>(null)
+  const [applyingCoupon, setApplyingCoupon] = useState(false)
 
   const activeCart = getActiveCart()
+
+  const subtotal = cart ? Number(cart.subtotal) : 0
+  const discountAmount = appliedCoupon
+    ? appliedCoupon.discount_type === 'percentage'
+      ? subtotal * (Number(appliedCoupon.discount_val) / 100)
+      : Math.min(Number(appliedCoupon.discount_val), subtotal)
+    : 0
+  const total = Math.max(subtotal - discountAmount, 0)
+
+  const handleApplyCoupon = async () => {
+    if (!activeCart || !couponInput.trim()) return
+    setApplyingCoupon(true)
+    try {
+      const coupon = await apiClient(
+        `/api/v1/store/${activeCart.tenantSlug}/coupons/validate?coupon_code=${encodeURIComponent(couponInput.trim())}`,
+        { method: 'POST' }
+      )
+      setAppliedCoupon(coupon)
+      showToast(`Coupon "${coupon.code}" applied`, 'success')
+    } catch (e: any) {
+      showToast(e.message || 'Invalid or expired coupon', 'error')
+    } finally {
+      setApplyingCoupon(false)
+    }
+  }
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null)
+    setCouponInput('')
+  }
 
   const isDigitalOnly = !!cart && cart.items.length > 0 && cart.items.every(item => item.product_type !== 'physical')
   const requiresShippingAddress = !!cart && cart.items.length > 0 && !isDigitalOnly
@@ -40,6 +75,10 @@ export default function CheckoutPage() {
           email,
           address_line_1: address,
         }
+      }
+
+      if (appliedCoupon) {
+        payload.coupon_code = appliedCoupon.code
       }
 
       const order = await apiClient(`/api/v1/store/${activeCart.tenantSlug}/cart/checkout`, {
@@ -229,16 +268,47 @@ export default function CheckoutPage() {
         <div className="space-y-6">
           <div data-testid="coupon-input" className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
             <h2 className="text-xl font-semibold mb-4">Coupon Code</h2>
-            <div className="flex gap-2">
-              <input type="text" placeholder="Enter code" className="flex-1 border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-600 outline-none text-gray-800" />
-              <button className="bg-gray-800 text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-900 transition-colors">Apply</button>
-            </div>
+            {appliedCoupon ? (
+              <div className="flex items-center justify-between bg-green-50 border border-green-100 rounded-lg px-3 py-2">
+                <span className="text-green-700 font-medium">{appliedCoupon.code} applied</span>
+                <button onClick={handleRemoveCoupon} className="text-sm text-red-600 hover:underline">Remove</button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Enter code"
+                  value={couponInput}
+                  onChange={e => setCouponInput(e.target.value)}
+                  className="flex-1 border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-600 outline-none text-gray-800"
+                />
+                <button
+                  onClick={handleApplyCoupon}
+                  disabled={applyingCoupon || !couponInput.trim()}
+                  className="bg-gray-800 text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-900 transition-colors disabled:opacity-50"
+                >
+                  {applyingCoupon ? 'Applying...' : 'Apply'}
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-            <div className="flex justify-between font-bold text-xl mb-6 text-gray-900">
-              <span>Total:</span>
-              <span>${Number(cart.subtotal).toFixed(2)}</span>
+            <div className="space-y-2 mb-6">
+              <div className="flex justify-between text-gray-600">
+                <span>Subtotal:</span>
+                <span>${subtotal.toFixed(2)}</span>
+              </div>
+              {appliedCoupon && (
+                <div className="flex justify-between text-green-600">
+                  <span>Discount ({appliedCoupon.code}):</span>
+                  <span>-${discountAmount.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between font-bold text-xl text-gray-900 pt-2 border-t">
+                <span>Total:</span>
+                <span>${total.toFixed(2)}</span>
+              </div>
             </div>
             <button
               onClick={handleCheckout}

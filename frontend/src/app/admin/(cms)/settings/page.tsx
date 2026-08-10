@@ -3,9 +3,11 @@
 import React, { useState, useEffect } from 'react'
 import { apiClient } from '@/lib/api/apiClient'
 import { getCookie } from 'cookies-next'
+import { useToast } from '@/context/ToastContext'
 
 export default function SettingsPage() {
   const tenantSlug = getCookie('tenantSlug') || 'test-tenant'
+  const { showToast } = useToast()
 
   const [formData, setFormData] = useState({
     currency: 'USD',
@@ -14,7 +16,6 @@ export default function SettingsPage() {
   })
   const [loading, setLoading] = useState(false)
   const [loadingSettings, setLoadingSettings] = useState(true)
-  const [success, setSuccess] = useState(false)
 
   useEffect(() => {
     apiClient(`/api/v1/store/${tenantSlug}/config`)
@@ -33,15 +34,14 @@ export default function SettingsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    setSuccess(false)
     try {
       await apiClient(`/api/v1/admin/store/${tenantSlug}/settings`, {
         method: 'PUT',
         body: JSON.stringify(formData)
       })
-      setSuccess(true)
+      showToast('Settings updated successfully!', 'success')
     } catch (err: any) {
-      alert(err.message || 'Failed to update settings')
+      showToast(err.message || 'Failed to update settings', 'error')
     } finally {
       setLoading(false)
     }
@@ -54,12 +54,6 @@ export default function SettingsPage() {
   return (
     <div className="max-w-2xl mx-auto">
       <h1 className="text-3xl font-bold text-gray-900 mb-8">Store Settings</h1>
-
-      {success && (
-        <div className="mb-6 p-4 bg-green-50 text-green-700 rounded-lg border border-green-100">
-          Settings updated successfully!
-        </div>
-      )}
 
       <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-6">
         <div>

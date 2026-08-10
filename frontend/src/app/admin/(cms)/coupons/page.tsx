@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react'
 import { useCoupons } from '@/hooks/useCoupons'
+import { useToast } from '@/context/ToastContext'
+import { useConfirm } from '@/context/ConfirmContext'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import * as z from 'zod'
@@ -36,6 +38,8 @@ const formSchema = z.object({
 
 export default function CouponsPage() {
   const { fetchCoupons, createCoupon, deleteCoupon } = useCoupons()
+  const { showToast } = useToast()
+  const { confirm } = useConfirm()
   const [coupons, setCoupons] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
 
@@ -73,20 +77,27 @@ export default function CouponsPage() {
       })
       form.reset()
       await loadCoupons()
+      showToast('Coupon created', 'success')
     } catch (error: any) {
-      alert(error.message || 'Failed to create coupon')
+      showToast(error.message || 'Failed to create coupon', 'error')
     } finally {
       setLoading(false)
     }
   }
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Delete this coupon?')) return
+    const ok = await confirm({
+      title: 'Delete this coupon?',
+      confirmLabel: 'Delete',
+      variant: 'destructive',
+    })
+    if (!ok) return
     try {
       await deleteCoupon(id)
       await loadCoupons()
+      showToast('Coupon deleted', 'success')
     } catch (error: any) {
-      alert(error.message || 'Failed to delete coupon')
+      showToast(error.message || 'Failed to delete coupon', 'error')
     }
   }
 
