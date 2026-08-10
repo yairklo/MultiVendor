@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { useProducts } from '@/hooks/useProducts'
+import { useCategories } from '@/hooks/useCategories'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -40,6 +41,8 @@ export default function EditProductPage(props: { params: Promise<{ id: string }>
 
   const router = useRouter()
   const { fetchProduct, updateProduct, updateVariant } = useProducts()
+  const { fetchCategories } = useCategories()
+  const [categories, setCategories] = useState<any[]>([])
   const [slug, setSlug] = useState('')
   const [variant, setVariant] = useState<any>(null)
   const [loading, setLoading] = useState(false)
@@ -57,6 +60,11 @@ export default function EditProductPage(props: { params: Promise<{ id: string }>
       is_active: true
     },
   })
+
+  useEffect(() => {
+    fetchCategories().then(setCategories)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     if (!productId) return
@@ -187,9 +195,20 @@ export default function EditProductPage(props: { params: Promise<{ id: string }>
                   name="category_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Category ID (Optional)</FormLabel>
+                      <FormLabel>Category (Optional)</FormLabel>
                       <FormControl>
-                        <Input type="number" {...field} value={field.value || ''} />
+                        <select
+                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                          value={field.value ?? ''}
+                          onChange={e => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                        >
+                          <option value="">No category</option>
+                          {categories.map(cat => (
+                            <option key={cat.id} value={cat.id}>
+                              {typeof cat.name === 'object' ? (cat.name?.en || cat.name?.he || 'Unnamed') : cat.name}
+                            </option>
+                          ))}
+                        </select>
                       </FormControl>
                       <FormMessage />
                     </FormItem>

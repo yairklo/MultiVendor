@@ -15,6 +15,22 @@ async def test_get_store_config_invalid_tenant(async_client: AsyncClient):
     assert response.status_code == 404
 
 @pytest.mark.asyncio
+async def test_get_store_config_with_null_supported_languages(async_client: AsyncClient, db_session):
+    # A settings row created before supported_languages was ever set (or via
+    # a path that leaves it NULL) used to 500 the whole config endpoint,
+    # since the response schema required a list.
+    from app.models.tenant import TenantSettings
+
+    db_session.add(TenantSettings(tenant_id=1, primary_color="#123456", currency="USD"))
+    await db_session.commit()
+
+    response = await async_client.get("/api/v1/store/tenant-a/config")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["supported_languages"] == ["he"]
+    assert data["primary_color"] == "#123456"
+
+@pytest.mark.asyncio
 async def test_list_products_with_pagination_and_search(async_client: AsyncClient):
     response = await async_client.get("/api/v1/store/tenant-a/products?page=1&page_size=10&q=test&category_id=1")
     assert response.status_code == 200

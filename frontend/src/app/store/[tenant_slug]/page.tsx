@@ -105,7 +105,9 @@ export default function StorefrontPage(props: { params: Promise<{ tenant_slug: s
           const qty = getQuantity(p.id)
           return (
           <div key={i} className="bg-white border border-gray-100 p-5 rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300">
-            <h2 className="text-lg font-bold mb-2">{typeof p.name === 'object' ? (p.name?.[lang] || p.name?.en || p.name?.he) : p.name}</h2>
+            <Link href={`/store/${tenantSlug}/products/${p.slug}`} className="hover:text-blue-600 transition-colors">
+              <h2 className="text-lg font-bold mb-2">{typeof p.name === 'object' ? (p.name?.[lang] || p.name?.en || p.name?.he) : p.name}</h2>
+            </Link>
             <p className="text-gray-500 mb-1">${p.base_price || p.price}</p>
             {stockKnown && (
               <p className={`text-sm mb-4 ${outOfStock ? 'text-red-600 font-medium' : 'text-gray-400'}`}>
