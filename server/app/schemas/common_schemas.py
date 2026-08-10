@@ -9,9 +9,11 @@ class UserRole(str, Enum):
 
 class OrderStatus(str, Enum):
     PENDING = "pending"
+    PENDING_PAYMENT = "pending_payment"
     PROCESSING = "processing"
     COMPLETED = "completed"
     CANCELLED = "cancelled"
+    EXPIRED = "expired"
     REFUNDED = "refunded"
 
 class DiscountType(str, Enum):

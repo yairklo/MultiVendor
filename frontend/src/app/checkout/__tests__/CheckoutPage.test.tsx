@@ -50,7 +50,10 @@ describe('CheckoutPage', () => {
     clearCartMock.mockClear()
     server.use(
       http.post('http://localhost:8000/api/v1/store/test-tenant/cart/checkout', () => {
-        return HttpResponse.json({ id: 1, order_number: 'ORD-1' }, { status: 201 })
+        return HttpResponse.json({ id: 1, order_number: 'ORD-1', total_amount: 99, status: 'pending_payment' }, { status: 201 })
+      }),
+      http.post('http://localhost:8000/api/v1/customer/orders/1/pay', () => {
+        return HttpResponse.json({ id: 1, order_number: 'ORD-1', total_amount: 99, status: 'processing' }, { status: 200 })
       })
     )
   })
@@ -71,7 +74,7 @@ describe('CheckoutPage', () => {
     expect(screen.queryByTestId('shipping-address-fields')).not.toBeInTheDocument()
   })
 
-  it('submits checkout and shows a success message', async () => {
+  it('submits checkout, then completes the mock payment step', async () => {
     const user = userEvent.setup()
     render(<CartProvider><CheckoutPage /></CartProvider>)
 
@@ -79,8 +82,15 @@ describe('CheckoutPage', () => {
     const submitButton = screen.getByRole('button', { name: /place order/i })
     await user.click(submitButton)
 
-    const confirmations = await screen.findAllByText(/order placed/i)
-    expect(confirmations.length).toBeGreaterThan(0)
+    // Checkout no longer finalizes the order outright — it creates it
+    // awaiting a (mock) payment step.
+    expect(await screen.findByTestId('pending-payment')).toBeInTheDocument()
+    expect(screen.getByText(/awaiting payment/i)).toBeInTheDocument()
     await waitFor(() => expect(clearCartMock).toHaveBeenCalled())
+
+    const payButton = screen.getByRole('button', { name: /pay now/i })
+    await user.click(payButton)
+
+    expect(await screen.findByText(/payment successful/i)).toBeInTheDocument()
   })
 })

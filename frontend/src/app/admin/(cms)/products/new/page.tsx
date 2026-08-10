@@ -1,7 +1,8 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useProducts } from '@/hooks/useProducts'
+import { useCategories } from '@/hooks/useCategories'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ApiError } from '@/lib/api/apiClient'
@@ -36,9 +37,16 @@ const formSchema = z.object({
 export default function NewProductPage() {
   const router = useRouter()
   const { createProduct } = useProducts()
+  const { fetchCategories } = useCategories()
+  const [categories, setCategories] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [limitReached, setLimitReached] = useState(false)
+
+  useEffect(() => {
+    fetchCategories().then(setCategories)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -192,9 +200,20 @@ export default function NewProductPage() {
                 name="category_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Category ID (Optional)</FormLabel>
+                    <FormLabel>Category (Optional)</FormLabel>
                     <FormControl>
-                      <Input type="number" {...field} value={field.value || ''} />
+                      <select
+                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                        value={field.value ?? ''}
+                        onChange={e => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                      >
+                        <option value="">No category</option>
+                        {categories.map(cat => (
+                          <option key={cat.id} value={cat.id}>
+                            {typeof cat.name === 'object' ? (cat.name?.en || cat.name?.he || 'Unnamed') : cat.name}
+                          </option>
+                        ))}
+                      </select>
                     </FormControl>
                     <FormMessage />
                   </FormItem>

@@ -1,3 +1,6 @@
+import asyncio
+import logging
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
@@ -9,6 +12,10 @@ from app.core.limiter import limiter
 from app.db.session import redis_client
 from sqlalchemy import text
 from app.db.session import AsyncSessionLocal
+from app.services.tasks import cleanup_abandoned_checkouts
+
+logger = logging.getLogger(__name__)
+CHECKOUT_CLEANUP_INTERVAL_SECONDS = 60
 
 openapi_tags = [
     {
@@ -39,12 +46,31 @@ openapi_tags = [
 
 from fastapi.middleware.cors import CORSMiddleware
 
+async def _checkout_cleanup_loop():
+    # Dev-only mock payment flow: orders left in "pending_payment" (the
+    # customer never clicked Pay, or walked away) are periodically expired
+    # and their reserved stock released. See app/services/tasks.py.
+    while True:
+        try:
+            async with AsyncSessionLocal() as session:
+                await cleanup_abandoned_checkouts(session)
+        except Exception:
+            logger.exception("checkout cleanup sweep failed")
+        await asyncio.sleep(CHECKOUT_CLEANUP_INTERVAL_SECONDS)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    cleanup_task = asyncio.create_task(_checkout_cleanup_loop())
+    yield
+    cleanup_task.cancel()
+
 app = FastAPI(
     title="MultiVendor Hub API",
     description="A fully featured Multi-Tenancy E-Commerce Platform API. Supports Row-Level Security, Redis Distributed Locks, and Subscription enforcement.",
     version="1.0.0",
     docs_url="/docs",
-    openapi_tags=openapi_tags
+    openapi_tags=openapi_tags,
+    lifespan=lifespan
 )
 
 app.add_middleware(

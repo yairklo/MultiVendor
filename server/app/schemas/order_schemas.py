@@ -73,6 +73,8 @@ class OrderResponse(BaseModel):
     id: int
     tenant_id: int
     customer_id: int
+    customer_name: Optional[str] = None
+    customer_email: Optional[str] = None
     order_number: str
     subtotal: Decimal
     discount_amt: Decimal

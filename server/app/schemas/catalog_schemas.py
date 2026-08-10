@@ -139,7 +139,9 @@ class ProductReviewCreateRequest(BaseModel):
 class ProductReviewResponse(BaseModel):
     id: int
     product_id: int
+    product_name: Optional[str] = None
     user_id: int
+    customer_name: Optional[str] = None
     rating: int
     comment: Optional[str]
     is_approved: bool

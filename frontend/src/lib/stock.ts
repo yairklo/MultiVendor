@@ -4,9 +4,16 @@ export interface StockVariant {
 
 export const LOW_STOCK_THRESHOLD = 5
 
+// Products/variants predating stock tracking (or test fixtures) may omit
+// stock_quantity entirely — that's "not tracked", not "zero", so it's kept
+// out of out-of-stock UI rather than silently blocking purchases.
+const UNTRACKED_STOCK = Number.POSITIVE_INFINITY
+
 export function totalStock(variants?: StockVariant[] | null): number {
   if (!variants || variants.length === 0) return 0
-  return variants.reduce((sum, v) => sum + (v.stock_quantity ?? 0), 0)
+  const tracked = variants.filter(v => typeof v.stock_quantity === 'number')
+  if (tracked.length === 0) return UNTRACKED_STOCK
+  return tracked.reduce((sum, v) => sum + (v.stock_quantity as number), 0)
 }
 
 export type StockLevel = 'out' | 'low' | 'in'

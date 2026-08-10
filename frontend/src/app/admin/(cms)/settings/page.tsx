@@ -1,19 +1,34 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { apiClient } from '@/lib/api/apiClient'
 import { getCookie } from 'cookies-next'
 
 export default function SettingsPage() {
   const tenantSlug = getCookie('tenantSlug') || 'test-tenant'
-  
+
   const [formData, setFormData] = useState({
     currency: 'USD',
     primary_color: '#3b82f6',
     default_language: 'en'
   })
   const [loading, setLoading] = useState(false)
+  const [loadingSettings, setLoadingSettings] = useState(true)
   const [success, setSuccess] = useState(false)
+
+  useEffect(() => {
+    apiClient(`/api/v1/store/${tenantSlug}/config`)
+      .then(config => {
+        setFormData({
+          currency: config.currency ?? 'USD',
+          primary_color: config.primary_color ?? '#3b82f6',
+          default_language: config.default_language ?? 'en',
+        })
+      })
+      .catch(e => console.error('Failed to load current store settings', e))
+      .finally(() => setLoadingSettings(false))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -30,6 +45,10 @@ export default function SettingsPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  if (loadingSettings) {
+    return <div className="max-w-2xl mx-auto text-gray-500">Loading settings...</div>
   }
 
   return (

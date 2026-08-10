@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { useProducts } from '@/hooks/useProducts'
+import { useCategories } from '@/hooks/useCategories'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -24,6 +25,7 @@ const formSchema = z.object({
   description: z.string().optional(),
   base_price: z.coerce.number().gt(0, 'Price must be positive'),
   category_id: z.coerce.number().optional().nullable(),
+  stock_quantity: z.coerce.number().min(0, 'Quantity cannot be negative'),
   is_active: z.boolean().default(true)
 })
 
@@ -38,8 +40,11 @@ export default function EditProductPage(props: { params: Promise<{ id: string }>
   }, [props.params, isPromise])
 
   const router = useRouter()
-  const { fetchProduct, updateProduct } = useProducts()
+  const { fetchProduct, updateProduct, updateVariant } = useProducts()
+  const { fetchCategories } = useCategories()
+  const [categories, setCategories] = useState<any[]>([])
   const [slug, setSlug] = useState('')
+  const [variant, setVariant] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [loadingProduct, setLoadingProduct] = useState(true)
   const [error, setError] = useState('')
@@ -51,15 +56,23 @@ export default function EditProductPage(props: { params: Promise<{ id: string }>
       description: '',
       base_price: 0,
       category_id: null,
+      stock_quantity: 0,
       is_active: true
     },
   })
+
+  useEffect(() => {
+    fetchCategories().then(setCategories)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     if (!productId) return
     fetchProduct(productId)
       .then(product => {
         setSlug(product.slug)
+        const firstVariant = product.variants?.[0] ?? null
+        setVariant(firstVariant)
         form.reset({
           name: typeof product.name === 'object' ? (product.name?.en || product.name?.he || '') : product.name,
           description: typeof product.description === 'object'
@@ -67,6 +80,7 @@ export default function EditProductPage(props: { params: Promise<{ id: string }>
             : (product.description || ''),
           base_price: Number(product.base_price),
           category_id: product.category_id ?? null,
+          stock_quantity: firstVariant?.stock_quantity ?? 0,
           is_active: product.is_active,
         })
       })
@@ -89,6 +103,16 @@ export default function EditProductPage(props: { params: Promise<{ id: string }>
       }
 
       await updateProduct(productId, payload)
+
+      if (variant) {
+        await updateVariant(variant.id, {
+          sku: variant.sku,
+          attributes_json: variant.attributes_json ?? {},
+          price_override: variant.price_override ?? null,
+          stock_quantity: values.stock_quantity,
+        })
+      }
+
       router.push('/admin/products')
     } catch (err: any) {
       setError(err.message || 'Failed to update product')
@@ -171,15 +195,45 @@ export default function EditProductPage(props: { params: Promise<{ id: string }>
                   name="category_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Category ID (Optional)</FormLabel>
+                      <FormLabel>Category (Optional)</FormLabel>
                       <FormControl>
-                        <Input type="number" {...field} value={field.value || ''} />
+                        <select
+                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                          value={field.value ?? ''}
+                          onChange={e => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                        >
+                          <option value="">No category</option>
+                          {categories.map(cat => (
+                            <option key={cat.id} value={cat.id}>
+                              {typeof cat.name === 'object' ? (cat.name?.en || cat.name?.he || 'Unnamed') : cat.name}
+                            </option>
+                          ))}
+                        </select>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
+
+              <FormField
+                control={form.control}
+                name="stock_quantity"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Stock Quantity</FormLabel>
+                    <FormControl>
+                      <Input type="number" {...field} disabled={!variant} />
+                    </FormControl>
+                    {!variant && (
+                      <p className="text-sm text-muted-foreground">
+                        This product has no variant to track stock against.
+                      </p>
+                    )}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}

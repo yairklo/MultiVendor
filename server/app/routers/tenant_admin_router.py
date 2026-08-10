@@ -11,20 +11,26 @@ from app.schemas.catalog_schemas import (
     ProductVariantSchema, CategoryCreateRequest, CategoryResponse,
     ProductReviewResponse
 )
+from app.schemas.order_schemas import OrderResponse, CouponCreateRequest, CouponResponse
+from app.schemas.auth_schemas import CustomerSummaryResponse
 from app.schemas.tenant_schemas import TenantSettingsSchema, TenantUpdateSchema, TenantResponse
 from app.services.catalog_service import (
     create_category_service, delete_category_service,
     create_product_service, get_admin_product_service, update_product_service, delete_product_service,
     add_product_variant_service, update_product_variant_service,
-    update_review_status_service, export_orders_csv_service
+    update_review_status_service, export_orders_csv_service, list_tenant_reviews_service
 )
 from app.services.tenant_service import (
     update_store_settings_service, update_tenant_service, get_tenant_analytics_service,
     upgrade_subscription_service, get_current_subscription_service
 )
-
-# For admin orders, we might need to import order service, but we can put it in catalog or tenant service for now or create order_service
-from app.services.order_service import update_order_status_service
+from app.services.order_service import (
+    update_order_status_service, list_tenant_orders_service, get_tenant_order_service,
+    list_tenant_customers_service
+)
+from app.services.coupon_service import (
+    list_tenant_coupons_service, create_tenant_coupon_service, delete_tenant_coupon_service
+)
 
 tenant_admin_router = APIRouter(prefix="/api/v1/admin/store/{tenant_slug}", tags=["Tenant Admin & CMS"])
 
@@ -205,6 +211,14 @@ async def update_store_settings(
     return await update_store_settings_service(tenant_slug, req, db)
 
 # REVIEWS MODERATION
+@tenant_admin_router.get("/reviews", response_model=list[ProductReviewResponse])
+async def get_tenant_reviews(
+    tenant_slug: str = Path(...),
+    admin: User = Depends(get_tenant_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    return await list_tenant_reviews_service(tenant_slug, db)
+
 @tenant_admin_router.patch("/reviews/{review_id}/status", response_model=ProductReviewResponse)
 async def update_review_status(
     review_id: int = Path(...),
@@ -261,43 +275,62 @@ async def get_analytics(
     return await get_tenant_analytics_service(tenant_slug, start_date, end_date, db)
 
 
-# ORDERS (Missing backlog endpoints)
-@tenant_admin_router.get('/orders')
+# ORDERS
+@tenant_admin_router.get('/orders', response_model=list[OrderResponse])
 async def get_tenant_orders(
     tenant_slug: str = Path(...),
     admin: User = Depends(get_tenant_admin),
     db: AsyncSession = Depends(get_db)
 ):
-    from app.models.order import Order
-    from sqlalchemy import select
-    from fastapi import HTTPException
-    
-    tenant_result = await db.execute(select(Tenant).where(Tenant.slug == tenant_slug))
-    tenant = tenant_result.scalar_one_or_none()
-    if not tenant:
-        raise HTTPException(status_code=404, detail='Tenant not found')
-        
-    result = await db.execute(select(Order).where(Order.tenant_id == tenant.id))
-    return result.scalars().all()
+    return await list_tenant_orders_service(tenant_slug, db)
 
-@tenant_admin_router.get('/orders/{order_id}')
+@tenant_admin_router.get('/orders/{order_id}', response_model=OrderResponse)
 async def get_tenant_order_details(
     order_id: int,
     tenant_slug: str = Path(...),
     admin: User = Depends(get_tenant_admin),
     db: AsyncSession = Depends(get_db)
 ):
-    from app.models.order import Order
-    from sqlalchemy import select
-    from fastapi import HTTPException
-    
-    tenant_result = await db.execute(select(Tenant).where(Tenant.slug == tenant_slug))
-    tenant = tenant_result.scalar_one_or_none()
-    if not tenant:
-        raise HTTPException(status_code=404, detail='Tenant not found')
-        
-    result = await db.execute(select(Order).where(Order.tenant_id == tenant.id, Order.id == order_id))
-    order = result.scalar_one_or_none()
-    if not order:
-        raise HTTPException(status_code=404, detail='Order not found')
-    return order
+    return await get_tenant_order_service(tenant_slug, order_id, db)
+
+# CUSTOMERS (CRM)
+@tenant_admin_router.get(
+    '/customers',
+    response_model=list[CustomerSummaryResponse],
+    summary="List Store Customers",
+    description="Lists customers who have an account with this store, with order count, total spend (from paid orders), and last order date."
+)
+async def get_tenant_customers(
+    tenant_slug: str = Path(...),
+    admin: User = Depends(get_tenant_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    return await list_tenant_customers_service(tenant_slug, db)
+
+# COUPONS
+@tenant_admin_router.get('/coupons', response_model=list[CouponResponse])
+async def get_tenant_coupons(
+    tenant_slug: str = Path(...),
+    admin: User = Depends(get_tenant_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    return await list_tenant_coupons_service(tenant_slug, db)
+
+@tenant_admin_router.post('/coupons', response_model=CouponResponse, status_code=status.HTTP_201_CREATED)
+async def create_tenant_coupon(
+    req: CouponCreateRequest,
+    tenant_slug: str = Path(...),
+    admin: User = Depends(get_tenant_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    return await create_tenant_coupon_service(tenant_slug, req, db)
+
+@tenant_admin_router.delete('/coupons/{coupon_id}', status_code=status.HTTP_204_NO_CONTENT)
+async def delete_tenant_coupon(
+    coupon_id: int = Path(...),
+    tenant_slug: str = Path(...),
+    admin: User = Depends(get_tenant_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    await delete_tenant_coupon_service(tenant_slug, coupon_id, db)
+    return None

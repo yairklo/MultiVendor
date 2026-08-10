@@ -156,7 +156,286 @@ async def test_export_orders_csv(async_client: AsyncClient, seed_tokens):
     assert response.status_code == 200
 
 @pytest.mark.asyncio
+async def test_export_orders_csv_contains_real_order_data(async_client: AsyncClient, seed_tokens, db_session):
+    # The export used to write one hardcoded row ("1", "100.00") regardless
+    # of what orders actually existed — verify it reflects real tenant data
+    # instead, and stays tenant-scoped.
+    from app.models.order import Order
+
+    headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+    db_session.add_all([
+        Order(tenant_id=1, user_id=4, order_number="ORD-CSV-TEST", subtotal=77, total_amount=77.50, status="completed"),
+        Order(tenant_id=2, user_id=5, order_number="ORD-TENANT-B", subtotal=10, total_amount=10.00, status="completed"),
+    ])
+    await db_session.commit()
+
+    response = await async_client.get("/api/v1/admin/store/tenant-a/reports/export?report_type=orders", headers=headers)
+    assert response.status_code == 200
+    body = response.text
+
+    assert "ORD-001" in body
+    assert "ORD-CSV-TEST" in body
+    assert "77.50" in body
+    # tenant-b's order must never leak into tenant-a's export.
+    assert "ORD-TENANT-B" not in body
+
+@pytest.mark.asyncio
 async def test_product_review_moderation(async_client: AsyncClient, seed_tokens):
     headers = {"Authorization": seed_tokens["tenant_admin_a"]}
     response = await async_client.patch("/api/v1/admin/store/tenant-a/reviews/1/status?status=approved", headers=headers)
     assert response.status_code == 200
+
+@pytest.mark.asyncio
+async def test_list_tenant_reviews_includes_product_and_customer_names(async_client: AsyncClient, seed_tokens):
+    # Review 1 is seeded on product 1 ("Product A1") by user 4 ("Customer A").
+    # Only PATCH .../status existed before — there was no way to list reviews
+    # for moderation at all.
+    headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+    response = await async_client.get("/api/v1/admin/store/tenant-a/reviews", headers=headers)
+    assert response.status_code == 200
+    body = response.json()
+    reviews = body["data"] if isinstance(body, dict) else body
+    review = next(r for r in reviews if r["id"] == 1)
+
+    assert review["product_name"] == "Product A1"
+    assert review["customer_name"] == "Customer A"
+    assert review["rating"] == 5
+
+@pytest.mark.asyncio
+async def test_list_tenant_reviews_is_tenant_isolated(async_client: AsyncClient, seed_tokens):
+    headers_b = {"Authorization": seed_tokens["tenant_admin_b"]}
+    response = await async_client.get("/api/v1/admin/store/tenant-a/reviews", headers=headers_b)
+    assert response.status_code == 403
+
+@pytest.mark.asyncio
+async def test_coupon_lifecycle_create_list_delete(async_client: AsyncClient, seed_tokens):
+    headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+    payload = {
+        "code": "NEWCODE10",
+        "discount_type": "percentage",
+        "discount_val": "10.00",
+        "min_order_amt": "0.00",
+        "usage_limit": 50,
+        "valid_until": "2037-12-31T23:59:59"
+    }
+
+    create_resp = await async_client.post("/api/v1/admin/store/tenant-a/coupons", json=payload, headers=headers)
+    assert create_resp.status_code == 201
+    coupon_id = create_resp.json()["id"]
+    assert create_resp.json()["code"] == "NEWCODE10"
+
+    list_resp = await async_client.get("/api/v1/admin/store/tenant-a/coupons", headers=headers)
+    assert list_resp.status_code == 200
+    coupons = list_resp.json()
+    assert any(c["code"] == "NEWCODE10" for c in coupons)
+
+    # Existing coupon VALID10 is seeded for tenant-a — verify it's listed too
+    # (a fresh call, not just the one we just created).
+    assert any(c["code"] == "VALID10" for c in coupons)
+
+    delete_resp = await async_client.delete(f"/api/v1/admin/store/tenant-a/coupons/{coupon_id}", headers=headers)
+    assert delete_resp.status_code == 204
+
+    list_after = await async_client.get("/api/v1/admin/store/tenant-a/coupons", headers=headers)
+    assert not any(c["code"] == "NEWCODE10" for c in list_after.json())
+
+@pytest.mark.asyncio
+async def test_create_coupon_duplicate_code_rejected(async_client: AsyncClient, seed_tokens):
+    headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+    payload = {
+        "code": "VALID10",  # already seeded for tenant-a
+        "discount_type": "percentage",
+        "discount_val": "5.00",
+        "valid_until": "2037-12-31T23:59:59"
+    }
+    response = await async_client.post("/api/v1/admin/store/tenant-a/coupons", json=payload, headers=headers)
+    assert response.status_code == 400
+
+@pytest.mark.asyncio
+async def test_coupons_are_tenant_isolated(async_client: AsyncClient, seed_tokens):
+    headers_a = {"Authorization": seed_tokens["tenant_admin_a"]}
+    headers_b = {"Authorization": seed_tokens["tenant_admin_b"]}
+
+    list_resp = await async_client.get("/api/v1/admin/store/tenant-a/coupons", headers=headers_b)
+    assert list_resp.status_code == 403
+
+    # tenant-a's seeded coupon id 1 (VALID10) must not be deletable by tenant-b.
+    delete_resp = await async_client.delete("/api/v1/admin/store/tenant-a/coupons/1", headers=headers_b)
+    assert delete_resp.status_code == 403
+
+    still_there = await async_client.get("/api/v1/admin/store/tenant-a/coupons", headers=headers_a)
+    assert any(c["code"] == "VALID10" for c in still_there.json())
+
+@pytest.mark.asyncio
+async def test_add_product_variant(async_client: AsyncClient, seed_tokens):
+    headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+    payload = {
+        "sku": "SKU-A1-2",
+        "attributes_json": {"color": "blue", "size": "L"},
+        "price_override": "12.50",
+        "stock_quantity": 25
+    }
+    response = await async_client.post(
+        "/api/v1/admin/store/tenant-a/products/1/variants", json=payload, headers=headers
+    )
+    assert response.status_code == 201
+    body = response.json()
+    assert body["sku"] == "SKU-A1-2"
+    assert body["stock_quantity"] == 25
+    assert float(body["price_override"]) == 12.50
+    assert body["id"] is not None
+
+    # The new variant shows up when the product is re-fetched.
+    get_resp = await async_client.get("/api/v1/admin/store/tenant-a/products/1", headers=headers)
+    skus = [v["sku"] for v in get_resp.json()["variants"]]
+    assert "SKU-A1-2" in skus
+
+@pytest.mark.asyncio
+async def test_add_product_variant_product_not_found(async_client: AsyncClient, seed_tokens):
+    headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+    payload = {"sku": "SKU-X", "stock_quantity": 1}
+    response = await async_client.post(
+        "/api/v1/admin/store/tenant-a/products/999999/variants", json=payload, headers=headers
+    )
+    assert response.status_code == 404
+
+@pytest.mark.asyncio
+async def test_add_product_variant_is_tenant_isolated(async_client: AsyncClient, seed_tokens):
+    # Product 1 belongs to tenant-a; tenant-b's admin must not be able to add a variant to it.
+    headers_b = {"Authorization": seed_tokens["tenant_admin_b"]}
+    payload = {"sku": "HIJACK-SKU", "stock_quantity": 1}
+    response = await async_client.post(
+        "/api/v1/admin/store/tenant-a/products/1/variants", json=payload, headers=headers_b
+    )
+    assert response.status_code == 403
+
+@pytest.mark.asyncio
+async def test_update_product_variant_persists_stock_and_price(async_client: AsyncClient, seed_tokens):
+    headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+    payload = {
+        "sku": "SKU-A1-1",
+        "attributes_json": {"color": "red"},
+        "price_override": "15.00",
+        "stock_quantity": 42
+    }
+    response = await async_client.put(
+        "/api/v1/admin/store/tenant-a/variants/1", json=payload, headers=headers
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["stock_quantity"] == 42
+    assert float(body["price_override"]) == 15.00
+    assert body["attributes_json"] == {"color": "red"}
+
+    get_resp = await async_client.get("/api/v1/admin/store/tenant-a/products/1", headers=headers)
+    updated_variant = next(v for v in get_resp.json()["variants"] if v["id"] == 1)
+    assert updated_variant["stock_quantity"] == 42
+
+@pytest.mark.asyncio
+async def test_update_product_variant_not_found(async_client: AsyncClient, seed_tokens):
+    headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+    payload = {"sku": "SKU-X", "stock_quantity": 1}
+    response = await async_client.put(
+        "/api/v1/admin/store/tenant-a/variants/999999", json=payload, headers=headers
+    )
+    assert response.status_code == 404
+
+@pytest.mark.asyncio
+async def test_update_product_variant_is_tenant_isolated(async_client: AsyncClient, seed_tokens):
+    # Variant 1 belongs to tenant-a; tenant-b's admin must not be able to modify it.
+    headers_b = {"Authorization": seed_tokens["tenant_admin_b"]}
+    payload = {"sku": "HIJACK-SKU", "stock_quantity": 999}
+    response = await async_client.put(
+        "/api/v1/admin/store/tenant-a/variants/1", json=payload, headers=headers_b
+    )
+    assert response.status_code == 403
+
+    headers_a = {"Authorization": seed_tokens["tenant_admin_a"]}
+    get_resp = await async_client.get("/api/v1/admin/store/tenant-a/products/1", headers=headers_a)
+    variant = next(v for v in get_resp.json()["variants"] if v["id"] == 1)
+    assert variant["sku"] != "HIJACK-SKU"
+
+@pytest.mark.asyncio
+async def test_list_tenant_orders_includes_customer_identity(async_client: AsyncClient, seed_tokens):
+    # Order 1 is seeded for user_id=4 ("Customer A", customer@tenanta.com). The
+    # admin orders list used to return the bare Order row (no customer_name/
+    # customer_email field exists on it), so the frontend always showed "Guest".
+    headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+    response = await async_client.get("/api/v1/admin/store/tenant-a/orders", headers=headers)
+    assert response.status_code == 200
+    body = response.json()
+    orders = body["data"] if isinstance(body, dict) else body
+    order = next(o for o in orders if o["id"] == 1)
+    assert order["customer_name"] == "Customer A"
+    assert order["customer_email"] == "customer@tenanta.com"
+
+@pytest.mark.asyncio
+async def test_get_tenant_order_includes_customer_identity(async_client: AsyncClient, seed_tokens):
+    headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+    response = await async_client.get("/api/v1/admin/store/tenant-a/orders/1", headers=headers)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["customer_name"] == "Customer A"
+    assert body["customer_email"] == "customer@tenanta.com"
+    assert body["items"] == [] or isinstance(body["items"], list)
+
+@pytest.mark.asyncio
+async def test_tenant_orders_are_tenant_isolated(async_client: AsyncClient, seed_tokens):
+    headers_b = {"Authorization": seed_tokens["tenant_admin_b"]}
+    response = await async_client.get("/api/v1/admin/store/tenant-a/orders", headers=headers_b)
+    assert response.status_code == 403
+
+    response = await async_client.get("/api/v1/admin/store/tenant-a/orders/1", headers=headers_b)
+    assert response.status_code in (403, 404)
+
+@pytest.mark.asyncio
+async def test_list_customers_aggregates_orders_and_spend(async_client: AsyncClient, seed_tokens, db_session):
+    from app.models.order import Order
+
+    headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+
+    # Seeded order #1 (user 4) is 'pending' — not counted as spend, but counts
+    # as an order. Add a paid order and a cancelled order for the same
+    # customer to exercise both sides of the aggregation.
+    db_session.add_all([
+        Order(tenant_id=1, user_id=4, order_number="ORD-PAID-1", subtotal=50, total_amount=50, status="completed"),
+        Order(tenant_id=1, user_id=4, order_number="ORD-CANCELLED-1", subtotal=30, total_amount=30, status="cancelled"),
+    ])
+    await db_session.commit()
+
+    response = await async_client.get("/api/v1/admin/store/tenant-a/customers", headers=headers)
+    assert response.status_code == 200
+    body = response.json()
+    customers = body["data"] if isinstance(body, dict) else body
+    customer = next(c for c in customers if c["email"] == "customer@tenanta.com")
+
+    assert customer["full_name"] == "Customer A"
+    assert customer["orders_count"] == 3
+    assert float(customer["total_spent"]) == 50.0
+
+@pytest.mark.asyncio
+async def test_list_customers_includes_customers_with_no_orders(async_client: AsyncClient, seed_tokens, db_session):
+    from app.models.user import User
+
+    headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+    db_session.add(User(
+        tenant_id=1, email="no-orders@tenanta.com", password_hash="x",
+        full_name="No Orders Yet", role="customer"
+    ))
+    await db_session.commit()
+
+    response = await async_client.get("/api/v1/admin/store/tenant-a/customers", headers=headers)
+    assert response.status_code == 200
+    body = response.json()
+    customers = body["data"] if isinstance(body, dict) else body
+    customer = next(c for c in customers if c["email"] == "no-orders@tenanta.com")
+
+    assert customer["orders_count"] == 0
+    assert float(customer["total_spent"]) == 0.0
+    assert customer["last_order_at"] is None
+
+@pytest.mark.asyncio
+async def test_list_customers_is_tenant_isolated(async_client: AsyncClient, seed_tokens):
+    headers_b = {"Authorization": seed_tokens["tenant_admin_b"]}
+    response = await async_client.get("/api/v1/admin/store/tenant-a/customers", headers=headers_b)
+    assert response.status_code == 403

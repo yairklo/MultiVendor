@@ -1,5 +1,5 @@
 from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, EmailStr, Field, ConfigDict
+from pydantic import BaseModel, EmailStr, Field, ConfigDict, field_validator
 from datetime import datetime
 from decimal import Decimal
 from app.schemas.common_schemas import PlanCode, PaginatedResponse
@@ -36,6 +36,15 @@ class TenantSettingsSchema(BaseModel):
     default_language: str = "he"
     review_moderation_enabled: bool = False
     allow_unverified_reviews: bool = True
+
+    @field_validator('supported_languages', mode='before')
+    @classmethod
+    def _default_supported_languages(cls, v):
+        # The column is nullable (rows created before a store ever configured
+        # languages), so a stored NULL means "not set" — fall back to the
+        # same default new settings get, rather than failing validation.
+        return v if v else ["he"]
+
     model_config = ConfigDict(json_schema_extra={
         "example": {
             "logo_url": "https://example.com/logo.png",
