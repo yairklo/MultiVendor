@@ -11,7 +11,7 @@ from app.schemas.catalog_schemas import (
     ProductVariantSchema, CategoryCreateRequest, CategoryResponse,
     ProductReviewResponse
 )
-from app.schemas.order_schemas import OrderResponse
+from app.schemas.order_schemas import OrderResponse, CouponCreateRequest, CouponResponse
 from app.schemas.auth_schemas import CustomerSummaryResponse
 from app.schemas.tenant_schemas import TenantSettingsSchema, TenantUpdateSchema, TenantResponse
 from app.services.catalog_service import (
@@ -27,6 +27,9 @@ from app.services.tenant_service import (
 from app.services.order_service import (
     update_order_status_service, list_tenant_orders_service, get_tenant_order_service,
     list_tenant_customers_service
+)
+from app.services.coupon_service import (
+    list_tenant_coupons_service, create_tenant_coupon_service, delete_tenant_coupon_service
 )
 
 tenant_admin_router = APIRouter(prefix="/api/v1/admin/store/{tenant_slug}", tags=["Tenant Admin & CMS"])
@@ -303,3 +306,31 @@ async def get_tenant_customers(
     db: AsyncSession = Depends(get_db)
 ):
     return await list_tenant_customers_service(tenant_slug, db)
+
+# COUPONS
+@tenant_admin_router.get('/coupons', response_model=list[CouponResponse])
+async def get_tenant_coupons(
+    tenant_slug: str = Path(...),
+    admin: User = Depends(get_tenant_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    return await list_tenant_coupons_service(tenant_slug, db)
+
+@tenant_admin_router.post('/coupons', response_model=CouponResponse, status_code=status.HTTP_201_CREATED)
+async def create_tenant_coupon(
+    req: CouponCreateRequest,
+    tenant_slug: str = Path(...),
+    admin: User = Depends(get_tenant_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    return await create_tenant_coupon_service(tenant_slug, req, db)
+
+@tenant_admin_router.delete('/coupons/{coupon_id}', status_code=status.HTTP_204_NO_CONTENT)
+async def delete_tenant_coupon(
+    coupon_id: int = Path(...),
+    tenant_slug: str = Path(...),
+    admin: User = Depends(get_tenant_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    await delete_tenant_coupon_service(tenant_slug, coupon_id, db)
+    return None

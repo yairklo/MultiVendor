@@ -208,6 +208,65 @@ async def test_list_tenant_reviews_is_tenant_isolated(async_client: AsyncClient,
     assert response.status_code == 403
 
 @pytest.mark.asyncio
+async def test_coupon_lifecycle_create_list_delete(async_client: AsyncClient, seed_tokens):
+    headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+    payload = {
+        "code": "NEWCODE10",
+        "discount_type": "percentage",
+        "discount_val": "10.00",
+        "min_order_amt": "0.00",
+        "usage_limit": 50,
+        "valid_until": "2037-12-31T23:59:59"
+    }
+
+    create_resp = await async_client.post("/api/v1/admin/store/tenant-a/coupons", json=payload, headers=headers)
+    assert create_resp.status_code == 201
+    coupon_id = create_resp.json()["id"]
+    assert create_resp.json()["code"] == "NEWCODE10"
+
+    list_resp = await async_client.get("/api/v1/admin/store/tenant-a/coupons", headers=headers)
+    assert list_resp.status_code == 200
+    coupons = list_resp.json()
+    assert any(c["code"] == "NEWCODE10" for c in coupons)
+
+    # Existing coupon VALID10 is seeded for tenant-a — verify it's listed too
+    # (a fresh call, not just the one we just created).
+    assert any(c["code"] == "VALID10" for c in coupons)
+
+    delete_resp = await async_client.delete(f"/api/v1/admin/store/tenant-a/coupons/{coupon_id}", headers=headers)
+    assert delete_resp.status_code == 204
+
+    list_after = await async_client.get("/api/v1/admin/store/tenant-a/coupons", headers=headers)
+    assert not any(c["code"] == "NEWCODE10" for c in list_after.json())
+
+@pytest.mark.asyncio
+async def test_create_coupon_duplicate_code_rejected(async_client: AsyncClient, seed_tokens):
+    headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+    payload = {
+        "code": "VALID10",  # already seeded for tenant-a
+        "discount_type": "percentage",
+        "discount_val": "5.00",
+        "valid_until": "2037-12-31T23:59:59"
+    }
+    response = await async_client.post("/api/v1/admin/store/tenant-a/coupons", json=payload, headers=headers)
+    assert response.status_code == 400
+
+@pytest.mark.asyncio
+async def test_coupons_are_tenant_isolated(async_client: AsyncClient, seed_tokens):
+    headers_a = {"Authorization": seed_tokens["tenant_admin_a"]}
+    headers_b = {"Authorization": seed_tokens["tenant_admin_b"]}
+
+    list_resp = await async_client.get("/api/v1/admin/store/tenant-a/coupons", headers=headers_b)
+    assert list_resp.status_code == 403
+
+    # tenant-a's seeded coupon id 1 (VALID10) must not be deletable by tenant-b.
+    delete_resp = await async_client.delete("/api/v1/admin/store/tenant-a/coupons/1", headers=headers_b)
+    assert delete_resp.status_code == 403
+
+    still_there = await async_client.get("/api/v1/admin/store/tenant-a/coupons", headers=headers_a)
+    assert any(c["code"] == "VALID10" for c in still_there.json())
+
+@pytest.mark.asyncio
 async def test_add_product_variant(async_client: AsyncClient, seed_tokens):
     headers = {"Authorization": seed_tokens["tenant_admin_a"]}
     payload = {
