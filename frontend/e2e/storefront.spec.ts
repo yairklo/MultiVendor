@@ -6,13 +6,6 @@ test.describe('Storefront & Checkout Flow', () => {
 
   test.beforeEach(async ({ page }) => {
     // We need at least one product to test the storefront. Let's create one.
-    await page.goto('/admin/login');
-    await page.getByLabel(/email/i).fill('admin@test-tenant.com');
-    await page.getByLabel(/password/i).fill('admin123');
-    await page.getByLabel(/store slug/i).fill(tenantSlug);
-    await page.getByRole('button', { name: /log\s*in|sign\s*in/i }).click();
-    await page.waitForURL(/\/admin\/(dashboard|products)/);
-
     await page.goto('/admin/products/new');
     await page.getByLabel(/Product Name/i).fill(productName);
     await page.getByLabel(/slug/i).fill(`storefront-e2e-${Date.now()}`);

@@ -35,12 +35,16 @@ export default function AdminLoginPage() {
         if (tenantSlug) {
           setCookie('tenantSlug', tenantSlug, { maxAge: 60 * 60 * 24 * 7, path: '/' })
         }
-        
-        // Simple logic to route based on email domain or user type, but for now just route to dashboard
-        if (email.includes('super')) {
+
+        // Route based on the role the backend actually returned, not a guess
+        // from the email — a customer account has no admin permissions and
+        // would otherwise land on /admin/dashboard and 403 on every request.
+        if (data.role === 'super_admin') {
           router.push('/super-admin')
-        } else {
+        } else if (data.role === 'tenant_admin') {
           router.push('/admin/dashboard')
+        } else {
+          router.push(`/store/${tenantSlug || 'test-tenant'}`)
         }
       }
     } catch (err: any) {

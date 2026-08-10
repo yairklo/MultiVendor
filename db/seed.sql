@@ -1,4 +1,4 @@
-USE multivendor_db;
+USE multivendor_test;
 SET FOREIGN_KEY_CHECKS = 0;
 TRUNCATE TABLE audit_logs;
 TRUNCATE TABLE order_items;

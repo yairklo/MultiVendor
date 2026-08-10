@@ -6,11 +6,11 @@ from app.db.session import get_db
 from app.deps import get_optional_user, get_tenant_customer
 from app.models.user import User
 from app.schemas.order_schemas import (
-    AddToCartRequest, CartResponse, CheckoutRequest, OrderResponse, CartItemResponse
+    AddToCartRequest, CartResponse, CheckoutRequest, OrderResponse, CartItemResponse, UpdateCartItemRequest
 )
 from app.services.checkout_service import (
     add_to_cart_service, get_cart_service, remove_from_cart_service,
-    checkout_service, validate_coupon_service
+    update_cart_item_service, checkout_service, validate_coupon_service
 )
 from fastapi import Request
 from app.core.limiter import limiter
@@ -72,6 +72,26 @@ async def remove_from_cart(
     db: AsyncSession = Depends(get_db)
 ):
     return await remove_from_cart_service(tenant_slug, cart_id, item_id, db)
+
+@cart_router.patch(
+    "/cart/{cart_id}/items/{item_id}",
+    summary="Update Cart Item Quantity",
+    description="Sets the exact quantity for a cart line item. Validates the new quantity against available stock.",
+    responses={
+        200: {"description": "Quantity updated."},
+        400: {"description": "Not enough stock for the requested quantity."},
+        404: {"description": "Item not found in cart."}
+    }
+)
+async def update_cart_item(
+    req: UpdateCartItemRequest,
+    tenant_slug: str = Path(...),
+    cart_id: UUID = Path(...),
+    item_id: int = Path(...),
+    user: Optional[User] = Depends(get_optional_user),
+    db: AsyncSession = Depends(get_db)
+):
+    return await update_cart_item_service(tenant_slug, cart_id, item_id, req.quantity, db)
 
 @cart_router.post(
     "/coupons/validate",

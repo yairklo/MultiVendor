@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import CheckoutPage from '../page'
+import { CartProvider } from '@/context/CartContext'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../../mocks/server'
 import type { Cart } from '@/lib/cart'
@@ -55,7 +56,7 @@ describe('CheckoutPage', () => {
   })
 
   it('renders item summary, shipping methods, coupon inputs, and shipping address for a physical cart', async () => {
-    render(<CheckoutPage />)
+    render(<CartProvider><CheckoutPage /></CartProvider>)
     expect(await screen.findByTestId('item-summary')).toBeInTheDocument()
     expect(screen.getByText(/Premium Product/i)).toBeInTheDocument()
     expect(screen.getByTestId('shipping-methods')).toBeInTheDocument()
@@ -65,14 +66,14 @@ describe('CheckoutPage', () => {
 
   it('hides shipping address fields when the cart is digital-only', async () => {
     mockedCart = digitalCart
-    render(<CheckoutPage />)
+    render(<CartProvider><CheckoutPage /></CartProvider>)
     expect(await screen.findByTestId('item-summary')).toBeInTheDocument()
     expect(screen.queryByTestId('shipping-address-fields')).not.toBeInTheDocument()
   })
 
   it('submits checkout and shows a success message', async () => {
     const user = userEvent.setup()
-    render(<CheckoutPage />)
+    render(<CartProvider><CheckoutPage /></CartProvider>)
 
     await screen.findByTestId('item-summary')
     const submitButton = screen.getByRole('button', { name: /place order/i })

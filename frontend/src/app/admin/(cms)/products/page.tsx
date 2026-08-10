@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { totalStock, stockLevel, stockLevelLabel, stockLevelClass } from '@/lib/stock'
 
 export default function ProductsPage() {
   const { fetchProducts, deleteProduct } = useProducts()
@@ -55,6 +56,7 @@ export default function ProductsPage() {
             <TableRow>
               <TableHead>Product Name</TableHead>
               <TableHead>Price</TableHead>
+              <TableHead>Stock</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -62,14 +64,17 @@ export default function ProductsPage() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-8">Loading...</TableCell>
+                <TableCell colSpan={5} className="text-center py-8">Loading...</TableCell>
               </TableRow>
             ) : products.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-8 text-gray-500">No products found.</TableCell>
+                <TableCell colSpan={5} className="text-center py-8 text-gray-500">No products found.</TableCell>
               </TableRow>
             ) : (
-              products.map(product => (
+              products.map(product => {
+                const stock = totalStock(product.variants)
+                const level = stockLevel(stock)
+                return (
                 <TableRow key={product.id}>
                   <TableCell>
                     <div className="font-bold">
@@ -81,6 +86,14 @@ export default function ProductsPage() {
                   </TableCell>
                   <TableCell>${product.base_price}</TableCell>
                   <TableCell>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{stock}</span>
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${stockLevelClass[level]}`}>
+                        {stockLevelLabel[level]}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
                     <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                       product.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
                     }`}>
@@ -88,11 +101,17 @@ export default function ProductsPage() {
                     </span>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" className="mr-2">Edit</Button>
+                    <Link
+                      href={`/admin/products/${product.id}/edit`}
+                      className={buttonVariants({ variant: 'ghost', size: 'sm', className: 'mr-2' })}
+                    >
+                      Edit
+                    </Link>
                     <Button variant="destructive" size="sm" onClick={() => handleDelete(product.id)}>Delete</Button>
                   </TableCell>
                 </TableRow>
-              ))
+                )
+              })
             )}
           </TableBody>
         </Table>

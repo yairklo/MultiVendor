@@ -12,8 +12,8 @@ class Settings(BaseSettings):
     DB_PORT: int = 3306
     DB_USER: str = "root"
     DB_PASSWORD: str = "rootpassword"
-    DB_NAME: str = "multivendor_db"
-    DATABASE_URL: str = "mysql+aiomysql://root:rootpassword@127.0.0.1:3306/multivendor_db"
+    DB_NAME: str = "multivendor_dev"
+    DATABASE_URL: str = "mysql+aiomysql://root:rootpassword@127.0.0.1:3306/multivendor_dev"
     
     REDIS_URL: str = "redis://127.0.0.1:6379/0"
     

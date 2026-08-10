@@ -1,8 +1,8 @@
 -- ================================================================================
 -- DATABASE CREATION & CONFIGURATION
 -- ================================================================================
-CREATE DATABASE IF NOT EXISTS multivendor_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE multivendor_db;
+CREATE DATABASE IF NOT EXISTS multivendor_dev CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE multivendor_dev;
 
 -- ================================================================================
 -- 1. SUBSCRIPTIONS & TENANTS LAYER

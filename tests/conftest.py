@@ -9,14 +9,22 @@ import os
 if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
+# Dedicated test database, isolated from the dev database (multivendor_dev).
+# Must be set *before* `app.main` (and therefore `app.core.config.settings`)
+# is imported below, since that's what app/db/session.py's get_db() — used
+# by every route the tests hit through the ASGI transport — reads from.
+# Without this, conftest's own fixtures would correctly target
+# multivendor_test while the app itself kept writing to multivendor_dev.
+DATABASE_URL = "mysql+aiomysql://root:rootpassword@127.0.0.1:3306/multivendor_test"
+os.environ["DATABASE_URL"] = DATABASE_URL
+os.environ["DB_NAME"] = "multivendor_test"
+
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'server'))
 from app.main import app
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 import redis.asyncio as redis
 from app.core.security import create_access_token
 
-# Setup Database connection
-DATABASE_URL = "mysql+aiomysql://root:rootpassword@127.0.0.1:3306/multivendor_db"
 engine = create_async_engine(DATABASE_URL, echo=False)
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
@@ -98,7 +106,7 @@ async def auto_clear_db():
     from sqlalchemy.ext.asyncio import create_async_engine
     from sqlalchemy import text
     import asyncio
-    engine = create_async_engine('mysql+aiomysql://root:rootpassword@127.0.0.1:3306/multivendor_db', echo=False)
+    engine = create_async_engine(DATABASE_URL, echo=False)
     async with engine.begin() as conn:
         await conn.execute(text('SET FOREIGN_KEY_CHECKS=0;'))
         

@@ -1,12 +1,12 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { apiClient } from '@/lib/api/apiClient'
-import { getActiveCart, fetchCart, clearCart, Cart } from '@/lib/cart'
+import { getActiveCart } from '@/lib/cart'
+import { useCart } from '@/context/CartContext'
 
 export default function CheckoutPage() {
-  const [cart, setCart] = useState<Cart | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { cart, loading, clear } = useCart()
   const [status, setStatus] = useState<string>('')
   const [error, setError] = useState<string>('')
   const [submitting, setSubmitting] = useState(false)
@@ -16,17 +16,6 @@ export default function CheckoutPage() {
   const [address, setAddress] = useState('')
 
   const activeCart = getActiveCart()
-
-  useEffect(() => {
-    if (!activeCart) {
-      setLoading(false)
-      return
-    }
-    fetchCart(activeCart.tenantSlug, activeCart.cartId)
-      .then(setCart)
-      .catch((e) => setError(e.message || 'Failed to load your cart.'))
-      .finally(() => setLoading(false))
-  }, [])
 
   const isDigitalOnly = !!cart && cart.items.length > 0 && cart.items.every(item => item.product_type !== 'physical')
   const requiresShippingAddress = !!cart && cart.items.length > 0 && !isDigitalOnly
@@ -57,7 +46,7 @@ export default function CheckoutPage() {
 
       setStatus('Order placed successfully!')
       setOrderPlaced(true)
-      clearCart()
+      clear()
     } catch (e: any) {
       if (e.status === 401) {
         setError('Please log in to complete checkout.')

@@ -14,6 +14,10 @@ export function useProducts() {
     }
   }
 
+  const fetchProduct = async (productId: number | string) => {
+    return apiClient(`/api/v1/admin/store/${tenantSlug}/products/${productId}`)
+  }
+
   const createProduct = async (payload: any) => {
     return apiClient(`/api/v1/admin/store/${tenantSlug}/products`, {
       method: 'POST',
@@ -34,10 +38,19 @@ export function useProducts() {
     })
   }
 
+  const updateVariant = async (variantId: number, payload: any) => {
+    return apiClient(`/api/v1/admin/store/${tenantSlug}/variants/${variantId}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload)
+    })
+  }
+
   return {
     fetchProducts,
+    fetchProduct,
     createProduct,
     updateProduct,
-    deleteProduct
+    deleteProduct,
+    updateVariant
   }
 }

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { apiClient } from '@/lib/api/apiClient'
-import { addItemToCart } from '@/lib/cart'
+import { useCart } from '@/context/CartContext'
 
 type Lang = 'en' | 'he'
 
@@ -23,9 +23,10 @@ export default function StorefrontPage(props: { params: Promise<{ tenant_slug: s
   }, [props.params, isPromise])
 
   const [products, setProducts] = useState<any[]>([])
-  const [cartCount, setCartCount] = useState(0)
   const [lang, setLang] = useState<Lang>('en')
   const t = strings[lang]
+  const { cart, addItem, openDrawer } = useCart()
+  const cartCount = cart?.items.reduce((sum, item) => sum + item.quantity, 0) ?? 0
   
   useEffect(() => {
     if (!tenantSlug) return
@@ -44,8 +45,7 @@ export default function StorefrontPage(props: { params: Promise<{ tenant_slug: s
     const variantId = product.variants?.[0]?.id
     if (!variantId || !tenantSlug) return
     try {
-      await addItemToCart(tenantSlug, variantId, 1)
-      setCartCount(c => c + 1)
+      await addItem(tenantSlug, variantId, 1)
     } catch (e) {
       console.error('Failed to add item to cart:', e)
     }
@@ -69,9 +69,13 @@ export default function StorefrontPage(props: { params: Promise<{ tenant_slug: s
       </header>
 
       <div className="mb-6 flex justify-end">
-        <div className="bg-blue-600 text-white px-4 py-2 rounded-full font-semibold shadow-md flex items-center gap-2">
+        <button
+          data-testid="cart-icon"
+          onClick={openDrawer}
+          className="bg-blue-600 text-white px-4 py-2 rounded-full font-semibold shadow-md flex items-center gap-2 hover:bg-blue-700 transition-colors"
+        >
           <span>{t.cart} ({cartCount})</span>
-        </div>
+        </button>
       </div>
 
       <div data-testid="product-grid" className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
