@@ -62,6 +62,45 @@ async def test_checkout_invalid_uuid(async_client: AsyncClient, seed_tokens):
     assert response.status_code == 422 # FastAPI should catch non-UUID
 
 @pytest.mark.asyncio
+async def test_update_cart_item_quantity_increases_and_decreases(async_client: AsyncClient, seed_tokens):
+    cart_id = str(uuid.uuid4())
+    add_resp = await async_client.post(f"/api/v1/store/tenant-a/cart/{cart_id}/items", json={"variant_id": 1, "quantity": 2})
+    assert add_resp.status_code == 201
+
+    cart = (await async_client.get(f"/api/v1/store/tenant-a/cart/{cart_id}")).json()
+    item_id = cart["items"][0]["id"]
+
+    up_resp = await async_client.patch(f"/api/v1/store/tenant-a/cart/{cart_id}/items/{item_id}", json={"quantity": 5})
+    assert up_resp.status_code == 200
+
+    cart = (await async_client.get(f"/api/v1/store/tenant-a/cart/{cart_id}")).json()
+    assert cart["items"][0]["quantity"] == 5
+    assert float(cart["items"][0]["total_price"]) == 5 * float(cart["items"][0]["unit_price"])
+
+    down_resp = await async_client.patch(f"/api/v1/store/tenant-a/cart/{cart_id}/items/{item_id}", json={"quantity": 1})
+    assert down_resp.status_code == 200
+    cart = (await async_client.get(f"/api/v1/store/tenant-a/cart/{cart_id}")).json()
+    assert cart["items"][0]["quantity"] == 1
+
+@pytest.mark.asyncio
+async def test_update_cart_item_insufficient_stock_rejected(async_client: AsyncClient, seed_tokens):
+    cart_id = str(uuid.uuid4())
+    await async_client.post(f"/api/v1/store/tenant-a/cart/{cart_id}/items", json={"variant_id": 1, "quantity": 1})
+    cart = (await async_client.get(f"/api/v1/store/tenant-a/cart/{cart_id}")).json()
+    item_id = cart["items"][0]["id"]
+
+    response = await async_client.patch(f"/api/v1/store/tenant-a/cart/{cart_id}/items/{item_id}", json={"quantity": 99999})
+    assert response.status_code == 400
+
+@pytest.mark.asyncio
+async def test_update_cart_item_not_found(async_client: AsyncClient, seed_tokens):
+    cart_id = str(uuid.uuid4())
+    await async_client.post(f"/api/v1/store/tenant-a/cart/{cart_id}/items", json={"variant_id": 1, "quantity": 1})
+
+    response = await async_client.patch(f"/api/v1/store/tenant-a/cart/{cart_id}/items/999999", json={"quantity": 2})
+    assert response.status_code == 404
+
+@pytest.mark.asyncio
 async def test_checkout_success_creates_order_and_snapshot(async_client: AsyncClient, seed_tokens):
     headers = {"Authorization": seed_tokens["customer_a"]}
     cart_id = str(uuid.uuid4())

@@ -17,6 +17,7 @@ export interface CartItem {
   unit_price: number
   quantity: number
   total_price: number
+  image_url?: string | null
 }
 
 export interface Cart {
@@ -72,4 +73,17 @@ export async function addItemToCart(tenantSlug: string, variantId: number, quant
 
 export async function fetchCart(tenantSlug: string, cartId: string): Promise<Cart> {
   return apiClient(`/api/v1/store/${tenantSlug}/cart/${cartId}`)
+}
+
+export async function updateItemQuantity(tenantSlug: string, cartId: string, itemId: number, quantity: number) {
+  return apiClient(`/api/v1/store/${tenantSlug}/cart/${cartId}/items/${itemId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ quantity }),
+  })
+}
+
+export async function removeCartItem(tenantSlug: string, cartId: string, itemId: number) {
+  return apiClient(`/api/v1/store/${tenantSlug}/cart/${cartId}/items/${itemId}`, {
+    method: 'DELETE',
+  })
 }

@@ -1,6 +1,10 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Authentication Flow', () => {
+  // This suite tests the login flow itself, so it must start unauthenticated
+  // rather than reusing the shared logged-in storageState.
+  test.use({ storageState: { cookies: [], origins: [] } });
+
   test('Login with valid credentials', async ({ page }) => {
     await page.goto('/admin/login');
     

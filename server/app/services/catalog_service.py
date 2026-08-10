@@ -252,12 +252,100 @@ async def create_product_service(tenant_slug: str, req: ProductCreateRequest, db
         created_at=product.created_at
     )
 
+async def get_admin_product_service(tenant_slug: str, product_id: int, db: AsyncSession) -> ProductResponse:
+    tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
+    tenant_id = tenant_result.scalar_one_or_none()
+    if not tenant_id:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    query = select(Product).where(Product.id == product_id, Product.tenant_id == tenant_id)
+    query = query.options(selectinload(Product.variants), selectinload(Product.images))
+    result = await db.execute(query)
+    product = result.scalar_one_or_none()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    primary_image = next((img.image_url for img in product.images if img.is_primary), None)
+    if not primary_image and product.images:
+        primary_image = product.images[0].image_url
+
+    return ProductResponse(
+        id=product.id,
+        tenant_id=product.tenant_id,
+        category_id=product.category_id,
+        name=product.name,
+        slug=product.slug,
+        description=product.description,
+        base_price=product.base_price,
+        is_active=product.is_active,
+        product_type=product.product_type,
+        digital_file_url=product.digital_file_url,
+        download_limit=product.download_limit,
+        is_bundle=product.is_bundle,
+        variants=[ProductVariantSchema.model_validate(v) for v in product.variants],
+        primary_image_url=primary_image,
+        images=[img.image_url for img in product.images],
+        created_at=product.created_at
+    )
+
 async def update_product_service(tenant_slug: str, product_id: int, req: ProductUpdateRequest, db: AsyncSession) -> ProductResponse:
-    # Basic implementation
-    return await get_public_product_service(tenant_slug, "placeholder", db)
+    tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
+    tenant_id = tenant_result.scalar_one_or_none()
+    if not tenant_id:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    query = select(Product).where(Product.id == product_id, Product.tenant_id == tenant_id)
+    query = query.options(selectinload(Product.variants), selectinload(Product.images))
+    result = await db.execute(query)
+    product = result.scalar_one_or_none()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    # bundle_items lives on a separate association table, not a Product column;
+    # editing bundle composition isn't wired up here, so leave it untouched.
+    update_fields = req.model_dump(exclude_unset=True, exclude={"bundle_items"})
+    for field, value in update_fields.items():
+        setattr(product, field, value)
+
+    await db.commit()
+    await db.refresh(product)
+
+    primary_image = next((img.image_url for img in product.images if img.is_primary), None)
+    if not primary_image and product.images:
+        primary_image = product.images[0].image_url
+
+    return ProductResponse(
+        id=product.id,
+        tenant_id=product.tenant_id,
+        category_id=product.category_id,
+        name=product.name,
+        slug=product.slug,
+        description=product.description,
+        base_price=product.base_price,
+        is_active=product.is_active,
+        product_type=product.product_type,
+        digital_file_url=product.digital_file_url,
+        download_limit=product.download_limit,
+        is_bundle=product.is_bundle,
+        variants=[ProductVariantSchema.model_validate(v) for v in product.variants],
+        primary_image_url=primary_image,
+        images=[img.image_url for img in product.images],
+        created_at=product.created_at
+    )
 
 async def delete_product_service(tenant_slug: str, product_id: int, db: AsyncSession):
-    pass
+    tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
+    tenant_id = tenant_result.scalar_one_or_none()
+    if not tenant_id:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    product_result = await db.execute(select(Product).where(Product.id == product_id, Product.tenant_id == tenant_id))
+    product = product_result.scalar_one_or_none()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    await db.delete(product)
+    await db.commit()
 
 async def add_product_variant_service(tenant_slug: str, product_id: int, req: ProductVariantSchema, db: AsyncSession) -> ProductVariantSchema:
     pass

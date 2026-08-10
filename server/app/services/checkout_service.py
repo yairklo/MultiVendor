@@ -75,7 +75,12 @@ async def get_cart_service(tenant_slug: str, cart_id: UUID, db: AsyncSession) ->
     cart_result = await db.execute(
         select(Cart)
         .where(Cart.id == str(cart_id))
-        .options(selectinload(Cart.items).selectinload(CartItem.variant).selectinload(ProductVariant.product))
+        .options(
+            selectinload(Cart.items)
+            .selectinload(CartItem.variant)
+            .selectinload(ProductVariant.product)
+            .selectinload(Product.images)
+        )
     )
     cart = cart_result.scalar_one_or_none()
     if not cart:
@@ -92,6 +97,10 @@ async def get_cart_service(tenant_slug: str, cart_id: UUID, db: AsyncSession) ->
         
         product_name = product.name.get('en') or next(iter(product.name.values())) if isinstance(product.name, dict) else str(product.name)
 
+        image_url = next((img.image_url for img in product.images if img.is_primary), None)
+        if not image_url and product.images:
+            image_url = product.images[0].image_url
+
         items.append(CartItemResponse(
             id=item.id,
             variant_id=variant.id,
@@ -101,7 +110,8 @@ async def get_cart_service(tenant_slug: str, cart_id: UUID, db: AsyncSession) ->
             attributes=variant.attributes_json or {},
             unit_price=unit_price,
             quantity=item.quantity,
-            total_price=total_price
+            total_price=total_price,
+            image_url=image_url
         ))
 
     return CartResponse(
@@ -120,6 +130,23 @@ async def remove_from_cart_service(tenant_slug: str, cart_id: UUID, item_id: int
         raise HTTPException(status_code=404, detail="Item not found")
 
     await db.delete(item)
+    await db.commit()
+    return {"status": "ok"}
+
+async def update_cart_item_service(tenant_slug: str, cart_id: UUID, item_id: int, quantity: int, db: AsyncSession):
+    item_result = await db.execute(
+        select(CartItem).join(Cart).where(Cart.id == str(cart_id), CartItem.id == item_id)
+    )
+    item = item_result.scalar_one_or_none()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    variant_result = await db.execute(select(ProductVariant).where(ProductVariant.id == item.variant_id))
+    variant = variant_result.scalar_one_or_none()
+    if variant and variant.stock_quantity < quantity:
+        raise HTTPException(status_code=400, detail="Not enough stock")
+
+    item.quantity = quantity
     await db.commit()
     return {"status": "ok"}
 

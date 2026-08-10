@@ -15,6 +15,14 @@ class AddToCartRequest(BaseModel):
         }
     })
 
+class UpdateCartItemRequest(BaseModel):
+    quantity: int = Field(..., ge=1)
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "quantity": 3
+        }
+    })
+
 class CartItemResponse(BaseModel):
     id: int
     variant_id: int
@@ -25,6 +33,7 @@ class CartItemResponse(BaseModel):
     unit_price: Decimal
     quantity: int
     total_price: Decimal
+    image_url: Optional[str] = None
 
 class CartResponse(BaseModel):
     cart_id: UUID

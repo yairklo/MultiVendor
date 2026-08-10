@@ -1,15 +1,6 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Products Management', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/admin/login');
-    await page.getByLabel(/email/i).fill('admin@test-tenant.com');
-    await page.getByLabel(/password/i).fill('admin123');
-    await page.getByLabel(/store slug/i).fill('test-tenant');
-    await page.getByRole('button', { name: /log\s*in|sign\s*in/i }).click();
-    await page.waitForURL(/\/admin\/(dashboard|products)/);
-  });
-
   test('Create Product', async ({ page }) => {
     const uniqueId = Date.now();
     const productName = `E2E Test Product ${uniqueId}`;

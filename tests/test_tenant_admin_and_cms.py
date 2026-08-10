@@ -54,6 +54,79 @@ async def test_create_product_exceeding_subscription_limit(async_client: AsyncCl
     assert "Maximum number of products" in response.text
 
 @pytest.mark.asyncio
+async def test_get_update_delete_product_lifecycle(async_client: AsyncClient, seed_tokens):
+    headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+    create_payload = {
+        "name": {"en": "Editable Product", "he": "מוצר לעריכה"},
+        "slug": "editable-product",
+        "base_price": "50.00",
+        "is_active": True,
+        "variants": [{"sku": "EDIT-1", "stock_quantity": 5}],
+        "images": []
+    }
+    create_resp = await async_client.post("/api/v1/admin/store/tenant-a/products", json=create_payload, headers=headers)
+    assert create_resp.status_code == 201
+    product_id = create_resp.json()["id"]
+
+    # GET returns the product, prefill-ready
+    get_resp = await async_client.get(f"/api/v1/admin/store/tenant-a/products/{product_id}", headers=headers)
+    assert get_resp.status_code == 200
+    assert get_resp.json()["name"]["en"] == "Editable Product"
+
+    # PUT actually persists the change — this used to be a stub that ignored the request
+    update_resp = await async_client.put(
+        f"/api/v1/admin/store/tenant-a/products/{product_id}",
+        json={"name": {"en": "Renamed Product", "he": "מוצר לעריכה"}, "base_price": "75.00"},
+        headers=headers
+    )
+    assert update_resp.status_code == 200
+    assert update_resp.json()["name"]["en"] == "Renamed Product"
+    assert float(update_resp.json()["base_price"]) == 75.00
+
+    reget_resp = await async_client.get(f"/api/v1/admin/store/tenant-a/products/{product_id}", headers=headers)
+    assert reget_resp.json()["name"]["en"] == "Renamed Product"
+
+    # DELETE actually removes the row — this used to be a no-op stub
+    delete_resp = await async_client.delete(f"/api/v1/admin/store/tenant-a/products/{product_id}", headers=headers)
+    assert delete_resp.status_code == 204
+
+    postdelete_resp = await async_client.get(f"/api/v1/admin/store/tenant-a/products/{product_id}", headers=headers)
+    assert postdelete_resp.status_code == 404
+
+@pytest.mark.asyncio
+async def test_product_get_update_delete_are_tenant_isolated(async_client: AsyncClient, seed_tokens):
+    headers_a = {"Authorization": seed_tokens["tenant_admin_a"]}
+    headers_b = {"Authorization": seed_tokens["tenant_admin_b"]}
+    create_payload = {
+        "name": {"en": "Tenant A Only", "he": "רק לדייר א"},
+        "slug": "tenant-a-only",
+        "base_price": "30.00",
+        "is_active": True,
+        "variants": [],
+        "images": []
+    }
+    create_resp = await async_client.post("/api/v1/admin/store/tenant-a/products", json=create_payload, headers=headers_a)
+    product_id = create_resp.json()["id"]
+
+    # tenant-b's admin acting against tenant-a's product route must not see or affect it
+    get_resp = await async_client.get(f"/api/v1/admin/store/tenant-a/products/{product_id}", headers=headers_b)
+    assert get_resp.status_code == 403
+
+    update_resp = await async_client.put(
+        f"/api/v1/admin/store/tenant-a/products/{product_id}",
+        json={"name": {"en": "Hijacked", "he": "נחטף"}},
+        headers=headers_b
+    )
+    assert update_resp.status_code == 403
+
+    delete_resp = await async_client.delete(f"/api/v1/admin/store/tenant-a/products/{product_id}", headers=headers_b)
+    assert delete_resp.status_code == 403
+
+    still_there = await async_client.get(f"/api/v1/admin/store/tenant-a/products/{product_id}", headers=headers_a)
+    assert still_there.status_code == 200
+    assert still_there.json()["name"]["en"] == "Tenant A Only"
+
+@pytest.mark.asyncio
 async def test_update_order_status(async_client: AsyncClient, seed_tokens):
     headers = {"Authorization": seed_tokens["tenant_admin_a"]}
     response = await async_client.patch("/api/v1/admin/store/tenant-a/orders/1/status?status=processing", headers=headers)

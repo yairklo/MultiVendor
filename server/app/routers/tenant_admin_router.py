@@ -14,7 +14,7 @@ from app.schemas.catalog_schemas import (
 from app.schemas.tenant_schemas import TenantSettingsSchema, TenantUpdateSchema, TenantResponse
 from app.services.catalog_service import (
     create_category_service, delete_category_service,
-    create_product_service, update_product_service, delete_product_service,
+    create_product_service, get_admin_product_service, update_product_service, delete_product_service,
     add_product_variant_service, update_product_variant_service,
     update_review_status_service, export_orders_csv_service
 )
@@ -89,6 +89,15 @@ async def create_product(
     db: AsyncSession = Depends(get_db)
 ):
     return await create_product_service(tenant_slug, req, db)
+
+@tenant_admin_router.get("/products/{product_id}", response_model=ProductResponse)
+async def get_product(
+    product_id: int = Path(...),
+    tenant_slug: str = Path(...),
+    admin: User = Depends(get_tenant_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    return await get_admin_product_service(tenant_slug, product_id, db)
 
 @tenant_admin_router.put("/products/{product_id}", response_model=ProductResponse)
 async def update_product(
