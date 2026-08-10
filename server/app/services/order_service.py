@@ -1,6 +1,6 @@
 import math
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, case
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException
 from app.models.tenant import Tenant
@@ -8,6 +8,9 @@ from app.models.order import Order, OrderItem
 from app.models.user import User
 from app.models.catalog import ProductVariant, Product, ProductBundleItem
 from app.schemas.order_schemas import PaginatedOrderResponse, OrderResponse, OrderItemResponse
+from app.schemas.auth_schemas import CustomerSummaryResponse
+
+PAID_ORDER_STATUSES = ('processing', 'completed')
 
 def _order_to_response(order: Order, customer: User | None = None) -> OrderResponse:
     return OrderResponse(
@@ -68,6 +71,39 @@ async def get_tenant_order_service(tenant_slug: str, order_id: int, db: AsyncSes
         raise HTTPException(status_code=404, detail="Order not found")
     order, customer = row
     return _order_to_response(order, customer)
+
+async def list_tenant_customers_service(tenant_slug: str, db: AsyncSession) -> list[CustomerSummaryResponse]:
+    tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
+    tenant_id = tenant_result.scalar_one_or_none()
+    if not tenant_id:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    paid_amount = case((Order.status.in_(PAID_ORDER_STATUSES), Order.total_amount), else_=0)
+    result = await db.execute(
+        select(
+            User,
+            func.count(Order.id).label('orders_count'),
+            func.coalesce(func.sum(paid_amount), 0).label('total_spent'),
+            func.max(Order.created_at).label('last_order_at'),
+        )
+        .outerjoin(Order, (Order.user_id == User.id) & (Order.tenant_id == tenant_id))
+        .where(User.tenant_id == tenant_id, User.role == 'customer')
+        .group_by(User.id)
+        .order_by(User.created_at.desc())
+    )
+
+    return [
+        CustomerSummaryResponse(
+            id=user.id,
+            email=user.email,
+            full_name=user.full_name,
+            created_at=user.created_at,
+            orders_count=orders_count,
+            total_spent=float(total_spent),
+            last_order_at=last_order_at,
+        )
+        for user, orders_count, total_spent, last_order_at in result.all()
+    ]
 
 async def restore_stock_for_order(order: Order, db: AsyncSession):
     # Determine variants to restore

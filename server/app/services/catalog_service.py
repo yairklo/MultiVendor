@@ -6,6 +6,7 @@ from fastapi import HTTPException, status
 from app.models.tenant import Tenant, TenantSettings, SubscriptionPlan
 from app.models.catalog import Product, Category, ProductVariant, ProductReview, ProductImage, ProductBundleItem
 from app.models.order import Order, OrderItem
+from app.models.user import User
 from app.schemas.tenant_schemas import TenantSettingsSchema
 from app.schemas.catalog_schemas import (
     PaginatedProductResponse, ProductResponse, ProductCreateRequest, ProductUpdateRequest,
@@ -416,11 +417,62 @@ async def update_review_status_service(tenant_slug: str, review_id: int, status:
     await db.refresh(review)
     return ProductReviewResponse.model_validate(review)
 
+async def list_tenant_reviews_service(tenant_slug: str, db: AsyncSession) -> list[ProductReviewResponse]:
+    tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
+    tenant_id = tenant_result.scalar_one_or_none()
+    if not tenant_id:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    result = await db.execute(
+        select(ProductReview, Product, User)
+        .join(Product, Product.id == ProductReview.product_id)
+        .join(User, User.id == ProductReview.user_id)
+        .where(ProductReview.tenant_id == tenant_id)
+        .order_by(ProductReview.created_at.desc())
+    )
+
+    def resolve_name(name):
+        if isinstance(name, dict):
+            return name.get('en') or next(iter(name.values()), '')
+        return str(name)
+
+    return [
+        ProductReviewResponse(
+            id=review.id,
+            product_id=review.product_id,
+            product_name=resolve_name(product.name),
+            user_id=review.user_id,
+            customer_name=customer.full_name,
+            rating=review.rating,
+            comment=review.comment,
+            is_approved=review.is_approved,
+            is_verified_buyer=review.is_verified_buyer,
+            created_at=review.created_at,
+        )
+        for review, product, customer in result.all()
+    ]
+
 async def export_orders_csv_service(tenant_slug: str, db: AsyncSession):
+    tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
+    tenant_id = tenant_result.scalar_one_or_none()
+    if not tenant_id:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    result = await db.execute(
+        select(Order, User)
+        .join(User, User.id == Order.user_id)
+        .where(Order.tenant_id == tenant_id)
+        .order_by(Order.created_at.desc())
+    )
+
     f = StringIO()
     writer = csv.writer(f)
-    writer.writerow(["order_id", "total"])
-    writer.writerow(["1", "100.00"])
-    
+    writer.writerow(["order_id", "order_number", "customer_name", "customer_email", "status", "total", "created_at"])
+    for order, customer in result.all():
+        writer.writerow([
+            order.id, order.order_number, customer.full_name, customer.email,
+            order.status, order.total_amount, order.created_at,
+        ])
+
     f.seek(0)
     return StreamingResponse(f, media_type="text/csv", headers={"Content-Disposition": "attachment; filename=orders.csv"})

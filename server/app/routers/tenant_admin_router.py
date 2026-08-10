@@ -12,19 +12,21 @@ from app.schemas.catalog_schemas import (
     ProductReviewResponse
 )
 from app.schemas.order_schemas import OrderResponse
+from app.schemas.auth_schemas import CustomerSummaryResponse
 from app.schemas.tenant_schemas import TenantSettingsSchema, TenantUpdateSchema, TenantResponse
 from app.services.catalog_service import (
     create_category_service, delete_category_service,
     create_product_service, get_admin_product_service, update_product_service, delete_product_service,
     add_product_variant_service, update_product_variant_service,
-    update_review_status_service, export_orders_csv_service
+    update_review_status_service, export_orders_csv_service, list_tenant_reviews_service
 )
 from app.services.tenant_service import (
     update_store_settings_service, update_tenant_service, get_tenant_analytics_service,
     upgrade_subscription_service, get_current_subscription_service
 )
 from app.services.order_service import (
-    update_order_status_service, list_tenant_orders_service, get_tenant_order_service
+    update_order_status_service, list_tenant_orders_service, get_tenant_order_service,
+    list_tenant_customers_service
 )
 
 tenant_admin_router = APIRouter(prefix="/api/v1/admin/store/{tenant_slug}", tags=["Tenant Admin & CMS"])
@@ -206,6 +208,14 @@ async def update_store_settings(
     return await update_store_settings_service(tenant_slug, req, db)
 
 # REVIEWS MODERATION
+@tenant_admin_router.get("/reviews", response_model=list[ProductReviewResponse])
+async def get_tenant_reviews(
+    tenant_slug: str = Path(...),
+    admin: User = Depends(get_tenant_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    return await list_tenant_reviews_service(tenant_slug, db)
+
 @tenant_admin_router.patch("/reviews/{review_id}/status", response_model=ProductReviewResponse)
 async def update_review_status(
     review_id: int = Path(...),
@@ -279,3 +289,17 @@ async def get_tenant_order_details(
     db: AsyncSession = Depends(get_db)
 ):
     return await get_tenant_order_service(tenant_slug, order_id, db)
+
+# CUSTOMERS (CRM)
+@tenant_admin_router.get(
+    '/customers',
+    response_model=list[CustomerSummaryResponse],
+    summary="List Store Customers",
+    description="Lists customers who have an account with this store, with order count, total spend (from paid orders), and last order date."
+)
+async def get_tenant_customers(
+    tenant_slug: str = Path(...),
+    admin: User = Depends(get_tenant_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    return await list_tenant_customers_service(tenant_slug, db)

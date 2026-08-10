@@ -75,6 +75,26 @@ class CustomerRegisterRequest(BaseModel):
         }
     })
 
+class CustomerSummaryResponse(BaseModel):
+    id: int
+    email: EmailStr
+    full_name: str
+    created_at: datetime
+    orders_count: int
+    total_spent: float
+    last_order_at: Optional[datetime] = None
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "id": 12,
+            "email": "customer@shop.com",
+            "full_name": "John Doe",
+            "created_at": "2026-08-09T10:00:00Z",
+            "orders_count": 4,
+            "total_spent": 312.50,
+            "last_order_at": "2026-08-10T08:00:00Z"
+        }
+    })
+
 class AuditLogResponse(BaseModel):
     id: int
     user_id: Optional[int]

@@ -156,10 +156,56 @@ async def test_export_orders_csv(async_client: AsyncClient, seed_tokens):
     assert response.status_code == 200
 
 @pytest.mark.asyncio
+async def test_export_orders_csv_contains_real_order_data(async_client: AsyncClient, seed_tokens, db_session):
+    # The export used to write one hardcoded row ("1", "100.00") regardless
+    # of what orders actually existed — verify it reflects real tenant data
+    # instead, and stays tenant-scoped.
+    from app.models.order import Order
+
+    headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+    db_session.add_all([
+        Order(tenant_id=1, user_id=4, order_number="ORD-CSV-TEST", subtotal=77, total_amount=77.50, status="completed"),
+        Order(tenant_id=2, user_id=5, order_number="ORD-TENANT-B", subtotal=10, total_amount=10.00, status="completed"),
+    ])
+    await db_session.commit()
+
+    response = await async_client.get("/api/v1/admin/store/tenant-a/reports/export?report_type=orders", headers=headers)
+    assert response.status_code == 200
+    body = response.text
+
+    assert "ORD-001" in body
+    assert "ORD-CSV-TEST" in body
+    assert "77.50" in body
+    # tenant-b's order must never leak into tenant-a's export.
+    assert "ORD-TENANT-B" not in body
+
+@pytest.mark.asyncio
 async def test_product_review_moderation(async_client: AsyncClient, seed_tokens):
     headers = {"Authorization": seed_tokens["tenant_admin_a"]}
     response = await async_client.patch("/api/v1/admin/store/tenant-a/reviews/1/status?status=approved", headers=headers)
     assert response.status_code == 200
+
+@pytest.mark.asyncio
+async def test_list_tenant_reviews_includes_product_and_customer_names(async_client: AsyncClient, seed_tokens):
+    # Review 1 is seeded on product 1 ("Product A1") by user 4 ("Customer A").
+    # Only PATCH .../status existed before — there was no way to list reviews
+    # for moderation at all.
+    headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+    response = await async_client.get("/api/v1/admin/store/tenant-a/reviews", headers=headers)
+    assert response.status_code == 200
+    body = response.json()
+    reviews = body["data"] if isinstance(body, dict) else body
+    review = next(r for r in reviews if r["id"] == 1)
+
+    assert review["product_name"] == "Product A1"
+    assert review["customer_name"] == "Customer A"
+    assert review["rating"] == 5
+
+@pytest.mark.asyncio
+async def test_list_tenant_reviews_is_tenant_isolated(async_client: AsyncClient, seed_tokens):
+    headers_b = {"Authorization": seed_tokens["tenant_admin_b"]}
+    response = await async_client.get("/api/v1/admin/store/tenant-a/reviews", headers=headers_b)
+    assert response.status_code == 403
 
 @pytest.mark.asyncio
 async def test_add_product_variant(async_client: AsyncClient, seed_tokens):
@@ -282,3 +328,55 @@ async def test_tenant_orders_are_tenant_isolated(async_client: AsyncClient, seed
 
     response = await async_client.get("/api/v1/admin/store/tenant-a/orders/1", headers=headers_b)
     assert response.status_code in (403, 404)
+
+@pytest.mark.asyncio
+async def test_list_customers_aggregates_orders_and_spend(async_client: AsyncClient, seed_tokens, db_session):
+    from app.models.order import Order
+
+    headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+
+    # Seeded order #1 (user 4) is 'pending' — not counted as spend, but counts
+    # as an order. Add a paid order and a cancelled order for the same
+    # customer to exercise both sides of the aggregation.
+    db_session.add_all([
+        Order(tenant_id=1, user_id=4, order_number="ORD-PAID-1", subtotal=50, total_amount=50, status="completed"),
+        Order(tenant_id=1, user_id=4, order_number="ORD-CANCELLED-1", subtotal=30, total_amount=30, status="cancelled"),
+    ])
+    await db_session.commit()
+
+    response = await async_client.get("/api/v1/admin/store/tenant-a/customers", headers=headers)
+    assert response.status_code == 200
+    body = response.json()
+    customers = body["data"] if isinstance(body, dict) else body
+    customer = next(c for c in customers if c["email"] == "customer@tenanta.com")
+
+    assert customer["full_name"] == "Customer A"
+    assert customer["orders_count"] == 3
+    assert float(customer["total_spent"]) == 50.0
+
+@pytest.mark.asyncio
+async def test_list_customers_includes_customers_with_no_orders(async_client: AsyncClient, seed_tokens, db_session):
+    from app.models.user import User
+
+    headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+    db_session.add(User(
+        tenant_id=1, email="no-orders@tenanta.com", password_hash="x",
+        full_name="No Orders Yet", role="customer"
+    ))
+    await db_session.commit()
+
+    response = await async_client.get("/api/v1/admin/store/tenant-a/customers", headers=headers)
+    assert response.status_code == 200
+    body = response.json()
+    customers = body["data"] if isinstance(body, dict) else body
+    customer = next(c for c in customers if c["email"] == "no-orders@tenanta.com")
+
+    assert customer["orders_count"] == 0
+    assert float(customer["total_spent"]) == 0.0
+    assert customer["last_order_at"] is None
+
+@pytest.mark.asyncio
+async def test_list_customers_is_tenant_isolated(async_client: AsyncClient, seed_tokens):
+    headers_b = {"Authorization": seed_tokens["tenant_admin_b"]}
+    response = await async_client.get("/api/v1/admin/store/tenant-a/customers", headers=headers_b)
+    assert response.status_code == 403
