@@ -5,6 +5,7 @@ from fastapi import HTTPException, status
 from app.models.tenant import Tenant, TenantSettings, SubscriptionPlan
 from app.models.order import Order
 from app.schemas.tenant_schemas import TenantSettingsSchema, TenantUpdateSchema, TenantResponse
+from app.services.order_service import PAID_ORDER_STATUSES
 from datetime import datetime, timezone
 import json
 
@@ -141,5 +142,30 @@ async def get_tenant_analytics_service(tenant_slug: str, start_date: str, end_da
             "total_sales": float(row.total_sales) if row.total_sales else 0.0,
             "order_count": row.order_count
         })
-        
-    return {"data": data}
+
+    # Top-level KPIs the dashboard cards actually read. Only orders that were
+    # actually paid count towards revenue/AOV — a pending_payment or cancelled
+    # order was never real money, and including it would understate the AOV.
+    totals_query = (
+        select(
+            func.coalesce(func.sum(Order.total_amount), 0).label('total_revenue'),
+            func.count(Order.id).label('orders_count'),
+        )
+        .where(
+            Order.tenant_id == tenant_id,
+            Order.created_at >= sd,
+            Order.created_at <= ed,
+            Order.status.in_(PAID_ORDER_STATUSES),
+        )
+    )
+    totals_result = await db.execute(totals_query)
+    total_revenue, orders_count = totals_result.one()
+    total_revenue = float(total_revenue)
+    aov = (total_revenue / orders_count) if orders_count else 0.0
+
+    return {
+        "data": data,
+        "total_revenue": round(total_revenue, 2),
+        "orders_count": orders_count,
+        "aov": round(aov, 2),
+    }

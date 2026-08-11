@@ -6,7 +6,10 @@ import { getCookie } from 'cookies-next'
 import { orderStatusClass, orderStatusLabel } from '@/lib/orderStatus'
 import { useToast } from '@/context/ToastContext'
 
-const MANUAL_STATUSES = ['pending', 'processing', 'completed', 'cancelled']
+// No real order is ever in plain 'pending' — checkout always creates
+// 'pending_payment', which becomes 'processing' once paid. 'pending' was a
+// leftover from before that flow existed and isn't a reachable admin action.
+const MANUAL_STATUSES = ['processing', 'completed', 'cancelled']
 
 export default function OrdersPage() {
   const { showToast } = useToast()

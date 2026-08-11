@@ -26,6 +26,11 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str | None = None
     EMAILS_FROM_EMAIL: str | None = None
 
+    # Left unset by default: the AI layout/product assistant runs in a
+    # deterministic mock mode with no external calls until a real key is set.
+    GEMINI_API_KEY: str | None = None
+    GEMINI_MODEL: str = "gemini-3.5-flash"
+
     model_config = SettingsConfigDict(env_file=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), ".env"), env_file_encoding="utf-8", extra="ignore")
 
 settings = Settings()

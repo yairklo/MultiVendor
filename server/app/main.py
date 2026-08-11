@@ -128,6 +128,7 @@ from app.routers.super_admin_router import super_admin_router
 from app.routers.storefront_router import storefront_router
 from app.routers.cart_router import cart_router
 from app.routers.tenant_admin_router import tenant_admin_router
+from app.routers.ai_router import ai_router
 
 app.include_router(auth_router)
 app.include_router(customer_router)
@@ -135,3 +136,4 @@ app.include_router(super_admin_router)
 app.include_router(storefront_router)
 app.include_router(cart_router)
 app.include_router(tenant_admin_router)
+app.include_router(ai_router)

@@ -2,14 +2,18 @@
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { getCookie } from 'cookies-next'
 import { Search } from 'lucide-react'
-import { apiClient } from '@/lib/api/apiClient'
+import { apiClient, ApiError } from '@/lib/api/apiClient'
 import { useCart } from '@/context/CartContext'
+import { useToast } from '@/context/ToastContext'
 import { totalStock } from '@/lib/stock'
 import { StarRating } from '@/components/ui/star-rating'
 import { PaginationControls, PaginationMeta } from '@/components/ui/pagination-controls'
 import { ProductCardSkeleton } from '@/components/ui/skeleton'
+import { PageRenderer } from '@/components/storefront/PageRenderer'
+import { DispatchedAction, StorePageSchema } from '@/lib/ai/types'
 
 const PAGE_SIZE = 12
 
@@ -44,6 +48,55 @@ export default function StorefrontPage(props: { params: Promise<{ tenant_slug: s
   const t = strings[lang]
   const { cart, addItem, openDrawer } = useCart()
   const cartCount = cart?.items.reduce((sum, item) => sum + item.quantity, 0) ?? 0
+  const router = useRouter()
+  const { showToast } = useToast()
+
+  // The vendor's AI/CMS-managed "home" layout, if they've used the AI Layout
+  // editor — falls back to the classic product listing below when there is
+  // none yet (aiPage stays null), so untouched stores are unaffected.
+  const [aiPage, setAiPage] = useState<StorePageSchema | null>(null)
+  const [aiPageChecked, setAiPageChecked] = useState(false)
+
+  useEffect(() => {
+    if (!tenantSlug) return
+    apiClient(`/api/v1/store/${tenantSlug}/pages/home`)
+      .then((data) => setAiPage(data))
+      .catch((e) => {
+        if (!(e instanceof ApiError && e.status === 404)) console.error('Failed to load AI home layout:', e)
+        setAiPage(null)
+      })
+      .finally(() => setAiPageChecked(true))
+  }, [tenantSlug])
+
+  // Searching or filtering by category always drops back to the classic full
+  // catalog listing — the AI layout is a curated homepage, not a search UI.
+  const isBrowsing = !debouncedSearch && !categoryId
+  const showAiHome = aiPageChecked && isBrowsing && !!aiPage && aiPage.sections.length > 0
+
+  function handleAiHomeAction(action: DispatchedAction) {
+    if (action.actionType === 'NAVIGATE' && tenantSlug) {
+      // Prefer page_key (an AI-authored button linking to another page on this
+      // store) — the AI is never told this store's URL structure, so it can
+      // only reference other pages by key, never by a guessed href.
+      if (typeof action.actionPayload?.page_key === 'string') {
+        router.push(`/store/${tenantSlug}/pages/${action.actionPayload.page_key}`)
+        return
+      }
+      if (typeof action.actionPayload?.href === 'string') {
+        router.push(action.actionPayload.href)
+        return
+      }
+    }
+    if (action.actionType === 'ADD_TO_CART') {
+      showToast(`${action.label}: pick a product below to add it to your cart.`, 'info')
+      return
+    }
+    if (action.actionType === 'APPLY_COUPON') {
+      showToast(`${action.label}: apply your coupon code at checkout.`, 'info')
+      return
+    }
+    showToast(action.label, 'info')
+  }
 
   useEffect(() => {
     const handle = setTimeout(() => setDebouncedSearch(search), 300)
@@ -103,7 +156,15 @@ export default function StorefrontPage(props: { params: Promise<{ tenant_slug: s
   if (!tenantSlug) return <div>Loading...</div>
 
   return (
-    <div dir={lang === 'he' ? 'rtl' : 'ltr'} className="p-4 bg-gray-50 min-h-screen text-gray-900">
+    <div
+      dir={lang === 'he' ? 'rtl' : 'ltr'}
+      className="p-4 bg-gray-50 min-h-screen text-gray-900"
+      style={
+        showAiHome
+          ? { backgroundColor: aiPage?.background_color || undefined, color: aiPage?.text_color || undefined }
+          : undefined
+      }
+    >
       <header className="flex justify-between items-center mb-8 bg-white p-4 shadow-sm rounded-lg">
         <div data-testid="tenant-logo" className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
           Logo
@@ -165,6 +226,9 @@ export default function StorefrontPage(props: { params: Promise<{ tenant_slug: s
         </div>
       </div>
 
+      {showAiHome ? (
+        <PageRenderer page={aiPage} tenantSlug={tenantSlug ?? undefined} onAction={handleAiHomeAction} />
+      ) : (
       <div data-testid="product-grid" className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {productsLoading ? (
           Array.from({ length: 8 }, (_, i) => <ProductCardSkeleton key={i} />)
@@ -237,8 +301,9 @@ export default function StorefrontPage(props: { params: Promise<{ tenant_slug: s
           </div>
         )}
       </div>
+      )}
 
-      {meta && meta.total_pages > 1 && (
+      {!showAiHome && meta && meta.total_pages > 1 && (
         <div className="mt-6 bg-white rounded-lg shadow-sm">
           <PaginationControls meta={meta} onPageChange={setPage} />
         </div>

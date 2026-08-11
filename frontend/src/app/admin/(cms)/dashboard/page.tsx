@@ -64,7 +64,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-center transform hover:-translate-y-1 transition-transform">
           <h2 className="text-gray-500 font-medium mb-2 uppercase tracking-wide text-sm">Total Revenue</h2>
-          <div className="text-4xl font-bold text-gray-900">${metrics.totalRevenue}</div>
+          <div className="text-4xl font-bold text-gray-900">${metrics.total_revenue}</div>
         </div>
 
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-center transform hover:-translate-y-1 transition-transform">
@@ -74,7 +74,7 @@ export default function Dashboard() {
 
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-center transform hover:-translate-y-1 transition-transform">
           <h2 className="text-gray-500 font-medium mb-2 uppercase tracking-wide text-sm">Orders Count</h2>
-          <div className="text-4xl font-bold text-gray-900">{metrics.ordersCount}</div>
+          <div className="text-4xl font-bold text-gray-900">{metrics.orders_count}</div>
         </div>
       </div>
 

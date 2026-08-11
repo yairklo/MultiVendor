@@ -19,6 +19,11 @@ DATABASE_URL = "mysql+aiomysql://root:rootpassword@127.0.0.1:3306/multivendor_te
 os.environ["DATABASE_URL"] = DATABASE_URL
 os.environ["DB_NAME"] = "multivendor_test"
 
+# The AI layout/product assistant must stay deterministic and network-free in
+# tests regardless of whatever GEMINI_API_KEY a developer has set in their own
+# .env for local use — same principle as the DATABASE_URL override above.
+os.environ["GEMINI_API_KEY"] = ""
+
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'server'))
 from app.main import app
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker

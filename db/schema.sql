@@ -252,7 +252,62 @@ CREATE TABLE order_items (
 ) ENGINE=InnoDB;
 
 -- ================================================================================
--- 5. PERFORMANCE COMPOSITE INDEXES
+-- 5. AI-MANAGED STOREFRONT PAGES
+-- ================================================================================
+CREATE TABLE store_pages (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    tenant_id INT NOT NULL,
+    page_key VARCHAR(100) NOT NULL,
+    page_type ENUM('static_page', 'template') NOT NULL DEFAULT 'static_page',
+    title VARCHAR(255) NOT NULL,
+    sections JSON NOT NULL,
+    background_color VARCHAR(20) NULL,
+    text_color VARCHAR(20) NULL,
+    -- Draft columns above are read/written by the AI and the admin preview.
+    -- The public storefront only ever reads the published_* snapshot below,
+    -- which only changes when the store owner explicitly publishes.
+    published_sections JSON NULL,
+    published_title VARCHAR(255) NULL,
+    published_background_color VARCHAR(20) NULL,
+    published_text_color VARCHAR(20) NULL,
+    published_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+    CONSTRAINT uq_store_pages_tenant_key_type UNIQUE (tenant_id, page_key, page_type)
+) ENGINE=InnoDB;
+
+CREATE TABLE store_page_versions (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    store_page_id BIGINT NOT NULL,
+    tenant_id INT NOT NULL,
+    page_key VARCHAR(100) NOT NULL,
+    page_type ENUM('static_page', 'template') NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    sections JSON NOT NULL,
+    background_color VARCHAR(20) NULL,
+    text_color VARCHAR(20) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (store_page_id) REFERENCES store_pages(id) ON DELETE CASCADE,
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE ai_conversations (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    tenant_id INT NOT NULL,
+    page_key VARCHAR(100) NOT NULL,
+    page_type ENUM('static_page', 'template') NOT NULL,
+    gemini_history JSON NULL,
+    messages JSON NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+    CONSTRAINT uq_ai_conversations_tenant_key_type UNIQUE (tenant_id, page_key, page_type)
+) ENGINE=InnoDB;
+
+CREATE INDEX idx_store_page_versions_page ON store_page_versions(tenant_id, store_page_id, created_at);
+
+-- ================================================================================
+-- 6. PERFORMANCE COMPOSITE INDEXES
 -- ================================================================================
 CREATE INDEX idx_products_tenant_active ON products(tenant_id, is_active);
 CREATE INDEX idx_variants_tenant_product ON product_variants(tenant_id, product_id);
