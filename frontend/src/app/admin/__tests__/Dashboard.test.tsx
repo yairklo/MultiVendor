@@ -9,9 +9,10 @@ describe('Admin Dashboard', () => {
     server.use(
       http.get('http://localhost:8000/api/v1/admin/store/:slug/analytics', () => {
         return HttpResponse.json({
-          totalRevenue: 50000,
+          data: [],
+          total_revenue: 50000,
           aov: 125.5,
-          ordersCount: 400
+          orders_count: 400
         })
       })
     )

@@ -137,7 +137,10 @@ async def update_order_status_service(tenant_slug: str, order_id: int, status: s
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    valid_statuses = ['pending', 'processing', 'completed', 'cancelled']
+    # 'pending' is deliberately excluded: checkout always creates orders as
+    # 'pending_payment', which becomes 'processing' once paid — plain 'pending'
+    # is a legacy status no real order flow ever produces or should be set to.
+    valid_statuses = ['processing', 'completed', 'cancelled']
     if status not in valid_statuses:
         raise HTTPException(status_code=422, detail="Invalid status transition")
 

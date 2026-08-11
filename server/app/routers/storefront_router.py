@@ -13,6 +13,8 @@ from app.services.catalog_service import (
     get_store_config_service, list_public_products_service, get_public_product_service,
     list_product_reviews_service, create_product_review_service, list_public_categories_service
 )
+from app.schemas.ai_schemas import StorePageSchema
+from app.services.store_page_service import get_published_page_schema_service
 
 storefront_router = APIRouter(prefix="/api/v1/store", tags=["Public Storefront"])
 
@@ -101,6 +103,29 @@ async def get_product_reviews(
     db: AsyncSession = Depends(get_db)
 ):
     return await list_product_reviews_service(tenant_slug, product_slug, db)
+
+@storefront_router.get(
+    "/{tenant_slug}/pages/{page_key}",
+    response_model=StorePageSchema,
+    summary="Get a Storefront Page's Section Layout",
+    description=(
+        "Fetches the AI/CMS-managed JSON section layout for a public static page (e.g. 'home'), so the "
+        "storefront can render it dynamically. Only ever serves page_type='static_page' — 'template' is an "
+        "internal editing concept and is never exposed publicly. Only ever serves the store owner's last "
+        "*published* version — draft edits from the AI/admin preview are invisible here until explicitly "
+        "published, even if they were made moments ago."
+    ),
+    responses={
+        200: {"description": "Page layout successfully retrieved."},
+        404: {"description": "Page not found, or has no published version yet."}
+    }
+)
+async def get_storefront_page(
+    tenant_slug: str = Path(..., title="Tenant Slug"),
+    page_key: str = Path(..., title="Page Key"),
+    db: AsyncSession = Depends(get_db)
+):
+    return await get_published_page_schema_service(tenant_slug, page_key, "static_page", db)
 
 @storefront_router.post(
     "/{tenant_slug}/reviews",

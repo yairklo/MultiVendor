@@ -1,5 +1,6 @@
 USE multivendor_test;
 SET FOREIGN_KEY_CHECKS = 0;
+TRUNCATE TABLE store_pages;
 TRUNCATE TABLE audit_logs;
 TRUNCATE TABLE order_items;
 TRUNCATE TABLE orders;
@@ -50,5 +51,14 @@ INSERT INTO coupons (id, tenant_id, code, discount_type, discount_val, min_order
 (2, 1, 'EXPIRED', 'percentage', 10.00, 0.00, 100, 0, '2020-12-31 23:59:59'),
 (3, 1, 'MAX_USED', 'percentage', 10.00, 0.00, 10, 10, '2037-12-31 23:59:59'),
 (4, 1, 'BELOW_MIN', 'percentage', 10.00, 1000.00, 100, 0, '2037-12-31 23:59:59');
+
+INSERT INTO store_pages (id, tenant_id, page_key, page_type, title, sections) VALUES
+(1, 1, 'home', 'static_page', 'Home Page', JSON_ARRAY(
+    JSON_OBJECT('id', 'sec_hero_1', 'type', 'hero_banner', 'settings', JSON_OBJECT('headline', 'Summer Collection', 'size', 'medium', 'alignment', 'center')),
+    JSON_OBJECT('id', 'sec_grid_1', 'type', 'product_grid', 'settings', JSON_OBJECT('title', 'Best Sellers', 'columns', 4, 'collection', 'best-sellers'))
+)),
+(2, 2, 'home', 'static_page', 'Home Page', JSON_ARRAY(
+    JSON_OBJECT('id', 'sec_hero_1', 'type', 'hero_banner', 'settings', JSON_OBJECT('headline', 'Welcome to Store B', 'size', 'medium', 'alignment', 'center'))
+));
 
 SET FOREIGN_KEY_CHECKS = 1;
