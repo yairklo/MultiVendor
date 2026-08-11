@@ -6,7 +6,8 @@ import {
 } from '@dnd-kit/core'
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical } from 'lucide-react'
+import { GripVertical, Pencil, X } from 'lucide-react'
+import { useState } from 'react'
 import { DispatchedAction, Section, StorePageSchema } from '@/lib/ai/types'
 import { renderSections } from '@/components/storefront/PageRenderer'
 import { resolveDesignVariantClasses } from '@/lib/design-tokens'
@@ -81,7 +82,11 @@ function DraggableSectionList({
       <SortableContext items={sections.map((s) => s.id)} strategy={verticalListSortingStrategy}>
         <div className="flex flex-col gap-4 pl-7">
           {sections.map((section) => (
-            <SortableSectionCard key={section.id} id={section.id}>
+            <SortableSectionCard 
+              key={section.id} 
+              section={section}
+              onChange={(patch) => onChange(updateChildAt(sections, section.id, patch))}
+            >
               {section.type === 'grid_container' ? (
                 <GridContainerEditor
                   section={section}
