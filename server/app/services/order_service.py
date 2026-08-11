@@ -46,6 +46,7 @@ async def list_tenant_orders_service(
     start_date: datetime | None = None,
     end_date: datetime | None = None,
     customer_email: str | None = None,
+    limit: int | None = None,
 ) -> list[OrderResponse]:
     tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
     tenant_id = tenant_result.scalar_one_or_none()
@@ -67,6 +68,8 @@ async def list_tenant_orders_service(
         query = query.where(Order.created_at <= end_date)
     if customer_email:
         query = query.where(User.email == customer_email)
+    if limit:
+        query = query.limit(limit)
 
     result = await db.execute(query)
     return [_order_to_response(order, customer) for order, customer in result.all()]
