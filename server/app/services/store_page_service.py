@@ -106,6 +106,8 @@ def _sanitize_sections(
 
     sanitized: List[Dict[str, Any]] = []
     for raw in raw_sections:
+        if not isinstance(raw, dict):
+            raise HTTPException(status_code=400, detail=f"Each section must be an object with a 'type' field, got: {raw!r}")
         section_type = raw.get("type")
         if section_type not in SECTION_TYPES:
             raise HTTPException(status_code=400, detail=f"Invalid section type: {section_type}")
@@ -331,6 +333,12 @@ async def upsert_page_sections_service(
 ) -> StorePageSchema:
     tenant_id = await _get_tenant_id(tenant_slug, db)
     sanitized_sections = _sanitize_sections(sections)
+
+    # Enforce Pydantic validation before committing so any hallucinated payload
+    # that bypassed the basic sanitizer is caught as a ValidationError here,
+    # returned to the AI for retry, rather than persisting and crashing reads.
+    for sec in sanitized_sections:
+        Section(**sec)
 
     result = await db.execute(
         select(StorePage).where(
