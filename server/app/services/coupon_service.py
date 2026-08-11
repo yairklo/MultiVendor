@@ -52,3 +52,17 @@ async def delete_tenant_coupon_service(tenant_slug: str, coupon_id: int, db: Asy
 
     await db.delete(coupon)
     await db.commit()
+
+async def toggle_coupon_status_service(tenant_slug: str, coupon_id: int, is_active: bool, db: AsyncSession) -> CouponResponse:
+    tenant_id = await _get_tenant_id(tenant_slug, db)
+    result = await db.execute(
+        select(Coupon).where(Coupon.id == coupon_id, Coupon.tenant_id == tenant_id)
+    )
+    coupon = result.scalar_one_or_none()
+    if not coupon:
+        raise HTTPException(status_code=404, detail="Coupon not found")
+
+    coupon.is_active = is_active
+    await db.commit()
+    await db.refresh(coupon)
+    return CouponResponse.model_validate(coupon, from_attributes=True)

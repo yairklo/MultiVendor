@@ -60,11 +60,17 @@ class ToolCallRecord(BaseModel):
     output: Any
     is_error: bool
 
+class PendingConfirmation(BaseModel):
+    id: str
+    tool_name: str
+    summary: str
+
 class AIChatResponse(BaseModel):
     reply: str
     tool_calls: List[ToolCallRecord]
     used_provider: Literal["gemini", "mock"]
     page: Optional[StorePageSchema] = None
+    pending_confirmation: Optional[PendingConfirmation] = None
 
 class AIStatusResponse(BaseModel):
     provider: Literal["gemini", "mock"]
@@ -83,3 +89,40 @@ class ChatMessageRecord(BaseModel):
 
 class ConversationResponse(BaseModel):
     messages: List[ChatMessageRecord]
+
+class InventoryHealthItem(BaseModel):
+    product_id: int
+    product_name: Any
+    variant_id: int
+    sku: str
+    stock_quantity: int
+
+class InventoryHealthResponse(BaseModel):
+    low_stock_threshold: int
+    out_of_stock: List[InventoryHealthItem]
+    low_stock: List[InventoryHealthItem]
+
+class TopSellingProduct(BaseModel):
+    # order_items snapshots sku/product_name at sale time rather than an FK to
+    # products (variant_id is even nullable, SET NULL if the variant is later
+    # deleted) — sku is the stable, always-present identifier to group by.
+    sku: str
+    product_name: str
+    quantity_sold: int
+    revenue: float
+
+class SalesAnalyticsResponse(BaseModel):
+    start_date: str
+    end_date: str
+    total_revenue: float
+    orders_count: int
+    aov: float
+    daily: List[Dict[str, Any]]
+    top_selling_products: List[TopSellingProduct]
+
+class CustomerInsightsResponse(BaseModel):
+    total_customers: int
+    customers_with_orders: int
+    repeat_customer_rate: float
+    top_spenders: List[Dict[str, Any]]
+    recent_signups: List[Dict[str, Any]]

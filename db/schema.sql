@@ -180,6 +180,7 @@ CREATE TABLE coupons (
     usage_limit INT DEFAULT 0,
     used_count INT DEFAULT 0,
     valid_until TIMESTAMP NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
     FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
     CONSTRAINT uq_coupons_tenant_code UNIQUE (tenant_id, code)
 ) ENGINE=InnoDB;
@@ -306,8 +307,23 @@ CREATE TABLE ai_conversations (
 
 CREATE INDEX idx_store_page_versions_page ON store_page_versions(tenant_id, store_page_id, created_at);
 
+-- Destructive AI-proposed actions (delete_product, cancel an order) never execute
+-- directly — they're staged here and only run once a human clicks a real confirm
+-- button in the UI (see ai_pending_action_service.py). One-time use: the row is
+-- deleted on confirm or cancel, and treated as gone once past expires_at.
+CREATE TABLE ai_pending_actions (
+    id CHAR(36) PRIMARY KEY,
+    tenant_id INT NOT NULL,
+    tool_name VARCHAR(100) NOT NULL,
+    tool_args JSON NOT NULL,
+    summary VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP NOT NULL,
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
 -- ================================================================================
--- 6. PERFORMANCE COMPOSITE INDEXES
+-- 7. PERFORMANCE COMPOSITE INDEXES
 -- ================================================================================
 CREATE INDEX idx_products_tenant_active ON products(tenant_id, is_active);
 CREATE INDEX idx_variants_tenant_product ON product_variants(tenant_id, product_id);

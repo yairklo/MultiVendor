@@ -1,3 +1,4 @@
+import { AlertTriangle } from 'lucide-react'
 import { FormEvent, useState } from 'react'
 import { ChatMessage } from '@/lib/ai/types'
 
@@ -6,11 +7,19 @@ export function ChatDrawer({
   onSend,
   isBusy,
   onNewConversation,
+  onConfirmAction,
+  onCancelAction,
+  resolvingConfirmationId,
 }: {
   messages: ChatMessage[]
   onSend: (message: string) => void
   isBusy: boolean
   onNewConversation?: () => void
+  /** Called with the pending action's id when the user clicks Confirm on a staged destructive action. */
+  onConfirmAction?: (confirmationId: string) => void
+  onCancelAction?: (confirmationId: string) => void
+  /** The confirmation id currently being confirmed/cancelled, so its buttons can show a busy state. */
+  resolvingConfirmationId?: string | null
 }) {
   const [draft, setDraft] = useState('')
 
@@ -65,6 +74,32 @@ export function ChatDrawer({
                   ))}
                 </ul>
               </details>
+            )}
+            {m.pendingConfirmation && (
+              <div className="mt-2 max-w-[85%] rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                <div className="flex gap-2">
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
+                  <p>{m.pendingConfirmation.summary}</p>
+                </div>
+                <div className="mt-2 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onCancelAction?.(m.pendingConfirmation!.id)}
+                    disabled={resolvingConfirmationId === m.pendingConfirmation.id}
+                    className="rounded-lg border border-amber-300 px-3 py-1.5 text-xs font-semibold text-amber-800 hover:bg-amber-100 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onConfirmAction?.(m.pendingConfirmation!.id)}
+                    disabled={resolvingConfirmationId === m.pendingConfirmation.id}
+                    className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700 disabled:opacity-50"
+                  >
+                    {resolvingConfirmationId === m.pendingConfirmation.id ? 'Working…' : 'Confirm'}
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         ))}

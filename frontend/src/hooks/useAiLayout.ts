@@ -58,6 +58,18 @@ export function useAiLayout() {
     })
   }
 
+  const confirmPendingAction = async (confirmationId: string): Promise<any> => {
+    return apiClient(`/api/v1/admin/store/${tenantSlug}/ai/pending-actions/${confirmationId}/confirm`, {
+      method: 'POST',
+    })
+  }
+
+  const cancelPendingAction = async (confirmationId: string): Promise<void> => {
+    await apiClient(`/api/v1/admin/store/${tenantSlug}/ai/pending-actions/${confirmationId}/cancel`, {
+      method: 'POST',
+    })
+  }
+
   return {
     tenantSlug,
     fetchStatus,
@@ -69,5 +81,7 @@ export function useAiLayout() {
     fetchConversation,
     clearConversation,
     publishPage,
+    confirmPendingAction,
+    cancelPendingAction,
   }
 }

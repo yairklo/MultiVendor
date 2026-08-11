@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, BigInteger, String, Enum, DateTime, ForeignKey, Numeric
+from sqlalchemy import Column, Integer, BigInteger, String, Enum, DateTime, ForeignKey, Numeric, Boolean
 from app.db.base_class import Base
 
 class Coupon(Base):
@@ -12,3 +12,4 @@ class Coupon(Base):
     usage_limit = Column(Integer, default=0)
     used_count = Column(Integer, default=0)
     valid_until = Column(DateTime, nullable=False)
+    is_active = Column(Boolean, nullable=False, default=True)
