@@ -332,6 +332,12 @@ async def upsert_page_sections_service(
     tenant_id = await _get_tenant_id(tenant_slug, db)
     sanitized_sections = _sanitize_sections(sections)
 
+    # Enforce Pydantic validation before committing so any hallucinated payload
+    # that bypassed the basic sanitizer is caught as a ValidationError here,
+    # returned to the AI for retry, rather than persisting and crashing reads.
+    for sec in sanitized_sections:
+        Section(**sec)
+
     result = await db.execute(
         select(StorePage).where(
             StorePage.tenant_id == tenant_id, StorePage.page_key == page_key, StorePage.page_type == page_type
