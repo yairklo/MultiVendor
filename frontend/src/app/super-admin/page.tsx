@@ -4,9 +4,11 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { getCookie } from 'cookies-next'
 import { apiClient } from '@/lib/api/apiClient'
+import { useToast } from '@/context/ToastContext'
 
 export default function SuperAdminPage() {
   const router = useRouter()
+  const { showToast } = useToast()
   const [authorized, setAuthorized] = useState(false)
   const [tenants, setTenants] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -44,8 +46,9 @@ export default function SuperAdminPage() {
         body: JSON.stringify({ status: newStatus })
       })
       fetchTenants()
+      showToast(`Tenant ${newStatus === 'active' ? 'activated' : 'suspended'}`, 'success')
     } catch (e) {
-      alert('Failed to update status')
+      showToast('Failed to update status', 'error')
     }
   }
 

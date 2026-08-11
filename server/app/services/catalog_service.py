@@ -1,6 +1,6 @@
 import math
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_, cast, String
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException, status
 from app.models.tenant import Tenant, TenantSettings, SubscriptionPlan
@@ -11,7 +11,7 @@ from app.schemas.tenant_schemas import TenantSettingsSchema
 from app.schemas.catalog_schemas import (
     PaginatedProductResponse, ProductResponse, ProductCreateRequest, ProductUpdateRequest,
     ProductVariantSchema, CategoryCreateRequest, CategoryResponse, ProductReviewResponse,
-    ProductBundleItemSchema
+    ProductBundleItemSchema, ProductReviewCreateRequest
 )
 from io import StringIO
 import csv
@@ -35,51 +35,89 @@ async def get_store_config_service(tenant_slug: str, db: AsyncSession) -> Tenant
         return TenantSettingsSchema.model_validate(tenant.settings)
     return TenantSettingsSchema()
 
+def _escape_like(value: str) -> str:
+    """Escapes LIKE wildcards so a search for e.g. "50% off" or "a_b" matches
+    literally instead of '%'/'_' being treated as SQL wildcards."""
+    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+async def _fetch_review_stats(product_ids: list[int], db: AsyncSession) -> dict[int, tuple[float, int]]:
+    if not product_ids:
+        return {}
+    result = await db.execute(
+        select(
+            ProductReview.product_id,
+            func.avg(ProductReview.rating),
+            func.count(ProductReview.id),
+        )
+        .where(ProductReview.product_id.in_(product_ids), ProductReview.is_approved == True)
+        .group_by(ProductReview.product_id)
+    )
+    return {product_id: (float(avg_rating), count) for product_id, avg_rating, count in result.all()}
+
+def _build_product_response(p: "Product", review_stats: dict[int, tuple[float, int]]) -> ProductResponse:
+    primary_image = next((img.image_url for img in p.images if img.is_primary), None)
+    if not primary_image and p.images:
+        primary_image = p.images[0].image_url
+
+    avg_rating, review_count = review_stats.get(p.id, (None, 0))
+
+    return ProductResponse(
+        id=p.id,
+        tenant_id=p.tenant_id,
+        category_id=p.category_id,
+        name=p.name,
+        slug=p.slug,
+        description=p.description,
+        base_price=p.base_price,
+        is_active=p.is_active,
+        product_type=p.product_type,
+        digital_file_url=p.digital_file_url,
+        download_limit=p.download_limit,
+        is_bundle=p.is_bundle,
+        variants=[ProductVariantSchema.model_validate(v) for v in p.variants],
+        primary_image_url=primary_image,
+        images=[img.image_url for img in p.images],
+        average_rating=round(avg_rating, 1) if avg_rating is not None else None,
+        review_count=review_count,
+        created_at=p.created_at
+    )
+
 async def list_public_products_service(tenant_slug: str, page: int, page_size: int, q: str | None, category_id: int | None, db: AsyncSession) -> PaginatedProductResponse:
     tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
     tenant_id = tenant_result.scalar_one_or_none()
     if not tenant_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Store not found")
 
-    query = select(Product).where(Product.tenant_id == tenant_id, Product.is_active == True)
-    if q:
-        pass # Not implementing full JSON ILIKE search here
+    conditions = [Product.tenant_id == tenant_id, Product.is_active == True]
     if category_id:
-        query = query.where(Product.category_id == category_id)
+        conditions.append(Product.category_id == category_id)
+    if q:
+        # name/description are i18n JSON blobs ({"en": "...", "he": "..."}) —
+        # casting to text and matching against the whole blob searches every
+        # language's value in one LIKE, the same "any translation matches"
+        # semantics the old Python-side search had, but evaluated in the DB.
+        pattern = f"%{_escape_like(q.strip().lower())}%"
+        conditions.append(or_(
+            func.lower(cast(Product.name, String)).like(pattern, escape="\\"),
+            func.lower(cast(Product.description, String)).like(pattern, escape="\\"),
+        ))
 
-    total_query = select(func.count()).select_from(query.subquery())
-    total_result = await db.execute(total_query)
-    total = total_result.scalar_one()
+    count_result = await db.execute(select(func.count()).select_from(Product).where(*conditions))
+    total = count_result.scalar_one()
 
-    query = query.options(selectinload(Product.variants), selectinload(Product.images))
-    query = query.offset((page - 1) * page_size).limit(page_size)
+    query = (
+        select(Product)
+        .where(*conditions)
+        .options(selectinload(Product.variants), selectinload(Product.images))
+        .order_by(Product.created_at.desc())
+        .limit(page_size)
+        .offset((page - 1) * page_size)
+    )
     result = await db.execute(query)
     products = result.scalars().all()
 
-    product_responses = []
-    for p in products:
-        primary_image = next((img.image_url for img in p.images if img.is_primary), None)
-        if not primary_image and p.images:
-            primary_image = p.images[0].image_url
-            
-        product_responses.append(ProductResponse(
-            id=p.id,
-            tenant_id=p.tenant_id,
-            category_id=p.category_id,
-            name=p.name,
-            slug=p.slug,
-            description=p.description,
-            base_price=p.base_price,
-            is_active=p.is_active,
-            product_type=p.product_type,
-            digital_file_url=p.digital_file_url,
-            download_limit=p.download_limit,
-            is_bundle=p.is_bundle,
-            variants=[ProductVariantSchema.model_validate(v) for v in p.variants],
-            primary_image_url=primary_image,
-            images=[img.image_url for img in p.images],
-            created_at=p.created_at
-        ))
+    review_stats = await _fetch_review_stats([p.id for p in products], db)
+    product_responses = [_build_product_response(p, review_stats) for p in products]
 
     total_pages = math.ceil(total / page_size) if total > 0 else 1
     return PaginatedProductResponse(
@@ -101,28 +139,8 @@ async def get_public_product_service(tenant_slug: str, product_slug: str, db: As
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
 
-    primary_image = next((img.image_url for img in product.images if img.is_primary), None)
-    if not primary_image and product.images:
-        primary_image = product.images[0].image_url
-
-    return ProductResponse(
-        id=product.id,
-        tenant_id=product.tenant_id,
-        category_id=product.category_id,
-        name=product.name,
-        slug=product.slug,
-        description=product.description,
-        base_price=product.base_price,
-        is_active=product.is_active,
-        product_type=product.product_type,
-        digital_file_url=product.digital_file_url,
-        download_limit=product.download_limit,
-        is_bundle=product.is_bundle,
-        variants=[ProductVariantSchema.model_validate(v) for v in product.variants],
-        primary_image_url=primary_image,
-        images=[img.image_url for img in product.images],
-        created_at=product.created_at
-    )
+    review_stats = await _fetch_review_stats([product.id], db)
+    return _build_product_response(product, review_stats)
 
 async def create_category_service(tenant_slug: str, req: CategoryCreateRequest, db: AsyncSession) -> CategoryResponse:
     tenant_result = await db.execute(select(Tenant).where(Tenant.slug == tenant_slug).options(selectinload(Tenant.settings)))
@@ -143,6 +161,18 @@ async def create_category_service(tenant_slug: str, req: CategoryCreateRequest, 
     await db.commit()
     await db.refresh(category)
     return CategoryResponse(id=category.id, name=category.name, slug=category.slug, parent_id=category.parent_id)
+
+async def list_public_categories_service(tenant_slug: str, db: AsyncSession) -> list[CategoryResponse]:
+    tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
+    tenant_id = tenant_result.scalar_one_or_none()
+    if not tenant_id:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    result = await db.execute(select(Category).where(Category.tenant_id == tenant_id).order_by(Category.id))
+    return [
+        CategoryResponse(id=c.id, name=c.name, slug=c.slug, parent_id=c.parent_id)
+        for c in result.scalars().all()
+    ]
 
 async def delete_category_service(tenant_slug: str, category_id: int, db: AsyncSession):
     tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
@@ -451,6 +481,122 @@ async def list_tenant_reviews_service(tenant_slug: str, db: AsyncSession) -> lis
         )
         for review, product, customer in result.all()
     ]
+
+def _resolve_review_name(name) -> str:
+    if isinstance(name, dict):
+        return name.get('en') or next(iter(name.values()), '')
+    return str(name)
+
+async def list_product_reviews_service(tenant_slug: str, product_slug: str, db: AsyncSession) -> list[ProductReviewResponse]:
+    tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
+    tenant_id = tenant_result.scalar_one_or_none()
+    if not tenant_id:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    product_result = await db.execute(
+        select(Product).where(Product.slug == product_slug, Product.tenant_id == tenant_id)
+    )
+    product = product_result.scalar_one_or_none()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    result = await db.execute(
+        select(ProductReview, User)
+        .join(User, User.id == ProductReview.user_id)
+        .where(
+            ProductReview.tenant_id == tenant_id,
+            ProductReview.product_id == product.id,
+            ProductReview.is_approved == True,
+        )
+        .order_by(ProductReview.created_at.desc())
+    )
+
+    return [
+        ProductReviewResponse(
+            id=review.id,
+            product_id=review.product_id,
+            product_name=_resolve_review_name(product.name),
+            user_id=review.user_id,
+            customer_name=customer.full_name,
+            rating=review.rating,
+            comment=review.comment,
+            is_approved=review.is_approved,
+            is_verified_buyer=review.is_verified_buyer,
+            created_at=review.created_at,
+        )
+        for review, customer in result.all()
+    ]
+
+async def create_product_review_service(
+    tenant_slug: str, user_id: int, req: ProductReviewCreateRequest, db: AsyncSession
+) -> ProductReviewResponse:
+    tenant_result = await db.execute(
+        select(Tenant).where(Tenant.slug == tenant_slug).options(selectinload(Tenant.settings))
+    )
+    tenant = tenant_result.scalar_one_or_none()
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    product_result = await db.execute(
+        select(Product).where(Product.id == req.product_id, Product.tenant_id == tenant.id)
+    )
+    product = product_result.scalar_one_or_none()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    existing = await db.execute(
+        select(ProductReview).where(
+            ProductReview.tenant_id == tenant.id,
+            ProductReview.product_id == req.product_id,
+            ProductReview.user_id == user_id,
+        )
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="You have already reviewed this product")
+
+    purchase_result = await db.execute(
+        select(OrderItem)
+        .join(Order, Order.id == OrderItem.order_id)
+        .join(ProductVariant, ProductVariant.id == OrderItem.variant_id)
+        .where(
+            Order.tenant_id == tenant.id,
+            Order.user_id == user_id,
+            Order.status.in_(('processing', 'completed')),
+            ProductVariant.product_id == req.product_id,
+        )
+    )
+    is_verified_buyer = purchase_result.first() is not None
+
+    moderation_enabled = tenant.settings.review_moderation_enabled if tenant.settings else False
+
+    review = ProductReview(
+        tenant_id=tenant.id,
+        product_id=req.product_id,
+        user_id=user_id,
+        rating=req.rating,
+        comment=req.comment,
+        is_approved=not moderation_enabled,
+        is_verified_buyer=is_verified_buyer,
+    )
+    db.add(review)
+    await db.commit()
+    await db.refresh(review)
+
+    user_result = await db.execute(select(User).where(User.id == user_id))
+    customer = user_result.scalar_one()
+
+    return ProductReviewResponse(
+        id=review.id,
+        product_id=review.product_id,
+        product_name=_resolve_review_name(product.name),
+        user_id=review.user_id,
+        customer_name=customer.full_name,
+        rating=review.rating,
+        comment=review.comment,
+        is_approved=review.is_approved,
+        is_verified_buyer=review.is_verified_buyer,
+        created_at=review.created_at,
+    )
 
 async def export_orders_csv_service(tenant_slug: str, db: AsyncSession):
     tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))

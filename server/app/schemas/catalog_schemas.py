@@ -86,6 +86,8 @@ class ProductResponse(BaseModel):
     variants: List[ProductVariantSchema]
     primary_image_url: Optional[str]
     images: List[str]
+    average_rating: Optional[float] = None
+    review_count: int = 0
     created_at: datetime
     model_config = ConfigDict(from_attributes=True, json_schema_extra={
         "example": {

@@ -13,8 +13,8 @@ test.describe('Products Management', () => {
     await page.getByLabel(/price/i).fill('99.99');
     await page.getByLabel(/description/i).fill('High quality E2E tested product');
 
-    // Category ID is just a number input here
-    await page.getByLabel(/Category ID/i).fill('1');
+    // Category is optional — a real dropdown of the store's categories now,
+    // not a raw numeric ID field. Leaving it at "No category" is valid.
 
     await page.getByRole('button', { name: /save product/i }).click();
 

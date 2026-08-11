@@ -31,12 +31,25 @@ export const apiClient = async (url: string, options: RequestInit = {}) => {
     deleteCookie('token')
     deleteCookie('tenantSlug')
     if (typeof window !== 'undefined') {
-      window.location.href = '/admin/login'
+      // Redirect to the login page that actually matches where the session
+      // expired — a shopper's expired session on the storefront has no
+      // business landing on the admin login screen, and vice versa.
+      const isAdminRoute = /^\/(admin|super-admin)(\/|$)/.test(window.location.pathname)
+      window.location.href = isAdminRoute ? '/admin/login' : '/login'
     }
   }
 
   if (!response.ok) {
-    throw new ApiError(response.status, `HTTP Error ${response.status}`)
+    // FastAPI error responses are {"detail": "..."} — surface that instead
+    // of a generic status message wherever the backend provides one.
+    let detail: string | undefined
+    try {
+      const body = await response.json()
+      detail = typeof body?.detail === 'string' ? body.detail : undefined
+    } catch {
+      // Response body wasn't JSON (or already consumed) — fall back below.
+    }
+    throw new ApiError(response.status, detail || `HTTP Error ${response.status}`)
   }
   
   if (response.status === 204) return null

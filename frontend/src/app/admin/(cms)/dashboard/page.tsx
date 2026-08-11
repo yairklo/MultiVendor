@@ -6,6 +6,7 @@ import { apiClient } from '@/lib/api/apiClient'
 import { getCookie } from 'cookies-next'
 import { orderStatusClass, orderStatusLabel } from '@/lib/orderStatus'
 import { totalStock, stockLevel, stockLevelLabel, stockLevelClass } from '@/lib/stock'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export default function Dashboard() {
   const slug = getCookie('tenantSlug') || 'test-tenant'
@@ -40,7 +41,21 @@ export default function Dashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  if (!metrics) return <div>Loading...</div>
+  if (!metrics) {
+    return (
+      <div className="p-6 bg-gray-50 min-h-screen">
+        <h1 className="text-3xl font-bold mb-8 text-gray-900">Admin Dashboard</h1>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {Array.from({ length: 3 }, (_, i) => (
+            <div key={i} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+              <Skeleton className="h-4 w-24 mb-3" />
+              <Skeleton className="h-9 w-32" />
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">

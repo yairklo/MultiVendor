@@ -5,10 +5,14 @@ import { useRouter } from 'next/navigation'
 import { getCookie } from 'cookies-next'
 import { useOrders } from '@/hooks/useOrders'
 import { orderStatusClass as statusClass, orderStatusLabel as statusLabel } from '@/lib/orderStatus'
+import { useToast } from '@/context/ToastContext'
+import { useConfirm } from '@/context/ConfirmContext'
 
 export default function MyOrdersPage() {
   const router = useRouter()
   const { fetchOrders, cancelOrder, payOrder } = useOrders()
+  const { showToast } = useToast()
+  const { confirm } = useConfirm()
   const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [busyId, setBusyId] = useState<number | null>(null)
@@ -41,22 +45,30 @@ export default function MyOrdersPage() {
     try {
       await payOrder(orderId)
       await loadOrders()
+      showToast('Payment successful', 'success')
     } catch (e: any) {
-      setError(e.message || 'Payment failed')
+      showToast(e.message || 'Payment failed', 'error')
     } finally {
       setBusyId(null)
     }
   }
 
   const handleCancel = async (orderId: number) => {
-    if (!confirm('Cancel this order?')) return
+    const ok = await confirm({
+      title: 'Cancel this order?',
+      confirmLabel: 'Cancel Order',
+      cancelLabel: 'Keep Order',
+      variant: 'destructive',
+    })
+    if (!ok) return
     setBusyId(orderId)
     setError('')
     try {
       await cancelOrder(orderId)
       await loadOrders()
+      showToast('Order cancelled', 'success')
     } catch (e: any) {
-      setError(e.message || 'Failed to cancel order')
+      showToast(e.message || 'Failed to cancel order', 'error')
     } finally {
       setBusyId(null)
     }

@@ -40,8 +40,11 @@ test.describe('Product Edit (CMS CRUD)', () => {
 
     const row = page.locator('tr', { hasText: productName });
     await expect(row).toHaveCount(1);
-    page.once('dialog', dialog => dialog.accept());
     await row.getByRole('button', { name: /delete/i }).click();
+
+    // Deletion goes through the app's own confirm dialog, not a native
+    // browser confirm() — accept it there instead of via page.on('dialog').
+    await page.getByRole('dialog').getByRole('button', { name: /^delete$/i }).click();
 
     await expect(page.locator('tr', { hasText: productName })).toHaveCount(0);
 
