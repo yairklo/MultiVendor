@@ -1,6 +1,6 @@
 import math
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_, cast, String
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException, status
 from app.models.tenant import Tenant, TenantSettings, SubscriptionPlan
@@ -35,17 +35,10 @@ async def get_store_config_service(tenant_slug: str, db: AsyncSession) -> Tenant
         return TenantSettingsSchema.model_validate(tenant.settings)
     return TenantSettingsSchema()
 
-def _matches_search(product: "Product", q: str) -> bool:
-    needle = q.strip().lower()
-    if not needle:
-        return True
-    haystacks = []
-    for field in (product.name, product.description):
-        if isinstance(field, dict):
-            haystacks.extend(str(v) for v in field.values())
-        elif field:
-            haystacks.append(str(field))
-    return any(needle in h.lower() for h in haystacks)
+def _escape_like(value: str) -> str:
+    """Escapes LIKE wildcards so a search for e.g. "50% off" or "a_b" matches
+    literally instead of '%'/'_' being treated as SQL wildcards."""
+    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 async def _fetch_review_stats(product_ids: list[int], db: AsyncSession) -> dict[int, tuple[float, int]]:
     if not product_ids:
@@ -95,23 +88,33 @@ async def list_public_products_service(tenant_slug: str, page: int, page_size: i
     if not tenant_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Store not found")
 
-    query = select(Product).where(Product.tenant_id == tenant_id, Product.is_active == True)
+    conditions = [Product.tenant_id == tenant_id, Product.is_active == True]
     if category_id:
-        query = query.where(Product.category_id == category_id)
-    query = query.options(selectinload(Product.variants), selectinload(Product.images))
-    query = query.order_by(Product.created_at.desc())
-
-    result = await db.execute(query)
-    all_products = result.scalars().all()
-
-    # Name/description are i18n JSON blobs, so search matching happens in
-    # Python rather than a DB-level ILIKE.
+        conditions.append(Product.category_id == category_id)
     if q:
-        all_products = [p for p in all_products if _matches_search(p, q)]
+        # name/description are i18n JSON blobs ({"en": "...", "he": "..."}) —
+        # casting to text and matching against the whole blob searches every
+        # language's value in one LIKE, the same "any translation matches"
+        # semantics the old Python-side search had, but evaluated in the DB.
+        pattern = f"%{_escape_like(q.strip().lower())}%"
+        conditions.append(or_(
+            func.lower(cast(Product.name, String)).like(pattern, escape="\\"),
+            func.lower(cast(Product.description, String)).like(pattern, escape="\\"),
+        ))
 
-    total = len(all_products)
-    start = (page - 1) * page_size
-    products = all_products[start:start + page_size]
+    count_result = await db.execute(select(func.count()).select_from(Product).where(*conditions))
+    total = count_result.scalar_one()
+
+    query = (
+        select(Product)
+        .where(*conditions)
+        .options(selectinload(Product.variants), selectinload(Product.images))
+        .order_by(Product.created_at.desc())
+        .limit(page_size)
+        .offset((page - 1) * page_size)
+    )
+    result = await db.execute(query)
+    products = result.scalars().all()
 
     review_stats = await _fetch_review_stats([p.id for p in products], db)
     product_responses = [_build_product_response(p, review_stats) for p in products]
