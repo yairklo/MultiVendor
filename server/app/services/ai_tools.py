@@ -304,7 +304,11 @@ ai_tools: List[ToolDefinition] = [
     # --- Orders & fulfillment ----------------------------------------------
     {
         "name": "list_orders",
-        "description": "List this store's orders, most recent first, with optional filters.",
+        "description": (
+            "List this store's orders, most recent first, with optional filters. Always capped server-side "
+            "(defaults to 20, max 50) regardless of how many orders the store actually has — narrow with "
+            "status/date/customer filters rather than expecting every order back at once."
+        ),
         "parameters": {
             "type": "object",
             "properties": {
@@ -312,6 +316,7 @@ ai_tools: List[ToolDefinition] = [
                 "start_date": {"type": "string", "description": "ISO8601 — only orders created on/after this."},
                 "end_date": {"type": "string", "description": "ISO8601 — only orders created on/before this."},
                 "customer_email": {"type": "string"},
+                "limit": {"type": "number", "description": "Max rows to return, default 20, hard-capped at 50."},
             },
             "required": [],
         },

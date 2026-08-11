@@ -87,9 +87,16 @@ def _slugify(text: str) -> str:
     return slug or "new-product"
 
 
+def _escape_table_cell(value: Any) -> str:
+    # Product/customer names are free text (including AI-generated ones) and can
+    # legitimately contain "|" — unescaped, that would split into extra columns
+    # and break the rendered table.
+    return str(value).replace("|", "\\|")
+
+
 def _format_markdown_table(headers: List[str], rows: List[List[str]]) -> str:
     lines = ["| " + " | ".join(headers) + " |", "| " + " | ".join("---" for _ in headers) + " |"]
-    lines += ["| " + " | ".join(str(c) for c in row) + " |" for row in rows]
+    lines += ["| " + " | ".join(_escape_table_cell(c) for c in row) + " |" for row in rows]
     return "\n".join(lines)
 
 
