@@ -8,13 +8,23 @@ import { TextBlock } from './sections/TextBlock'
 import { Gallery } from './sections/Gallery'
 import { ButtonGroupSection } from './sections/ButtonGroupSection'
 import { TableSection } from './sections/TableSection'
+import { GridContainer } from './sections/GridContainer'
+import { TwoColumnLayout } from './sections/TwoColumnLayout'
 
-type SectionComponent = (props: {
+export type SectionComponent = (props: {
   section: Section
   themeStyle: CSSProperties
   onAction?: (action: DispatchedAction) => void
   tenantSlug?: string
+  showTypeLabels?: boolean
 }) => React.JSX.Element
+
+export type RenderSectionsOptions = {
+  onAction?: (action: DispatchedAction) => void
+  tenantSlug?: string
+  /** Overlays each section's type as a small badge — useful in the admin editor preview, not on the live storefront. */
+  showTypeLabels?: boolean
+}
 
 const SECTION_COMPONENTS: Record<Section['type'], SectionComponent> = {
   hero_banner: HeroBanner,
@@ -24,6 +34,42 @@ const SECTION_COMPONENTS: Record<Section['type'], SectionComponent> = {
   gallery: Gallery,
   button_group: ButtonGroupSection,
   table: TableSection,
+  grid_container: GridContainer,
+  two_column_layout: TwoColumnLayout,
+}
+
+/**
+ * Shared recursive traversal — both the top-level PageRenderer and the two container
+ * components (GridContainer/TwoColumnLayout) call this for their own child sections, so
+ * nesting logic lives in exactly one place rather than being reimplemented per container.
+ */
+export function renderSections(sections: Section[], opts: RenderSectionsOptions): React.JSX.Element[] {
+  return sections.map((section) => {
+    const Component = SECTION_COMPONENTS[section.type]
+    if (!Component) {
+      return (
+        <div key={section.id} className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          Unknown section type: {section.type}
+        </div>
+      )
+    }
+    return (
+      <div key={section.id} className="relative">
+        {opts.showTypeLabels && (
+          <div className="absolute -top-2 left-4 z-10 rounded-full bg-gray-900/80 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white">
+            {section.type}
+          </div>
+        )}
+        <Component
+          section={section}
+          themeStyle={getSectionThemeStyle(section.settings)}
+          onAction={opts.onAction}
+          tenantSlug={opts.tenantSlug}
+          showTypeLabels={opts.showTypeLabels}
+        />
+      </div>
+    )
+  })
 }
 
 export function PageRenderer({
@@ -45,31 +91,7 @@ export function PageRenderer({
 
   return (
     <div className="flex flex-col gap-4">
-      {page.sections.map((section) => {
-        const Component = SECTION_COMPONENTS[section.type]
-        if (!Component) {
-          return (
-            <div key={section.id} className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-              Unknown section type: {section.type}
-            </div>
-          )
-        }
-        return (
-          <div key={section.id} className="relative">
-            {showTypeLabels && (
-              <div className="absolute -top-2 left-4 rounded-full bg-gray-900/80 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white">
-                {section.type}
-              </div>
-            )}
-            <Component
-              section={section}
-              themeStyle={getSectionThemeStyle(section.settings)}
-              onAction={onAction}
-              tenantSlug={tenantSlug}
-            />
-          </div>
-        )
-      })}
+      {renderSections(page.sections, { onAction, tenantSlug, showTypeLabels })}
       {page.sections.length === 0 && <div className="p-8 text-center text-gray-400">No sections yet.</div>}
     </div>
   )

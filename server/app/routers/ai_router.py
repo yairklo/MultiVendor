@@ -6,7 +6,7 @@ from app.deps import get_tenant_admin
 from app.models.user import User
 from app.schemas.ai_schemas import (
     AIChatRequest, AIChatResponse, AIStatusResponse, ConversationResponse, PageType, PendingConfirmation,
-    StorePageSchema, StorePageSummary, StorePageVersionSummary, ToolCallRecord
+    SavePageSectionsRequest, StorePageSchema, StorePageSummary, StorePageVersionSummary, ToolCallRecord
 )
 from app.services import ai_conversation_service, ai_pending_action_service, store_page_service
 from app.services.ai_agent_service import is_gemini_configured, run_agent_turn
@@ -53,6 +53,29 @@ async def get_page_schema(
     db: AsyncSession = Depends(get_db),
 ):
     return await store_page_service.get_page_schema_service(tenant_slug, page_key, page_type, db)
+
+
+@ai_router.put(
+    "/page-schema",
+    response_model=StorePageSchema,
+    summary="Manually Save a Page's Section Tree",
+    description=(
+        "Direct write path for drag-and-drop reordering in the admin editor — bypasses the AI tool-calling loop "
+        "entirely, but reuses the identical recursive sanitizer, so a manually-dragged payload is validated "
+        "exactly like an AI-authored one. Writes only to the draft — publishing still requires POST /publish."
+    ),
+)
+async def put_page_schema(
+    req: SavePageSectionsRequest,
+    tenant_slug: str = Path(...),
+    admin: User = Depends(get_tenant_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    return await store_page_service.upsert_page_sections_service(
+        tenant_slug, req.page_key, req.page_type,
+        [s.model_dump(exclude_none=True) for s in req.sections], db,
+        title=req.title, background_color=req.background_color, text_color=req.text_color,
+    )
 
 
 @ai_router.post(

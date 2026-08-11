@@ -3,16 +3,30 @@ from typing import Optional, List, Dict, Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 SectionType = Literal[
-    "hero_banner", "product_grid", "video_embed", "text_block", "gallery", "button_group", "table"
+    "hero_banner", "product_grid", "video_embed", "text_block", "gallery", "button_group", "table",
+    "grid_container", "two_column_layout",
 ]
 PageType = Literal["static_page", "template"]
 MediaType = Literal["image", "video"]
 ButtonVariant = Literal["primary", "secondary", "outline"]
 ButtonActionType = Literal["NAVIGATE", "OPEN_MODAL", "ADD_TO_CART", "APPLY_COUPON"]
+DesignVariant = Literal["primary", "accent", "secondary", "muted", "neutral"]
 
-SECTION_TYPES: tuple = ("hero_banner", "product_grid", "video_embed", "text_block", "gallery", "button_group", "table")
+SECTION_TYPES: tuple = (
+    "hero_banner", "product_grid", "video_embed", "text_block", "gallery", "button_group", "table",
+    "grid_container", "two_column_layout",
+)
 BUTTON_ACTION_TYPES: tuple = ("NAVIGATE", "OPEN_MODAL", "ADD_TO_CART", "APPLY_COUPON")
 BUTTON_VARIANTS: tuple = ("primary", "secondary", "outline")
+# Structural sections that hold other sections rather than rendering leaf content themselves.
+CONTAINER_SECTION_TYPES: tuple = ("grid_container", "two_column_layout")
+# AI-selectable Tailwind design tokens for container theming (frontend/src/lib/design-tokens.ts
+# maps each to a literal, statically-scanned class string) — kept separate from the free-text
+# background_color/text_color path the original 7 section types use.
+DESIGN_VARIANTS: tuple = ("primary", "accent", "secondary", "muted", "neutral")
+# A store's page tree is user/AI-authored — cap nesting so a hallucinated or malicious payload
+# can't produce pathologically deep recursion server- or client-side.
+MAX_SECTION_NESTING_DEPTH = 3
 
 class SectionMedia(BaseModel):
     type: MediaType
@@ -25,7 +39,14 @@ class Section(BaseModel):
     type: SectionType
     settings: Dict[str, Any] = Field(default_factory=dict)
     media: Optional[SectionMedia] = None
+    # Only meaningful for type="grid_container" — the sections rendered inside the grid.
+    children: Optional[List["Section"]] = None
+    # Only meaningful for type="two_column_layout" — keys are "left"/"right".
+    zones: Optional[Dict[str, List["Section"]]] = None
     model_config = ConfigDict(from_attributes=True)
+
+
+Section.model_rebuild()
 
 class StorePageSchema(BaseModel):
     page_key: str
@@ -42,6 +63,17 @@ class StorePageSchema(BaseModel):
     has_unpublished_changes: bool = False
     published_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)
+
+class SavePageSectionsRequest(BaseModel):
+    """Direct write path for the drag-and-drop editor — bypasses the AI/Gemini tool-calling
+    loop entirely, but is validated by the exact same recursive sanitizer as an AI-authored
+    update_page_sections call, so a manually-dragged payload gets identical guarantees."""
+    page_key: str = Field(..., min_length=1)
+    page_type: PageType
+    sections: List[Section]
+    title: Optional[str] = None
+    background_color: Optional[str] = None
+    text_color: Optional[str] = None
 
 class StorePageSummary(BaseModel):
     page_key: str

@@ -6,6 +6,12 @@ export type SectionType =
   | 'gallery'
   | 'button_group'
   | 'table'
+  | 'grid_container'
+  | 'two_column_layout'
+
+export type DesignVariant = 'primary' | 'accent' | 'secondary' | 'muted' | 'neutral'
+
+export const MAX_SECTION_NESTING_DEPTH = 3
 
 export type PageType = 'static_page' | 'template'
 
@@ -30,6 +36,10 @@ export interface Section {
   type: SectionType
   settings: Record<string, any>
   media?: SectionMedia
+  /** Only meaningful for type="grid_container" — the sections rendered inside the grid. */
+  children?: Section[]
+  /** Only meaningful for type="two_column_layout". */
+  zones?: { left?: Section[]; right?: Section[] }
 }
 
 export interface StorePageSchema {

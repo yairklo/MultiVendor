@@ -20,7 +20,8 @@ export const apiClient = async (url: string, options: RequestInit = {}) => {
   }
 
   // Handle relative URLs to hit the live FastAPI backend
-  const fullUrl = url.startsWith('/') ? `http://localhost:8000${url}` : url
+  const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
+  const fullUrl = url.startsWith('/') ? `${apiBase}${url}` : url
 
   const response = await fetch(fullUrl, { ...options, headers })
 

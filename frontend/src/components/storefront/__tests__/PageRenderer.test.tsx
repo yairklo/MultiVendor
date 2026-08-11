@@ -31,6 +31,21 @@ const page: StorePageSchema = {
       settings: { buttons: [{ label: XSS_PAYLOAD, actionType: 'NAVIGATE', actionPayload: { href: '/shop' } }] },
     },
     { id: 's7', type: 'product_grid', settings: { title: XSS_PAYLOAD, columns: 2 } },
+    {
+      id: 's8',
+      type: 'grid_container',
+      settings: { columns: 2 },
+      children: [{ id: 's8a', type: 'text_block', settings: { heading: XSS_PAYLOAD, body: SCRIPT_PAYLOAD } }],
+    },
+    {
+      id: 's9',
+      type: 'two_column_layout',
+      settings: {},
+      zones: {
+        left: [{ id: 's9a', type: 'hero_banner', settings: { headline: XSS_PAYLOAD, size: 'small' } }],
+        right: [{ id: 's9b', type: 'text_block', settings: { heading: SCRIPT_PAYLOAD, body: XSS_PAYLOAD } }],
+      },
+    },
   ],
 }
 

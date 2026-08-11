@@ -70,6 +70,21 @@ export function useAiLayout() {
     })
   }
 
+  /** Direct write path for manual drag-and-drop reordering — bypasses the AI chat loop entirely. */
+  const saveLayout = async (schema: StorePageSchema): Promise<StorePageSchema> => {
+    return apiClient(`/api/v1/admin/store/${tenantSlug}/ai/page-schema`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        page_key: schema.page_key,
+        page_type: schema.page_type,
+        sections: schema.sections,
+        title: schema.title,
+        background_color: schema.background_color,
+        text_color: schema.text_color,
+      }),
+    })
+  }
+
   return {
     tenantSlug,
     fetchStatus,
@@ -83,5 +98,6 @@ export function useAiLayout() {
     publishPage,
     confirmPendingAction,
     cancelPendingAction,
+    saveLayout,
   }
 }

@@ -13,57 +13,88 @@ class ToolDefinition(TypedDict):
     parameters: Dict[str, Any]
 
 
-_SECTION_SCHEMA: Dict[str, Any] = {
-    "type": "object",
-    "properties": {
-        "id": {
-            "type": "string",
-            "description": "Stable unique identifier for this section. Reuse the existing id when editing a "
-            "section in place; omit it when adding a brand new section (the server will generate one).",
-        },
-        "type": {
-            "type": "string",
-            "enum": ["hero_banner", "product_grid", "video_embed", "text_block", "gallery", "button_group", "table"],
-            "description": "The section component type to render.",
-        },
-        "settings": {
-            "type": "object",
-            "description": (
-                "Arbitrary type-specific settings — use exactly these key names, the frontend components only "
-                "read these: hero_banner: {headline, size: 'small'|'medium'|'large', alignment: 'left'|'center'|"
-                "'right'}. product_grid: {title, columns (number), category_id?: number} renders REAL live "
-                "products from this store, filtered to that category if category_id is given (look it up via the "
-                "store's categories if the user names one) or the newest products otherwise — never invent "
-                "product data yourself, this section always pulls the real catalog. video_embed: {title, autoplay "
-                "(bool)}. text_block: {heading, body}. gallery: {layout: 'grid'|'carousel', thumbnails (bool)}. "
-                "table: {title?, headers: string[], rows: string[][] (each row same length as headers)}. "
-                "button_group: {buttons: [{label, variant?: 'primary'|'secondary'|'outline', actionType: "
-                "'NAVIGATE'|'OPEN_MODAL'|'ADD_TO_CART'|'APPLY_COUPON', actionPayload?}]} — note actionType/"
-                "actionPayload are camelCase, unlike every other snake_case field in this API; they are "
-                "dispatched to the frontend as structured data, never executed as code, and any button with an "
-                "unrecognized actionType (or the wrong casing) is silently dropped. For actionType=NAVIGATE, "
-                "actionPayload MUST always be an object — a raw string is dropped and the button ends up dead: "
-                "use {page_key: '<key>'} (always page_type='static_page') to link to another page on THIS store, "
-                "including a brand new one you are creating in the same or a follow-up update_page_sections call "
-                "— you do not know and must never guess this store's URL, the frontend resolves page_key to the "
-                "correct link automatically. Only use {href: '/some/path'} for a fixed, non-page destination "
-                "(e.g. '/shop'). On any section type, background_color/background/theme_color/theme and "
-                "text_color/color are honored as CSS colors."
-            ),
-        },
-        "media": {
-            "type": "object",
-            "description": "Optional media attached to the section (image or video).",
-            "properties": {
-                "type": {"type": "string", "enum": ["image", "video"]},
-                "url": {"type": "string"},
-                "aspect_ratio": {"type": "string"},
+# Recursive JSON Schema via $defs/$ref — a section can itself be a container ("grid_container",
+# "two_column_layout") holding other sections. $defs is hoisted onto the tool's top-level
+# `parameters` object (see update_page_sections below) since a "#/$defs/..." $ref resolves
+# against the schema document root, not the immediate parent object. Confirmed by reading
+# ai_agent_service.py: decl["parameters"] is passed straight through to
+# types.FunctionDeclaration(parameters_json_schema=...) with zero transformation, so $defs/$ref
+# reach the Gemini SDK call untouched. children/zones are deliberately kept as non-required
+# Section properties (true by omission below) — the google-genai SDK's docs note recursive refs
+# are only supported within non-required properties.
+_SECTION_SCHEMA_DEFS: Dict[str, Any] = {
+    "Section": {
+        "type": "object",
+        "properties": {
+            "id": {
+                "type": "string",
+                "description": "Stable unique identifier for this section. Reuse the existing id when editing a "
+                "section in place; omit it when adding a brand new section (the server will generate one).",
             },
-            "required": ["type", "url"],
+            "type": {
+                "type": "string",
+                "enum": [
+                    "hero_banner", "product_grid", "video_embed", "text_block", "gallery", "button_group", "table",
+                    "grid_container", "two_column_layout",
+                ],
+                "description": "The section component type to render.",
+            },
+            "settings": {
+                "type": "object",
+                "description": (
+                    "Arbitrary type-specific settings — use exactly these key names, the frontend components only "
+                    "read these: hero_banner: {headline, size: 'small'|'medium'|'large', alignment: 'left'|'center'|"
+                    "'right'}. product_grid: {title, columns (number), category_id?: number} renders REAL live "
+                    "products from this store, filtered to that category if category_id is given (look it up via the "
+                    "store's categories if the user names one) or the newest products otherwise — never invent "
+                    "product data yourself, this section always pulls the real catalog. video_embed: {title, autoplay "
+                    "(bool)}. text_block: {heading, body}. gallery: {layout: 'grid'|'carousel', thumbnails (bool)}. "
+                    "table: {title?, headers: string[], rows: string[][] (each row same length as headers)}. "
+                    "button_group: {buttons: [{label, variant?: 'primary'|'secondary'|'outline', actionType: "
+                    "'NAVIGATE'|'OPEN_MODAL'|'ADD_TO_CART'|'APPLY_COUPON', actionPayload?}]} — note actionType/"
+                    "actionPayload are camelCase, unlike every other snake_case field in this API; they are "
+                    "dispatched to the frontend as structured data, never executed as code, and any button with an "
+                    "unrecognized actionType (or the wrong casing) is silently dropped. For actionType=NAVIGATE, "
+                    "actionPayload MUST always be an object — a raw string is dropped and the button ends up dead: "
+                    "use {page_key: '<key>'} (always page_type='static_page') to link to another page on THIS store, "
+                    "including a brand new one you are creating in the same or a follow-up update_page_sections call "
+                    "— you do not know and must never guess this store's URL, the frontend resolves page_key to the "
+                    "correct link automatically. Only use {href: '/some/path'} for a fixed, non-page destination "
+                    "(e.g. '/shop'). On any of the 7 leaf section types above, background_color/background/"
+                    "theme_color/theme and text_color/color are honored as CSS colors. grid_container: "
+                    "{columns (number, e.g. 3), design_variant?: 'primary'|'accent'|'secondary'|'muted'|'neutral'}. "
+                    "two_column_layout: {design_variant?: same 5 values}. Containers do NOT read background_color — "
+                    "design_variant is the only way to theme a grid_container/two_column_layout."
+                ),
+            },
+            "media": {
+                "type": "object",
+                "description": "Optional media attached to the section (image or video).",
+                "properties": {
+                    "type": {"type": "string", "enum": ["image", "video"]},
+                    "url": {"type": "string"},
+                    "aspect_ratio": {"type": "string"},
+                },
+                "required": ["type", "url"],
+            },
+            "children": {
+                "type": "array",
+                "description": "Only for type='grid_container' — the child sections rendered inside the grid.",
+                "items": {"$ref": "#/$defs/Section"},
+            },
+            "zones": {
+                "type": "object",
+                "description": "Only for type='two_column_layout'. Keys 'left'/'right', each an array of child sections.",
+                "properties": {
+                    "left": {"type": "array", "items": {"$ref": "#/$defs/Section"}},
+                    "right": {"type": "array", "items": {"$ref": "#/$defs/Section"}},
+                },
+            },
         },
-    },
-    "required": ["type", "settings"],
+        "required": ["type", "settings"],
+    }
 }
+_SECTION_SCHEMA: Dict[str, Any] = {"$ref": "#/$defs/Section"}
 
 _VARIANT_SCHEMA: Dict[str, Any] = {
     "type": "object",
@@ -129,6 +160,7 @@ ai_tools: List[ToolDefinition] = [
         ),
         "parameters": {
             "type": "object",
+            "$defs": _SECTION_SCHEMA_DEFS,
             "properties": {
                 "page_key": {"type": "string", "description": "The unique key of the page or template being updated."},
                 "page_type": {
@@ -138,7 +170,13 @@ ai_tools: List[ToolDefinition] = [
                 },
                 "sections": {
                     "type": "array",
-                    "description": "The full, ordered list of sections that should exist on the page after this update.",
+                    "description": (
+                        "The full, ordered list of sections that should exist on the page after this update. Use a "
+                        "grid_container for 3+ related items that should sit side by side (put a product_grid, "
+                        "button_group, or text_block as each child in 'children') and a two_column_layout for "
+                        "exactly two side-by-side blocks (children go in zones.left/zones.right). Nesting is capped "
+                        "at 3 levels server-side — don't nest a container inside a container more than 2 levels deep."
+                    ),
                     "items": _SECTION_SCHEMA,
                 },
                 "background_color": {
