@@ -9,7 +9,8 @@ from app.models.tenant import Tenant
 from app.models.store_page import StorePage, StorePageVersion
 from app.schemas.ai_schemas import (
     StorePageSchema, StorePageSummary, StorePageVersionSummary, Section,
-    SECTION_TYPES, BUTTON_ACTION_TYPES, BUTTON_VARIANTS
+    SECTION_TYPES, BUTTON_ACTION_TYPES, BUTTON_VARIANTS, CONTAINER_SECTION_TYPES,
+    DESIGN_VARIANTS, MAX_SECTION_NESTING_DEPTH,
 )
 
 MAX_VERSIONS_PER_PAGE = 20
@@ -83,8 +84,26 @@ def _sanitize_button_group_settings(settings: Dict[str, Any]) -> Dict[str, Any]:
     return {**settings, "buttons": sanitized}
 
 
-def _sanitize_sections(raw_sections: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    seen_ids: set = set()
+def _sanitize_design_variant_settings(settings: Dict[str, Any]) -> Dict[str, Any]:
+    """Clamp a container's design_variant to the fixed token allow-list — this is the real
+    enforcement gate; the frontend's own fallback-to-neutral lookup is defense-in-depth, not
+    the primary guarantee that only a Tailwind-generated class ever reaches the DOM."""
+    variant = settings.get("design_variant")
+    if variant not in DESIGN_VARIANTS:
+        return {k: v for k, v in settings.items() if k != "design_variant"}
+    return settings
+
+
+def _sanitize_sections(
+    raw_sections: List[Dict[str, Any]], seen_ids: "set | None" = None, depth: int = 0
+) -> List[Dict[str, Any]]:
+    # A single seen_ids set is threaded through every recursive call (never recreated per
+    # call) so generated ids stay globally unique across nesting levels, not just within one.
+    if seen_ids is None:
+        seen_ids = set()
+    if depth > MAX_SECTION_NESTING_DEPTH:
+        raise HTTPException(status_code=400, detail="Section nesting too deep")
+
     sanitized: List[Dict[str, Any]] = []
     for raw in raw_sections:
         section_type = raw.get("type")
@@ -99,10 +118,24 @@ def _sanitize_sections(raw_sections: List[Dict[str, Any]]) -> List[Dict[str, Any
         settings = raw.get("settings") or {}
         if section_type == "button_group":
             settings = _sanitize_button_group_settings(settings)
+        elif section_type in CONTAINER_SECTION_TYPES:
+            settings = _sanitize_design_variant_settings(settings)
 
         entry: Dict[str, Any] = {"id": section_id, "type": section_type, "settings": settings}
         if raw.get("media"):
             entry["media"] = raw["media"]
+
+        if section_type == "grid_container":
+            children = raw.get("children") if isinstance(raw.get("children"), list) else []
+            entry["children"] = _sanitize_sections(children, seen_ids, depth + 1)
+        elif section_type == "two_column_layout":
+            zones_raw = raw.get("zones") if isinstance(raw.get("zones"), dict) else {}
+            entry["zones"] = {
+                zone: _sanitize_sections(items, seen_ids, depth + 1)
+                for zone, items in zones_raw.items()
+                if zone in ("left", "right") and isinstance(items, list)
+            }
+
         sanitized.append(entry)
     return sanitized
 

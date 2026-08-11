@@ -4,14 +4,14 @@
     {
       "name": "backend",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "uvicorn", "app.main:app", "--app-dir", "server", "--port", "8000", "--reload"],
-      "port": 8000
+      "runtimeArgs": ["-m", "uvicorn", "app.main:app", "--app-dir", "server", "--port", "8005", "--reload"],
+      "port": 8005
     },
     {
       "name": "frontend",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--prefix", "frontend"],
-      "port": 3000
+      "runtimeArgs": ["run", "dev", "--prefix", "frontend", "--", "-p", "3005"],
+      "port": 3005
     }
   ]
 }

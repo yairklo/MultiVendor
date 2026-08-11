@@ -425,3 +425,207 @@ async def test_create_product_tool_is_scoped_to_the_authenticated_tenant(async_c
     )
     assert result.is_error is False
     assert result.output["tenant_id"] == 1  # tenant-a, not the smuggled tenant-b
+
+
+# ---------------------------------------------------------------------------
+# Nested sections (grid_container / two_column_layout)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_update_page_sections_sanitizes_nested_grid_container_children(async_client: AsyncClient, db_session):
+    result = await execute_tool(
+        "update_page_sections",
+        {
+            "page_key": "nested-grid",
+            "page_type": "static_page",
+            "sections": [
+                {
+                    "type": "grid_container",
+                    "settings": {"columns": 3, "design_variant": "accent"},
+                    "children": [
+                        {"type": "text_block", "settings": {"heading": "One"}},
+                        {"type": "text_block", "settings": {"heading": "Two"}},
+                    ],
+                }
+            ],
+        },
+        "tenant-a",
+        db_session,
+    )
+    assert result.is_error is False
+    grid = result.output["sections"][0]
+    assert grid["type"] == "grid_container"
+    assert grid["settings"]["design_variant"] == "accent"
+    children = grid["children"]
+    assert len(children) == 2
+    assert all(c["id"] for c in children)  # ids generated
+    assert children[0]["id"] != children[1]["id"]  # unique even though never supplied
+
+
+@pytest.mark.asyncio
+async def test_update_page_sections_rejects_invalid_nested_section_type(async_client: AsyncClient, db_session):
+    result = await execute_tool(
+        "update_page_sections",
+        {
+            "page_key": "nested-bad-type",
+            "page_type": "static_page",
+            "sections": [
+                {
+                    "type": "grid_container",
+                    "settings": {"columns": 2},
+                    "children": [{"type": "not_a_real_type", "settings": {}}],
+                }
+            ],
+        },
+        "tenant-a",
+        db_session,
+    )
+    assert result.is_error is True
+    assert "Invalid section type" in result.output["error"]
+
+
+@pytest.mark.asyncio
+async def test_update_page_sections_enforces_max_nesting_depth(async_client: AsyncClient, db_session):
+    # grid_container -> children[0] grid_container -> children[0] grid_container -> children[0]
+    # grid_container: one level past MAX_SECTION_NESTING_DEPTH (3).
+    def _grid(inner):
+        return {"type": "grid_container", "settings": {"columns": 1}, "children": [inner] if inner else []}
+
+    too_deep = _grid(_grid(_grid(_grid({"type": "text_block", "settings": {}}))))
+    result = await execute_tool(
+        "update_page_sections",
+        {"page_key": "too-deep", "page_type": "static_page", "sections": [too_deep]},
+        "tenant-a",
+        db_session,
+    )
+    assert result.is_error is True
+    assert "nesting too deep" in result.output["error"].lower()
+
+
+@pytest.mark.asyncio
+async def test_update_page_sections_drops_unrecognized_button_action_type_when_nested(
+    async_client: AsyncClient, db_session
+):
+    # Proves the recursive sanitizer reuses the exact same button_group sanitization as the
+    # top-level path — not a parallel, weaker code path for nested content.
+    result = await execute_tool(
+        "update_page_sections",
+        {
+            "page_key": "nested-button-sanitize",
+            "page_type": "static_page",
+            "sections": [
+                {
+                    "type": "grid_container",
+                    "settings": {"columns": 2},
+                    "children": [
+                        {
+                            "type": "button_group",
+                            "settings": {
+                                "buttons": [
+                                    {"label": "Legit", "actionType": "NAVIGATE", "actionPayload": {"href": "/shop"}},
+                                    {"label": "Malicious", "actionType": "RUN_ARBITRARY_JS"},
+                                ]
+                            },
+                        }
+                    ],
+                }
+            ],
+        },
+        "tenant-a",
+        db_session,
+    )
+    assert result.is_error is False
+    nested_buttons = result.output["sections"][0]["children"][0]["settings"]["buttons"]
+    assert [b["label"] for b in nested_buttons] == ["Legit"]
+
+
+@pytest.mark.asyncio
+async def test_update_page_sections_sanitizes_two_column_layout_zones(async_client: AsyncClient, db_session):
+    result = await execute_tool(
+        "update_page_sections",
+        {
+            "page_key": "two-col",
+            "page_type": "static_page",
+            "sections": [
+                {
+                    "type": "two_column_layout",
+                    "settings": {},
+                    "zones": {
+                        "left": [{"type": "text_block", "settings": {"heading": "Left"}}],
+                        "right": [{"type": "text_block", "settings": {"heading": "Right"}}],
+                        "middle": [{"type": "text_block", "settings": {"heading": "Dropped"}}],
+                    },
+                }
+            ],
+        },
+        "tenant-a",
+        db_session,
+    )
+    assert result.is_error is False
+    zones = result.output["sections"][0]["zones"]
+    assert set(zones.keys()) == {"left", "right"}  # unrecognized "middle" key dropped
+    assert zones["left"][0]["settings"]["heading"] == "Left"
+    assert zones["right"][0]["settings"]["heading"] == "Right"
+
+
+# ---------------------------------------------------------------------------
+# Manual save endpoint (drag-and-drop write path, bypasses Gemini)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_manual_save_page_schema_endpoint_persists_sections(async_client: AsyncClient, seed_tokens):
+    headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+    payload = {
+        "page_key": "manual-save-test",
+        "page_type": "static_page",
+        "sections": [{"type": "text_block", "settings": {"heading": "Manually placed"}}],
+    }
+    put_resp = await async_client.put(
+        "/api/v1/admin/store/tenant-a/ai/page-schema", json=payload, headers=headers
+    )
+    assert put_resp.status_code == 200
+    assert put_resp.json()["sections"][0]["settings"]["heading"] == "Manually placed"
+
+    get_resp = await async_client.get(
+        "/api/v1/admin/store/tenant-a/ai/page-schema?page_key=manual-save-test&page_type=static_page",
+        headers=headers,
+    )
+    assert get_resp.status_code == 200
+    assert get_resp.json()["sections"][0]["settings"]["heading"] == "Manually placed"
+
+
+@pytest.mark.asyncio
+async def test_manual_save_page_schema_scoped_to_authenticated_tenant(async_client: AsyncClient, seed_tokens):
+    headers_a = {"Authorization": seed_tokens["tenant_admin_a"]}
+    headers_b = {"Authorization": seed_tokens["tenant_admin_b"]}
+    payload = {
+        "page_key": "manual-save-scope",
+        "page_type": "static_page",
+        "sections": [{"type": "text_block", "settings": {"heading": "Tenant A only"}}],
+    }
+    # tenant-b's own admin can't write into tenant-a's store, even at the same page_key.
+    cross_tenant_resp = await async_client.put(
+        "/api/v1/admin/store/tenant-b/ai/page-schema",
+        json={**payload, "sections": payload["sections"]},
+        headers=headers_a,
+    )
+    assert cross_tenant_resp.status_code == 403
+
+    own_resp = await async_client.put(
+        "/api/v1/admin/store/tenant-a/ai/page-schema", json=payload, headers=headers_a
+    )
+    assert own_resp.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_customer_cannot_manually_save_page_schema(async_client: AsyncClient, seed_tokens):
+    headers = {"Authorization": seed_tokens["customer_a"]}
+    payload = {
+        "page_key": "manual-save-customer",
+        "page_type": "static_page",
+        "sections": [{"type": "text_block", "settings": {"heading": "Nope"}}],
+    }
+    response = await async_client.put(
+        "/api/v1/admin/store/tenant-a/ai/page-schema", json=payload, headers=headers
+    )
+    assert response.status_code == 403

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { UploadCloud } from 'lucide-react'
-import { PageRenderer } from '@/components/storefront/PageRenderer'
+import { DraggablePageEditor } from '@/components/admin/ai/DraggablePageEditor'
 import { ContextBadge } from '@/components/admin/ai/ContextBadge'
 import { ChatDrawer } from '@/components/admin/ai/ChatDrawer'
 import { VersionHistoryPanel } from '@/components/admin/ai/VersionHistoryPanel'
@@ -10,13 +10,13 @@ import { useAiLayout } from '@/hooks/useAiLayout'
 import { useAutoSyncAIContext } from '@/hooks/useAutoSyncAIContext'
 import { useToast } from '@/context/ToastContext'
 import { useConfirm } from '@/context/ConfirmContext'
-import { DispatchedAction, PageType, StorePageSchema, StorePageSummary, StorePageVersionSummary } from '@/lib/ai/types'
+import { DispatchedAction, PageType, Section, StorePageSchema, StorePageSummary, StorePageVersionSummary } from '@/lib/ai/types'
 
 export default function AiLayoutPage() {
   const {
     tenantSlug, fetchStatus, fetchPageTargets, fetchPageSchema, sendChatMessage,
     fetchPageVersions, revertToVersion, fetchConversation, clearConversation, publishPage,
-    confirmPendingAction, cancelPendingAction,
+    confirmPendingAction, cancelPendingAction, saveLayout,
   } = useAiLayout()
   const { pageKey, pageType, messages, setMessages, setContext } = useAutoSyncAIContext()
   const { showToast } = useToast()
@@ -30,6 +30,7 @@ export default function AiLayoutPage() {
   const [revertingId, setRevertingId] = useState<number | null>(null)
   const [publishing, setPublishing] = useState(false)
   const [resolvingConfirmationId, setResolvingConfirmationId] = useState<string | null>(null)
+  const [savingLayout, setSavingLayout] = useState(false)
 
   useEffect(() => {
     fetchStatus().then((s) => setProvider(s.provider)).catch(() => {})
@@ -150,6 +151,25 @@ export default function AiLayoutPage() {
     }
   }
 
+  function handleSectionsReorder(sections: Section[]) {
+    setPage((prev) => (prev ? { ...prev, sections } : prev))
+  }
+
+  async function handleSaveLayout() {
+    if (!page) return
+    setSavingLayout(true)
+    try {
+      const saved = await saveLayout(page)
+      setPage(saved)
+      fetchPageVersions(pageKey, pageType).then(setVersions).catch(() => {})
+      showToast('Layout saved. Remember to publish if this should go live.', 'success')
+    } catch (err: any) {
+      showToast(err.message || 'Failed to save layout', 'error')
+    } finally {
+      setSavingLayout(false)
+    }
+  }
+
   async function handlePublish() {
     const ok = await confirm({
       title: 'Publish this page?',
@@ -208,7 +228,15 @@ export default function AiLayoutPage() {
           className="overflow-y-auto rounded-xl border border-gray-100 bg-gray-50 p-6"
           style={{ backgroundColor: page?.background_color || undefined, color: page?.text_color || undefined }}
         >
-          <PageRenderer page={page} tenantSlug={tenantSlug} onAction={handleAction} showTypeLabels />
+          <DraggablePageEditor
+            page={page}
+            onChange={handleSectionsReorder}
+            onSave={handleSaveLayout}
+            saving={savingLayout}
+            tenantSlug={tenantSlug}
+            onAction={handleAction}
+            showTypeLabels
+          />
         </div>
         <div className="min-h-[400px]">
           <ChatDrawer
