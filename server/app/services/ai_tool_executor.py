@@ -1,4 +1,5 @@
-from typing import Any, Dict, Optional
+import json
+from typing import Any, Dict, Optional, Set
 
 from fastapi import HTTPException
 from pydantic import ValidationError
@@ -10,12 +11,53 @@ from app.schemas.ai_schemas import PendingConfirmation
 from app.services import ai_pending_action_service, catalog_service, coupon_service, order_service, store_page_service, tenant_service
 
 
-class ToolExecutionResult:
-    def __init__(self, tool_name: str, output: Any, is_error: bool, pending_confirmation: Optional[PendingConfirmation] = None):
-        self.tool_name = tool_name
-        self.output = output
-        self.is_error = is_error
-        self.pending_confirmation = pending_confirmation
+class UngroundedReferenceError(ValueError):
+    """Raised when a write tool references an entity id the model never verified via a read/list/create tool this turn."""
+
+
+class ToolGroundingContext:
+    """
+    Tracks which real entity ids this single agent turn has actually observed
+    via a successful read/list/create tool call, so a write tool (update/
+    archive/delete/toggle) can refuse an id the model never verified instead
+    of silently acting on a guessed or hallucinated one. Create one fresh per
+    run_agent_turn call — never persisted across turns, since a store's data
+    (and therefore which ids are real) can change between them.
+    """
+
+    ENTITY_TYPES = ("product", "variant", "coupon", "order")
+
+    def __init__(self) -> None:
+        self._seen: Dict[str, Set[int]] = {t: set() for t in self.ENTITY_TYPES}
+
+    def mark(self, entity_type: str, entity_id: Any) -> None:
+        if entity_id is None:
+            return
+        try:
+            self._seen[entity_type].add(int(entity_id))
+        except (TypeError, ValueError):
+            pass
+
+    def is_grounded(self, entity_type: str, entity_id: Any) -> bool:
+        try:
+            return int(entity_id) in self._seen[entity_type]
+        except (TypeError, ValueError):
+            return False
+
+
+def _require_grounded(
+    context: Optional[ToolGroundingContext], entity_type: str, entity_id: Any, lookup_hint: str
+) -> None:
+    """No-op when no context is supplied (e.g. direct unit-test calls to execute_tool) — grounding is
+    enforced only for real agent-driven turns, which always pass one in."""
+    if context is None:
+        return
+    if not context.is_grounded(entity_type, entity_id):
+        raise UngroundedReferenceError(
+            f"{entity_type}_id {entity_id!r} has not been verified in this conversation. Call {lookup_hint} "
+            f"first to retrieve the real, current {entity_type}_id from the database — never guess or reuse "
+            f"an id you haven't just looked up."
+        )
 
 
 def _resolve_product_display_name(name: Any) -> str:
@@ -24,8 +66,28 @@ def _resolve_product_display_name(name: Any) -> str:
     return str(name)
 
 
+class ToolExecutionResult:
+    def __init__(
+        self,
+        tool_name: str,
+        output: Any,
+        is_error: bool,
+        pending_confirmation: Optional[PendingConfirmation] = None,
+        error_type: Optional[str] = None,
+    ):
+        self.tool_name = tool_name
+        self.output = output
+        self.is_error = is_error
+        self.pending_confirmation = pending_confirmation
+        # Machine-readable failure category the agent loop uses to label the error back to the model —
+        # "ValidationFailed" (bad/missing args), "UngroundedReference" (an id the model never verified),
+        # "NotFound", or "ExecutionFailed" (default fallback).
+        self.error_type = error_type or ("ExecutionFailed" if is_error else None)
+
+
 async def execute_tool(
-    tool_name: str, raw_input: Dict[str, Any], tenant_slug: str, db: AsyncSession
+    tool_name: str, raw_input: Dict[str, Any], tenant_slug: str, db: AsyncSession,
+    context: Optional[ToolGroundingContext] = None,
 ) -> ToolExecutionResult:
     """
     Executes a single tool call by name, always scoped to `tenant_slug` — the
@@ -82,6 +144,10 @@ async def execute_tool(
                 images=raw_input.get("images") or [],
             )
             product = await catalog_service.create_product_service(tenant_slug, req, db)
+            if context:
+                context.mark("product", product.id)
+                for v in product.variants:
+                    context.mark("variant", v.id)
             return ToolExecutionResult(tool_name, product.model_dump(mode="json"), False)
 
         # --- Catalog & inventory -------------------------------------------
@@ -90,12 +156,17 @@ async def execute_tool(
             if product_id is None:
                 raise ValueError("product_id is required")
             product = await catalog_service.get_admin_product_service(tenant_slug, int(product_id), db)
+            if context:
+                context.mark("product", product.id)
+                for v in product.variants:
+                    context.mark("variant", v.id)
             return ToolExecutionResult(tool_name, product.model_dump(mode="json"), False)
 
         if tool_name == "update_product":
             product_id = raw_input.get("product_id")
             if product_id is None:
                 raise ValueError("product_id is required")
+            _require_grounded(context, "product", product_id, "get_product")
             fields = {k: v for k, v in raw_input.items() if k != "product_id"}
             req = ProductUpdateRequest(**fields)
             product = await catalog_service.update_product_service(tenant_slug, int(product_id), req, db)
@@ -105,6 +176,7 @@ async def execute_tool(
             product_id = raw_input.get("product_id")
             if product_id is None:
                 raise ValueError("product_id is required")
+            _require_grounded(context, "product", product_id, "get_product")
             product = await catalog_service.update_product_service(
                 tenant_slug, int(product_id), ProductUpdateRequest(is_active=False), db
             )
@@ -114,6 +186,7 @@ async def execute_tool(
             product_id = raw_input.get("product_id")
             if product_id is None:
                 raise ValueError("product_id is required")
+            _require_grounded(context, "product", product_id, "get_product")
             # Only reads the product (to build a clear summary) — never deletes here.
             product = await catalog_service.get_admin_product_service(tenant_slug, int(product_id), db)
             display_name = _resolve_product_display_name(product.name)
@@ -130,6 +203,7 @@ async def execute_tool(
             stock_quantity = raw_input.get("stock_quantity")
             if variant_id is None or stock_quantity is None:
                 raise ValueError("variant_id and stock_quantity are required")
+            _require_grounded(context, "variant", variant_id, "get_product or get_inventory_health")
             current = await catalog_service.get_variant_service(tenant_slug, int(variant_id), db)
             merged = ProductVariantSchema(
                 id=current.id, sku=current.sku, attributes_json=current.attributes_json,
@@ -142,6 +216,7 @@ async def execute_tool(
             product_id = raw_input.get("product_id")
             if product_id is None:
                 raise ValueError("product_id is required")
+            _require_grounded(context, "product", product_id, "get_product")
             req = ProductVariantSchema(
                 sku=raw_input.get("sku", ""),
                 attributes_json=raw_input.get("attributes_json") or {},
@@ -149,6 +224,8 @@ async def execute_tool(
                 stock_quantity=raw_input.get("stock_quantity", 0),
             )
             variant = await catalog_service.add_product_variant_service(tenant_slug, int(product_id), req, db)
+            if context:
+                context.mark("variant", variant.id)
             return ToolExecutionResult(tool_name, variant.model_dump(mode="json"), False)
 
         # --- Coupons ---------------------------------------------------------
@@ -162,10 +239,15 @@ async def execute_tool(
                 valid_until=raw_input.get("valid_until"),
             )
             coupon = await coupon_service.create_tenant_coupon_service(tenant_slug, req, db)
+            if context:
+                context.mark("coupon", coupon.id)
             return ToolExecutionResult(tool_name, coupon.model_dump(mode="json"), False)
 
         if tool_name == "list_coupons":
             coupons = await coupon_service.list_tenant_coupons_service(tenant_slug, db)
+            if context:
+                for c in coupons:
+                    context.mark("coupon", c.id)
             return ToolExecutionResult(tool_name, [c.model_dump(mode="json") for c in coupons], False)
 
         if tool_name == "toggle_coupon_status":
@@ -173,6 +255,7 @@ async def execute_tool(
             is_active = raw_input.get("is_active")
             if coupon_id is None or is_active is None:
                 raise ValueError("coupon_id and is_active are required")
+            _require_grounded(context, "coupon", coupon_id, "list_coupons")
             coupon = await coupon_service.toggle_coupon_status_service(tenant_slug, int(coupon_id), bool(is_active), db)
             return ToolExecutionResult(tool_name, coupon.model_dump(mode="json"), False)
 
@@ -190,6 +273,9 @@ async def execute_tool(
                 end_date=_parse(raw_input.get("end_date")),
                 customer_email=raw_input.get("customer_email"),
             )
+            if context:
+                for o in orders:
+                    context.mark("order", o.id)
             return ToolExecutionResult(tool_name, [o.model_dump(mode="json") for o in orders], False)
 
         if tool_name == "get_order_details":
@@ -197,6 +283,8 @@ async def execute_tool(
             if order_id is None:
                 raise ValueError("order_id is required")
             order = await order_service.get_tenant_order_service(tenant_slug, int(order_id), db)
+            if context:
+                context.mark("order", order.id)
             return ToolExecutionResult(tool_name, order.model_dump(mode="json"), False)
 
         if tool_name == "update_order_status":
@@ -204,6 +292,7 @@ async def execute_tool(
             status = raw_input.get("status")
             if order_id is None or status not in ("processing", "completed", "cancelled"):
                 raise ValueError("order_id and a valid status are required")
+            _require_grounded(context, "order", order_id, "list_orders or get_order_details")
 
             if status == "cancelled":
                 order = await order_service.get_tenant_order_service(tenant_slug, int(order_id), db)
@@ -243,12 +332,25 @@ async def execute_tool(
 
         if tool_name == "get_inventory_health":
             health = await catalog_service.get_inventory_health_service(tenant_slug, db)
+            if context:
+                for item in (*health.out_of_stock, *health.low_stock):
+                    context.mark("product", item.product_id)
+                    context.mark("variant", item.variant_id)
             return ToolExecutionResult(tool_name, health.model_dump(mode="json"), False)
 
-        return ToolExecutionResult(tool_name, {"error": f"Unknown tool: {tool_name}"}, True)
+        return ToolExecutionResult(tool_name, {"error": f"Unknown tool: {tool_name}"}, True, error_type="UnknownTool")
+    except UngroundedReferenceError as exc:
+        return ToolExecutionResult(tool_name, {"error": str(exc)}, True, error_type="UngroundedReference")
     except HTTPException as exc:
-        return ToolExecutionResult(tool_name, {"error": exc.detail}, True)
+        if exc.status_code >= 500:
+            raise
+        return ToolExecutionResult(
+            tool_name, {"error": exc.detail}, True, error_type="NotFound" if exc.status_code == 404 else "ExecutionFailed"
+        )
     except ValidationError as exc:
-        return ToolExecutionResult(tool_name, {"error": exc.errors()}, True)
+        # exc.errors() embeds raw, non-JSON-safe values (e.g. a Decimal in a numeric
+        # constraint's ctx) — round-trip through exc.json() instead so this is safe to
+        # persist (chat transcript, Gemini function-response history) as well as return.
+        return ToolExecutionResult(tool_name, {"error": json.loads(exc.json())}, True, error_type="ValidationFailed")
     except ValueError as exc:
-        return ToolExecutionResult(tool_name, {"error": str(exc)}, True)
+        return ToolExecutionResult(tool_name, {"error": str(exc)}, True, error_type="ValidationFailed")

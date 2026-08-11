@@ -5,10 +5,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.services import ai_conversation_service
 from app.services.ai_mock_agent import run_mock_agent
-from app.services.ai_tool_executor import execute_tool
+from app.services.ai_tool_executor import ToolGroundingContext, execute_tool
 from app.services.ai_tools import to_gemini_function_declarations
 
 MAX_TOOL_TURNS = 6
+
+# A tool call that fails validation/grounding isn't fatal — its error is fed back to
+# the model as the next turn's input so it can self-correct. But an unbounded retry
+# budget risks looping forever on a request it fundamentally can't satisfy, so
+# consecutive failures (reset by any success) are capped here: after this many in a
+# row, the turn ends with one clear user-facing error instead of continuing to
+# bounce off the model.
+MAX_VALIDATION_RETRIES = 3
 
 _SYSTEM_INSTRUCTION_TEMPLATE = (
     "You are a proactive store-management co-pilot for a multi-vendor e-commerce admin panel — a full "
@@ -22,6 +30,13 @@ _SYSTEM_INSTRUCTION_TEMPLATE = (
     "Call exactly ONE tool per turn and wait for its result before calling another — never call multiple tools "
     "in parallel in the same turn. Prefer a read tool (get_product, get_order_details, list_orders, ...) before "
     "an update when you don't already know the current state. "
+    "Never fabricate or guess entity ids (product_id, variant_id, coupon_id, order_id) — if the user names an "
+    "item by title, code, or number instead of giving you its id directly, you MUST first call the matching "
+    "lookup tool (get_product, get_inventory_health, list_coupons, list_orders, get_order_details) to retrieve "
+    "the real id from the database before calling any update/archive/delete/toggle tool with it. The server "
+    "enforces this and will reject an id it hasn't seen you look up this conversation with an UngroundedReference "
+    "error — if you see that error, call the suggested lookup tool and then retry with the id it returns, don't "
+    "retry with the same guessed id. "
     "For sales reports, low-stock lists, or any other multi-row result, reply with a Markdown table — don't just "
     "restate numbers in prose. "
     "delete_product and update_order_status(status='cancelled') NEVER complete immediately, no matter how "
@@ -85,6 +100,43 @@ async def _persist_turn(
     )
 
 
+def _content_has_part(content: Any, part_attr: str) -> bool:
+    return any(getattr(part, part_attr, None) is not None for part in (content.parts or []))
+
+
+def _trim_history_for_persistence(history: List[Any], round_results: List[Dict[str, Any]]) -> List[Any]:
+    """
+    `history` is the raw google.genai Content[] for this turn (chat.get_history()).
+    `round_results[i]` = {"tool_name", "is_error"} for the i-th function-call round
+    this turn, in order. Because chat.send_message(user_message) seeds history[0]
+    (user) / history[1] (model) before the loop starts, and the system prompt
+    requires exactly one tool call per model turn, round i's function_call lives
+    at history[2*i + 1] and its function_response at history[2*i + 2].
+
+    Drops two things before this gets persisted and replayed as context on every
+    future turn:
+      - a failed round's call/response pair, once a LATER round this same turn
+        retried the same tool and it succeeded — the model already self-corrected,
+        so the abandoned attempt is just noise from here on.
+      - a trailing function_call with no matching function_response, which happens
+        when the loop stops (retry cap or MAX_TOOL_TURNS) without sending one more
+        message to Gemini — left in place it would replay as an unresolved dangling
+        tool call next turn.
+    """
+    drop_indices = set()
+    for i, r in enumerate(round_results):
+        if not r["is_error"]:
+            continue
+        if any(not later["is_error"] and later["tool_name"] == r["tool_name"] for later in round_results[i + 1:]):
+            drop_indices.add(2 * i + 1)
+            drop_indices.add(2 * i + 2)
+
+    trimmed = [c for idx, c in enumerate(history) if idx not in drop_indices]
+    if trimmed and _content_has_part(trimmed[-1], "function_call") and not _content_has_part(trimmed[-1], "function_response"):
+        trimmed = trimmed[:-1]
+    return trimmed
+
+
 async def run_agent_turn(
     db: AsyncSession, tenant_slug: str, user_message: str, page_key: str, page_type: str
 ) -> Dict[str, Any]:
@@ -116,7 +168,13 @@ async def run_agent_turn(
     )
 
     tool_calls: List[Dict[str, Any]] = []
+    # One entry per function-call round this turn, in order — used only to decide what
+    # to drop from the persisted Gemini history afterwards (see _trim_history_for_persistence).
+    round_results: List[Dict[str, Any]] = []
     pending_confirmation = None
+    grounding_context = ToolGroundingContext()
+    consecutive_failures = 0
+    last_error_detail: Any = None
     response = await chat.send_message(user_message)
 
     for _ in range(MAX_TOOL_TURNS):
@@ -126,17 +184,40 @@ async def run_agent_turn(
             break
 
         response_parts = []
+        round_had_error = False
         for call in function_calls:
-            tool_result = await execute_tool(call.name, dict(call.args or {}), tenant_slug, db)
+            tool_result = await execute_tool(call.name, dict(call.args or {}), tenant_slug, db, grounding_context)
             tool_calls.append({"name": call.name, "input": call.args, "output": tool_result.output, "is_error": tool_result.is_error})
+            round_results.append({"tool_name": call.name, "is_error": tool_result.is_error})
             if tool_result.pending_confirmation:
                 pending_confirmation = tool_result.pending_confirmation
+            if tool_result.is_error:
+                round_had_error = True
+                last_error_detail = tool_result.output
             response_parts.append(
                 types.Part.from_function_response(
                     name=call.name,
-                    response={"error": tool_result.output} if tool_result.is_error else {"result": tool_result.output},
+                    response=(
+                        {"error": tool_result.error_type, "details": tool_result.output}
+                        if tool_result.is_error else {"result": tool_result.output}
+                    ),
                 )
             )
+
+        consecutive_failures = consecutive_failures + 1 if round_had_error else 0
+        if consecutive_failures > MAX_VALIDATION_RETRIES:
+            # Deliberately don't send this round's results back to Gemini — we're
+            # done retrying, so no more API calls are needed for this turn.
+            result = {
+                "reply": (
+                    f"I tried {MAX_VALIDATION_RETRIES + 1} times to complete that but kept hitting validation "
+                    f"errors — the last one was: {last_error_detail}. Could you double-check the details (or "
+                    f"rephrase what you'd like) and I'll try again?"
+                ),
+                "tool_calls": tool_calls,
+                "used_provider": "gemini",
+            }
+            break
 
         response = await chat.send_message(response_parts)
     else:
@@ -149,6 +230,7 @@ async def run_agent_turn(
     if pending_confirmation:
         result["pending_confirmation"] = pending_confirmation.model_dump(mode="json")
 
-    history_json = [c.model_dump(mode="json", exclude_none=True) for c in chat.get_history()]
+    trimmed_history = _trim_history_for_persistence(chat.get_history(), round_results)
+    history_json = [c.model_dump(mode="json", exclude_none=True) for c in trimmed_history]
     await _persist_turn(tenant_slug, page_key, page_type, user_message, result, db, gemini_history_json=history_json)
     return result
