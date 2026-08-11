@@ -150,6 +150,10 @@ async def list_page_versions_service(
             StorePageVersion.page_type == page_type,
         )
         .order_by(StorePageVersion.created_at.desc(), StorePageVersion.id.desc())
+        # _snapshot_version already prunes stored rows to MAX_VERSIONS_PER_PAGE,
+        # but that's a separate write-path guarantee — this LIMIT makes the read
+        # path safe on its own, independent of the pruning logic staying correct.
+        .limit(MAX_VERSIONS_PER_PAGE)
     )
     versions = result.scalars().all()
     return [

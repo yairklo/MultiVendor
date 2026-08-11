@@ -236,6 +236,46 @@ async def test_publish_is_scoped_to_the_authenticated_tenant(async_client: Async
 
 
 @pytest.mark.asyncio
+async def test_page_versions_listing_is_capped_independent_of_write_side_pruning(
+    async_client: AsyncClient, seed_tokens, db_session
+):
+    # _snapshot_version already prunes stored rows to MAX_VERSIONS_PER_PAGE on
+    # write, but the read endpoint must not rely solely on that staying correct
+    # — insert more than the cap directly, bypassing the pruning code path
+    # entirely, and confirm the listing query itself still clamps the result.
+    from app.models.tenant import Tenant
+    from app.models.store_page import StorePage, StorePageVersion
+    from app.services.store_page_service import MAX_VERSIONS_PER_PAGE
+
+    headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+    await async_client.post(
+        "/api/v1/admin/store/tenant-a/ai/chat",
+        json={"message": "add a hero banner", "page_key": "many-versions", "page_type": "static_page"},
+        headers=headers,
+    )
+
+    tenant_id = (await db_session.execute(select(Tenant.id).where(Tenant.slug == "tenant-a"))).scalar_one()
+    page = (await db_session.execute(
+        select(StorePage).where(
+            StorePage.tenant_id == tenant_id, StorePage.page_key == "many-versions", StorePage.page_type == "static_page"
+        )
+    )).scalar_one()
+
+    for i in range(MAX_VERSIONS_PER_PAGE + 15):
+        db_session.add(StorePageVersion(
+            store_page_id=page.id, tenant_id=tenant_id, page_key="many-versions", page_type="static_page",
+            title=f"Version {i}", sections=[],
+        ))
+    await db_session.commit()
+
+    resp = await async_client.get(
+        "/api/v1/admin/store/tenant-a/ai/page-versions?page_key=many-versions&page_type=static_page", headers=headers
+    )
+    assert resp.status_code == 200
+    assert len(resp.json()) == MAX_VERSIONS_PER_PAGE
+
+
+@pytest.mark.asyncio
 async def test_page_version_history_snapshots_on_edit_and_supports_revert(async_client: AsyncClient, seed_tokens):
     headers = {"Authorization": seed_tokens["tenant_admin_a"]}
 
