@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { History, RotateCcw } from 'lucide-react'
 import { StorePageVersionSummary } from '@/lib/ai/types'
+import { parseServerDate } from '@/lib/utils'
 
 function timeAgo(isoDate: string): string {
-  const diffMs = Date.now() - new Date(isoDate).getTime()
+  const diffMs = Date.now() - parseServerDate(isoDate).getTime()
   const minutes = Math.round(diffMs / 60000)
   if (minutes < 1) return 'Just now'
   if (minutes < 60) return `${minutes}m ago`
@@ -17,10 +18,13 @@ export function VersionHistoryPanel({
   versions,
   onRevert,
   revertingId,
+  publishedAt,
 }: {
   versions: StorePageVersionSummary[]
   onRevert: (versionId: number) => void
   revertingId: number | null
+  /** When the current draft was last published — shown separately from each version's save time. */
+  publishedAt?: string | null
 }) {
   const [open, setOpen] = useState(false)
 
@@ -45,6 +49,9 @@ export function VersionHistoryPanel({
           <div className="px-2 py-1 text-xs font-semibold uppercase tracking-wide text-gray-400">
             Version History
           </div>
+          <div className="px-2 pb-2 text-xs text-gray-500">
+            Last published: {publishedAt ? timeAgo(publishedAt) : 'never'}
+          </div>
           {versions.length === 0 ? (
             <div className="px-2 py-3 text-sm text-gray-400">No edits to this page yet.</div>
           ) : (
@@ -54,7 +61,7 @@ export function VersionHistoryPanel({
                   <div className="min-w-0">
                     <div className="truncate text-sm font-medium text-gray-900">{v.title}</div>
                     <div className="text-xs text-gray-400">
-                      {timeAgo(v.created_at)} · {v.section_count} sections
+                      Saved {timeAgo(v.created_at)} · {v.section_count} sections
                     </div>
                   </div>
                   <button

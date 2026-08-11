@@ -1,6 +1,6 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any, Literal
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
 SectionType = Literal[
     "hero_banner", "product_grid", "video_embed", "text_block", "gallery", "button_group", "table"
@@ -13,6 +13,20 @@ ButtonActionType = Literal["NAVIGATE", "OPEN_MODAL", "ADD_TO_CART", "APPLY_COUPO
 SECTION_TYPES: tuple = ("hero_banner", "product_grid", "video_embed", "text_block", "gallery", "button_group", "table")
 BUTTON_ACTION_TYPES: tuple = ("NAVIGATE", "OPEN_MODAL", "ADD_TO_CART", "APPLY_COUPON")
 BUTTON_VARIANTS: tuple = ("primary", "secondary", "outline")
+
+
+def _utc_iso(value: Optional[datetime]) -> Optional[str]:
+    """
+    MySQL TIMESTAMP columns round-trip as naive datetimes representing the
+    session's clock (UTC here), but a bare `datetime.isoformat()` omits the
+    offset — browsers then parse it as local time, skewing every "time ago"
+    display by the client's UTC offset. Stamp it explicitly as UTC instead.
+    """
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.isoformat()
 
 class SectionMedia(BaseModel):
     type: MediaType
@@ -42,6 +56,10 @@ class StorePageSchema(BaseModel):
     has_unpublished_changes: bool = False
     published_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)
+
+    @field_serializer("published_at")
+    def _serialize_published_at(self, value: Optional[datetime]) -> Optional[str]:
+        return _utc_iso(value)
 
 class StorePageSummary(BaseModel):
     page_key: str
@@ -81,6 +99,10 @@ class StorePageVersionSummary(BaseModel):
     title: str
     section_count: int
     model_config = ConfigDict(from_attributes=True)
+
+    @field_serializer("created_at")
+    def _serialize_created_at(self, value: datetime) -> Optional[str]:
+        return _utc_iso(value)
 
 class ChatMessageRecord(BaseModel):
     role: Literal["user", "assistant"]

@@ -1,5 +1,5 @@
 import { AlertTriangle } from 'lucide-react'
-import { FormEvent, useState } from 'react'
+import { FormEvent, KeyboardEvent, useState } from 'react'
 import { ChatMessage } from '@/lib/ai/types'
 
 export function ChatDrawer({
@@ -23,12 +23,23 @@ export function ChatDrawer({
 }) {
   const [draft, setDraft] = useState('')
 
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault()
+  function submitDraft() {
     const trimmed = draft.trim()
     if (!trimmed || isBusy) return
     onSend(trimmed)
     setDraft('')
+  }
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    submitDraft()
+  }
+
+  function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      submitDraft()
+    }
   }
 
   return (
@@ -57,7 +68,7 @@ export function ChatDrawer({
         {messages.map((m, i) => (
           <div key={i} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
             <div
-              className={`max-w-[85%] rounded-2xl px-4 py-2 text-sm ${
+              className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-2 text-sm ${
                 m.role === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-900'
               }`}
             >
@@ -107,18 +118,19 @@ export function ChatDrawer({
       </div>
 
       <form className="flex gap-2 border-t border-gray-100 p-3" onSubmit={handleSubmit}>
-        <input
-          type="text"
+        <textarea
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder="Describe a layout change or a product to add…"
+          onKeyDown={handleKeyDown}
+          placeholder="Describe a layout change or a product to add… (Shift+Enter for a new line)"
           disabled={isBusy}
-          className="flex-1 rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 outline-none disabled:opacity-50"
+          rows={2}
+          className="flex-1 resize-y rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 outline-none disabled:opacity-50"
         />
         <button
           type="submit"
           disabled={isBusy || !draft.trim()}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 self-end"
         >
           Send
         </button>

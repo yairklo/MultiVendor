@@ -178,7 +178,12 @@ export default function AiLayoutPage() {
         <div className="flex-1">
           <ContextBadge targets={targets} pageKey={pageKey} pageType={pageType} provider={provider} onChange={setContext} />
         </div>
-        <VersionHistoryPanel versions={versions} onRevert={handleRevert} revertingId={revertingId} />
+        <VersionHistoryPanel
+          versions={versions}
+          onRevert={handleRevert}
+          revertingId={revertingId}
+          publishedAt={page?.published_at}
+        />
         <button
           type="button"
           onClick={handlePublish}
