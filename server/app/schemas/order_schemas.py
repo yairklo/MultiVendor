@@ -124,3 +124,4 @@ class CouponResponse(BaseModel):
     discount_val: Decimal
     used_count: int
     valid_until: datetime
+    is_active: bool = True

@@ -3,8 +3,9 @@ from sqlalchemy import select, func, cast, Date
 from sqlalchemy.orm import joinedload
 from fastapi import HTTPException, status
 from app.models.tenant import Tenant, TenantSettings, SubscriptionPlan
-from app.models.order import Order
+from app.models.order import Order, OrderItem
 from app.schemas.tenant_schemas import TenantSettingsSchema, TenantUpdateSchema, TenantResponse
+from app.schemas.ai_schemas import TopSellingProduct
 from app.services.order_service import PAID_ORDER_STATUSES
 from datetime import datetime, timezone
 import json
@@ -169,3 +170,41 @@ async def get_tenant_analytics_service(tenant_slug: str, start_date: str, end_da
         "orders_count": orders_count,
         "aov": round(aov, 2),
     }
+
+async def get_top_selling_products_service(
+    tenant_slug: str, start_date: str, end_date: str, db: AsyncSession, limit: int = 5
+) -> list[TopSellingProduct]:
+    tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
+    tenant_id = tenant_result.scalar_one_or_none()
+    if not tenant_id:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    try:
+        sd = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
+        ed = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid date format, use ISO8601")
+
+    query = (
+        select(
+            OrderItem.sku,
+            OrderItem.product_name,
+            func.sum(OrderItem.quantity).label("quantity_sold"),
+            func.sum(OrderItem.quantity * OrderItem.unit_price).label("revenue"),
+        )
+        .join(Order, Order.id == OrderItem.order_id)
+        .where(
+            Order.tenant_id == tenant_id,
+            Order.created_at >= sd,
+            Order.created_at <= ed,
+            Order.status.in_(PAID_ORDER_STATUSES),
+        )
+        .group_by(OrderItem.sku, OrderItem.product_name)
+        .order_by(func.sum(OrderItem.quantity).desc())
+        .limit(limit)
+    )
+    result = await db.execute(query)
+    return [
+        TopSellingProduct(sku=sku, product_name=name, quantity_sold=int(qty), revenue=round(float(rev), 2))
+        for sku, name, qty, rev in result.all()
+    ]

@@ -5,10 +5,10 @@ from app.db.session import get_db
 from app.deps import get_tenant_admin
 from app.models.user import User
 from app.schemas.ai_schemas import (
-    AIChatRequest, AIChatResponse, AIStatusResponse, ConversationResponse, PageType, StorePageSchema,
-    StorePageSummary, StorePageVersionSummary, ToolCallRecord
+    AIChatRequest, AIChatResponse, AIStatusResponse, ConversationResponse, PageType, PendingConfirmation,
+    StorePageSchema, StorePageSummary, StorePageVersionSummary, ToolCallRecord
 )
-from app.services import ai_conversation_service, store_page_service
+from app.services import ai_conversation_service, ai_pending_action_service, store_page_service
 from app.services.ai_agent_service import is_gemini_configured, run_agent_turn
 
 ai_router = APIRouter(prefix="/api/v1/admin/store/{tenant_slug}/ai", tags=["AI Layout & Product Assistant"])
@@ -79,12 +79,47 @@ async def post_ai_chat(
     except HTTPException:
         pass
 
+    pending = result.get("pending_confirmation")
     return AIChatResponse(
         reply=result["reply"],
         tool_calls=[ToolCallRecord(**tc) for tc in result["tool_calls"]],
         used_provider=result["used_provider"],
         page=page,
+        pending_confirmation=PendingConfirmation(**pending) if pending else None,
     )
+
+
+@ai_router.post(
+    "/pending-actions/{confirmation_id}/confirm",
+    summary="Confirm a Staged Destructive Action",
+    description=(
+        "The only path that actually performs delete_product or an order cancellation the AI staged — reached "
+        "solely by an explicit human click, gated by the exact same tenant-admin auth as every other action here."
+    ),
+)
+async def post_confirm_pending_action(
+    confirmation_id: str = Path(...),
+    tenant_slug: str = Path(...),
+    admin: User = Depends(get_tenant_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    return await ai_pending_action_service.confirm_pending_action_service(tenant_slug, confirmation_id, db)
+
+
+@ai_router.post(
+    "/pending-actions/{confirmation_id}/cancel",
+    status_code=204,
+    summary="Cancel a Staged Destructive Action",
+    description="Discards a staged delete_product/cancel-order action without executing anything.",
+)
+async def post_cancel_pending_action(
+    confirmation_id: str = Path(...),
+    tenant_slug: str = Path(...),
+    admin: User = Depends(get_tenant_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    await ai_pending_action_service.cancel_pending_action_service(tenant_slug, confirmation_id, db)
+    return None
 
 
 @ai_router.post(

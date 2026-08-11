@@ -168,7 +168,10 @@ async def validate_coupon_service(tenant_slug: str, coupon_code: str, db: AsyncS
     
     if not coupon:
         raise HTTPException(status_code=400, detail="Invalid coupon")
-        
+
+    if not coupon.is_active:
+        raise HTTPException(status_code=400, detail="Coupon is disabled")
+
     if coupon.valid_until and coupon.valid_until.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
         raise HTTPException(status_code=400, detail="Coupon expired")
         

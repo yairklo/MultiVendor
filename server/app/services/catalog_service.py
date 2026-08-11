@@ -13,6 +13,11 @@ from app.schemas.catalog_schemas import (
     ProductVariantSchema, CategoryCreateRequest, CategoryResponse, ProductReviewResponse,
     ProductBundleItemSchema, ProductReviewCreateRequest
 )
+from app.schemas.ai_schemas import InventoryHealthItem, InventoryHealthResponse
+
+# Matches frontend/src/lib/stock.ts's LOW_STOCK_THRESHOLD — per-product configurable
+# thresholds don't exist in the schema, so this is a fixed, shared definition of "low".
+LOW_STOCK_THRESHOLD = 5
 from io import StringIO
 import csv
 from fastapi.responses import StreamingResponse
@@ -403,6 +408,20 @@ async def add_product_variant_service(tenant_slug: str, product_id: int, req: Pr
 
     return ProductVariantSchema.model_validate(variant)
 
+async def get_variant_service(tenant_slug: str, variant_id: int, db: AsyncSession) -> ProductVariantSchema:
+    tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
+    tenant_id = tenant_result.scalar_one_or_none()
+    if not tenant_id:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    variant_result = await db.execute(
+        select(ProductVariant).where(ProductVariant.id == variant_id, ProductVariant.tenant_id == tenant_id)
+    )
+    variant = variant_result.scalar_one_or_none()
+    if not variant:
+        raise HTTPException(status_code=404, detail="Variant not found")
+    return ProductVariantSchema.model_validate(variant)
+
 async def update_product_variant_service(tenant_slug: str, variant_id: int, req: ProductVariantSchema, db: AsyncSession) -> ProductVariantSchema:
     tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
     tenant_id = tenant_result.scalar_one_or_none()
@@ -622,3 +641,35 @@ async def export_orders_csv_service(tenant_slug: str, db: AsyncSession):
 
     f.seek(0)
     return StreamingResponse(f, media_type="text/csv", headers={"Content-Disposition": "attachment; filename=orders.csv"})
+
+async def get_inventory_health_service(tenant_slug: str, db: AsyncSession) -> InventoryHealthResponse:
+    tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
+    tenant_id = tenant_result.scalar_one_or_none()
+    if not tenant_id:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    result = await db.execute(
+        select(ProductVariant, Product)
+        .join(Product, Product.id == ProductVariant.product_id)
+        .where(ProductVariant.tenant_id == tenant_id, Product.is_active == True)
+        .order_by(ProductVariant.stock_quantity.asc())
+    )
+
+    out_of_stock = []
+    low_stock = []
+    for variant, product in result.all():
+        item = InventoryHealthItem(
+            product_id=product.id,
+            product_name=product.name,
+            variant_id=variant.id,
+            sku=variant.sku,
+            stock_quantity=variant.stock_quantity,
+        )
+        if variant.stock_quantity <= 0:
+            out_of_stock.append(item)
+        elif variant.stock_quantity <= LOW_STOCK_THRESHOLD:
+            low_stock.append(item)
+
+    return InventoryHealthResponse(
+        low_stock_threshold=LOW_STOCK_THRESHOLD, out_of_stock=out_of_stock, low_stock=low_stock
+    )

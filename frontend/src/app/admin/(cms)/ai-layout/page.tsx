@@ -16,6 +16,7 @@ export default function AiLayoutPage() {
   const {
     tenantSlug, fetchStatus, fetchPageTargets, fetchPageSchema, sendChatMessage,
     fetchPageVersions, revertToVersion, fetchConversation, clearConversation, publishPage,
+    confirmPendingAction, cancelPendingAction,
   } = useAiLayout()
   const { pageKey, pageType, messages, setMessages, setContext } = useAutoSyncAIContext()
   const { showToast } = useToast()
@@ -28,6 +29,7 @@ export default function AiLayoutPage() {
   const [versions, setVersions] = useState<StorePageVersionSummary[]>([])
   const [revertingId, setRevertingId] = useState<number | null>(null)
   const [publishing, setPublishing] = useState(false)
+  const [resolvingConfirmationId, setResolvingConfirmationId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchStatus().then((s) => setProvider(s.provider)).catch(() => {})
@@ -62,7 +64,15 @@ export default function AiLayoutPage() {
       const result = await sendChatMessage(message, pageKey, pageType)
       setProvider(result.used_provider)
       if (result.page) setPage(result.page)
-      setMessages((prev) => [...prev, { role: 'assistant', text: result.reply, toolCalls: result.tool_calls }])
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          text: result.reply,
+          toolCalls: result.tool_calls,
+          pendingConfirmation: result.pending_confirmation ?? undefined,
+        },
+      ])
       fetchPageTargets().then(setTargets).catch(() => {})
       fetchPageVersions(pageKey, pageType).then(setVersions).catch(() => {})
     } catch (err: any) {
@@ -70,6 +80,42 @@ export default function AiLayoutPage() {
       showToast(err.message || 'Failed to send message', 'error')
     } finally {
       setIsBusy(false)
+    }
+  }
+
+  function resolvePendingConfirmationInPlace(confirmationId: string, noteText: string) {
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.pendingConfirmation?.id === confirmationId
+          ? { ...m, text: `${m.text}\n\n${noteText}`, pendingConfirmation: undefined }
+          : m,
+      ),
+    )
+  }
+
+  async function handleConfirmPendingAction(confirmationId: string) {
+    setResolvingConfirmationId(confirmationId)
+    try {
+      await confirmPendingAction(confirmationId)
+      resolvePendingConfirmationInPlace(confirmationId, '✅ Confirmed — done.')
+      showToast('Action completed.', 'success')
+      fetchPageTargets().then(setTargets).catch(() => {})
+    } catch (err: any) {
+      showToast(err.message || 'Failed to confirm action', 'error')
+    } finally {
+      setResolvingConfirmationId(null)
+    }
+  }
+
+  async function handleCancelPendingAction(confirmationId: string) {
+    setResolvingConfirmationId(confirmationId)
+    try {
+      await cancelPendingAction(confirmationId)
+      resolvePendingConfirmationInPlace(confirmationId, '❎ Cancelled — nothing was changed.')
+    } catch (err: any) {
+      showToast(err.message || 'Failed to cancel action', 'error')
+    } finally {
+      setResolvingConfirmationId(null)
     }
   }
 
@@ -132,7 +178,12 @@ export default function AiLayoutPage() {
         <div className="flex-1">
           <ContextBadge targets={targets} pageKey={pageKey} pageType={pageType} provider={provider} onChange={setContext} />
         </div>
-        <VersionHistoryPanel versions={versions} onRevert={handleRevert} revertingId={revertingId} />
+        <VersionHistoryPanel
+          versions={versions}
+          onRevert={handleRevert}
+          revertingId={revertingId}
+          publishedAt={page?.published_at}
+        />
         <button
           type="button"
           onClick={handlePublish}
@@ -160,7 +211,15 @@ export default function AiLayoutPage() {
           <PageRenderer page={page} tenantSlug={tenantSlug} onAction={handleAction} showTypeLabels />
         </div>
         <div className="min-h-[400px]">
-          <ChatDrawer messages={messages} onSend={handleSend} isBusy={isBusy} onNewConversation={handleNewConversation} />
+          <ChatDrawer
+            messages={messages}
+            onSend={handleSend}
+            isBusy={isBusy}
+            onNewConversation={handleNewConversation}
+            onConfirmAction={handleConfirmPendingAction}
+            onCancelAction={handleCancelPendingAction}
+            resolvingConfirmationId={resolvingConfirmationId}
+          />
         </div>
       </div>
     </div>

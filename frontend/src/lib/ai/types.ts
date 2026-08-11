@@ -59,17 +59,26 @@ export interface ToolCallRecord {
   is_error: boolean
 }
 
+export interface PendingConfirmation {
+  id: string
+  tool_name: string
+  summary: string
+}
+
 export interface AIChatResponse {
   reply: string
   tool_calls: ToolCallRecord[]
   used_provider: 'gemini' | 'mock'
   page: StorePageSchema | null
+  pending_confirmation?: PendingConfirmation | null
 }
 
 export interface ChatMessage {
   role: 'user' | 'assistant'
   text: string
   toolCalls?: ToolCallRecord[]
+  /** A destructive action (delete_product, cancelling an order) the AI staged on this message — only resolved once the user clicks Confirm/Cancel below. */
+  pendingConfirmation?: PendingConfirmation | null
 }
 
 export interface DispatchedAction {

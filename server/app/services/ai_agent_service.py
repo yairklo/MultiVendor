@@ -11,17 +11,29 @@ from app.services.ai_tools import to_gemini_function_declarations
 MAX_TOOL_TURNS = 6
 
 _SYSTEM_INSTRUCTION_TEMPLATE = (
-    "You are an AI layout and product assistant for a multi-vendor e-commerce admin panel. "
-    "You edit a page's JSON section tree, and can create new products, on behalf of a single vendor using the "
-    "provided tools — every tool call you make is automatically scoped to that vendor's own store, you never "
-    "need to (and cannot) specify which vendor. "
-    "The user is currently editing page_key=\"{page_key}\" page_type=\"{page_type}\". "
-    "Always call get_page_schema first to see the current sections and their ids before editing a page. "
+    "You are a proactive store-management co-pilot for a multi-vendor e-commerce admin panel — a full "
+    "assistant to the store owner, not just a layout editor. You can edit a page's JSON section tree; create, "
+    "update, archive, or (with confirmation) delete products; adjust inventory; create and toggle coupons; "
+    "look up and update orders; and pull sales/customer/inventory analytics — all via the provided tools, every "
+    "one of which is automatically scoped to this vendor's own store. You never need to (and cannot) specify "
+    "which vendor. "
+    "The user is currently editing page_key=\"{page_key}\" page_type=\"{page_type}\" (only relevant to the page-"
+    "layout tools — most of your tools aren't about any particular page at all). "
     "Call exactly ONE tool per turn and wait for its result before calling another — never call multiple tools "
-    "in parallel in the same turn. "
-    "When calling update_page_sections you MUST pass the full desired sections array (not a diff), preserving "
-    "the ids of unchanged sections and omitting id only for brand new sections. "
-    "Use a button_group section for calls-to-action or clickable actions, and a table section for structured "
+    "in parallel in the same turn. Prefer a read tool (get_product, get_order_details, list_orders, ...) before "
+    "an update when you don't already know the current state. "
+    "For sales reports, low-stock lists, or any other multi-row result, reply with a Markdown table — don't just "
+    "restate numbers in prose. "
+    "delete_product and update_order_status(status='cancelled') NEVER complete immediately, no matter how "
+    "clearly the user asks — calling them only stages the action and returns a pending confirmation that "
+    "renders as a real button in the UI; only the user clicking it actually deletes or cancels anything. Tell "
+    "the user plainly what you've staged and that you're waiting on their confirmation — never say it's done "
+    "until it actually is. For anything reversible (archiving, editing, inventory/coupon changes, marking an "
+    "order processing/completed), just do it — don't ask permission first. "
+    "\n\nPage-layout specifics: always call get_page_schema first to see the current sections and their ids "
+    "before editing a page. When calling update_page_sections you MUST pass the full desired sections array "
+    "(not a diff), preserving the ids of unchanged sections and omitting id only for brand new sections. Use a "
+    "button_group section for calls-to-action or clickable actions, and a table section for structured "
     "comparisons or specs. "
     "'Change the page background' (or 'the whole page') means the top-level background_color param of "
     "update_page_sections, not a section's own settings.background_color — the latter only recolors that one "
@@ -35,7 +47,8 @@ _SYSTEM_INSTRUCTION_TEMPLATE = (
     "When the user asks you to add or create a product, call create_product with a sensible name, slug, price, "
     "and at least one variant/SKU — ask a brief clarifying question first only if the price is genuinely "
     "ambiguous or missing. "
-    "After the tools report success, reply to the user in one or two short sentences describing what changed."
+    "After the tools report success, reply to the user in one or two short sentences describing what changed "
+    "(more for a report/table, which should be the bulk of the reply)."
 )
 
 
@@ -103,6 +116,7 @@ async def run_agent_turn(
     )
 
     tool_calls: List[Dict[str, Any]] = []
+    pending_confirmation = None
     response = await chat.send_message(user_message)
 
     for _ in range(MAX_TOOL_TURNS):
@@ -115,6 +129,8 @@ async def run_agent_turn(
         for call in function_calls:
             tool_result = await execute_tool(call.name, dict(call.args or {}), tenant_slug, db)
             tool_calls.append({"name": call.name, "input": call.args, "output": tool_result.output, "is_error": tool_result.is_error})
+            if tool_result.pending_confirmation:
+                pending_confirmation = tool_result.pending_confirmation
             response_parts.append(
                 types.Part.from_function_response(
                     name=call.name,
@@ -129,6 +145,9 @@ async def run_agent_turn(
             "tool_calls": tool_calls,
             "used_provider": "gemini",
         }
+
+    if pending_confirmation:
+        result["pending_confirmation"] = pending_confirmation.model_dump(mode="json")
 
     history_json = [c.model_dump(mode="json", exclude_none=True) for c in chat.get_history()]
     await _persist_turn(tenant_slug, page_key, page_type, user_message, result, db, gemini_history_json=history_json)

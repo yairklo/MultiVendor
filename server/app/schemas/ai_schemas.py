@@ -1,6 +1,6 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any, Literal
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
 SectionType = Literal[
     "hero_banner", "product_grid", "video_embed", "text_block", "gallery", "button_group", "table"
@@ -13,6 +13,20 @@ ButtonActionType = Literal["NAVIGATE", "OPEN_MODAL", "ADD_TO_CART", "APPLY_COUPO
 SECTION_TYPES: tuple = ("hero_banner", "product_grid", "video_embed", "text_block", "gallery", "button_group", "table")
 BUTTON_ACTION_TYPES: tuple = ("NAVIGATE", "OPEN_MODAL", "ADD_TO_CART", "APPLY_COUPON")
 BUTTON_VARIANTS: tuple = ("primary", "secondary", "outline")
+
+
+def _utc_iso(value: Optional[datetime]) -> Optional[str]:
+    """
+    MySQL TIMESTAMP columns round-trip as naive datetimes representing the
+    session's clock (UTC here), but a bare `datetime.isoformat()` omits the
+    offset — browsers then parse it as local time, skewing every "time ago"
+    display by the client's UTC offset. Stamp it explicitly as UTC instead.
+    """
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.isoformat()
 
 class SectionMedia(BaseModel):
     type: MediaType
@@ -43,6 +57,10 @@ class StorePageSchema(BaseModel):
     published_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)
 
+    @field_serializer("published_at")
+    def _serialize_published_at(self, value: Optional[datetime]) -> Optional[str]:
+        return _utc_iso(value)
+
 class StorePageSummary(BaseModel):
     page_key: str
     page_type: PageType
@@ -60,11 +78,17 @@ class ToolCallRecord(BaseModel):
     output: Any
     is_error: bool
 
+class PendingConfirmation(BaseModel):
+    id: str
+    tool_name: str
+    summary: str
+
 class AIChatResponse(BaseModel):
     reply: str
     tool_calls: List[ToolCallRecord]
     used_provider: Literal["gemini", "mock"]
     page: Optional[StorePageSchema] = None
+    pending_confirmation: Optional[PendingConfirmation] = None
 
 class AIStatusResponse(BaseModel):
     provider: Literal["gemini", "mock"]
@@ -76,6 +100,10 @@ class StorePageVersionSummary(BaseModel):
     section_count: int
     model_config = ConfigDict(from_attributes=True)
 
+    @field_serializer("created_at")
+    def _serialize_created_at(self, value: datetime) -> Optional[str]:
+        return _utc_iso(value)
+
 class ChatMessageRecord(BaseModel):
     role: Literal["user", "assistant"]
     text: str
@@ -83,3 +111,40 @@ class ChatMessageRecord(BaseModel):
 
 class ConversationResponse(BaseModel):
     messages: List[ChatMessageRecord]
+
+class InventoryHealthItem(BaseModel):
+    product_id: int
+    product_name: Any
+    variant_id: int
+    sku: str
+    stock_quantity: int
+
+class InventoryHealthResponse(BaseModel):
+    low_stock_threshold: int
+    out_of_stock: List[InventoryHealthItem]
+    low_stock: List[InventoryHealthItem]
+
+class TopSellingProduct(BaseModel):
+    # order_items snapshots sku/product_name at sale time rather than an FK to
+    # products (variant_id is even nullable, SET NULL if the variant is later
+    # deleted) — sku is the stable, always-present identifier to group by.
+    sku: str
+    product_name: str
+    quantity_sold: int
+    revenue: float
+
+class SalesAnalyticsResponse(BaseModel):
+    start_date: str
+    end_date: str
+    total_revenue: float
+    orders_count: int
+    aov: float
+    daily: List[Dict[str, Any]]
+    top_selling_products: List[TopSellingProduct]
+
+class CustomerInsightsResponse(BaseModel):
+    total_customers: int
+    customers_with_orders: int
+    repeat_customer_rate: float
+    top_spenders: List[Dict[str, Any]]
+    recent_signups: List[Dict[str, Any]]

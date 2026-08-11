@@ -1,4 +1,5 @@
 import math
+from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, case
 from sqlalchemy.orm import selectinload
@@ -39,19 +40,35 @@ def _order_to_response(order: Order, customer: User | None = None) -> OrderRespo
         ) for i in order.items]
     )
 
-async def list_tenant_orders_service(tenant_slug: str, db: AsyncSession) -> list[OrderResponse]:
+async def list_tenant_orders_service(
+    tenant_slug: str, db: AsyncSession,
+    status: str | None = None,
+    start_date: datetime | None = None,
+    end_date: datetime | None = None,
+    customer_email: str | None = None,
+) -> list[OrderResponse]:
     tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
     tenant_id = tenant_result.scalar_one_or_none()
     if not tenant_id:
         raise HTTPException(status_code=404, detail="Tenant not found")
 
-    result = await db.execute(
+    query = (
         select(Order, User)
         .join(User, User.id == Order.user_id)
         .where(Order.tenant_id == tenant_id)
         .options(selectinload(Order.items))
         .order_by(Order.created_at.desc())
     )
+    if status:
+        query = query.where(Order.status == status)
+    if start_date:
+        query = query.where(Order.created_at >= start_date)
+    if end_date:
+        query = query.where(Order.created_at <= end_date)
+    if customer_email:
+        query = query.where(User.email == customer_email)
+
+    result = await db.execute(query)
     return [_order_to_response(order, customer) for order, customer in result.all()]
 
 async def get_tenant_order_service(tenant_slug: str, order_id: int, db: AsyncSession) -> OrderResponse:
@@ -214,3 +231,33 @@ async def pay_order_service(user_id: int, order_id: int, db: AsyncSession) -> Or
     await db.refresh(order)
 
     return _order_to_response(order)
+
+async def get_customer_insights_service(tenant_slug: str, db: AsyncSession, top_n: int = 5) -> dict:
+    """
+    Built directly on list_tenant_customers_service's existing per-customer
+    aggregates (orders_count/total_spent/last_order_at) — no new query shape,
+    just summarizing data that's already fetched tenant-scoped.
+    """
+    customers = await list_tenant_customers_service(tenant_slug, db)
+
+    total_customers = len(customers)
+    customers_with_orders = [c for c in customers if c.orders_count > 0]
+    repeat_customers = [c for c in customers_with_orders if c.orders_count > 1]
+    repeat_rate = (len(repeat_customers) / len(customers_with_orders)) if customers_with_orders else 0.0
+
+    top_spenders = sorted(customers_with_orders, key=lambda c: c.total_spent, reverse=True)[:top_n]
+    recent_signups = sorted(customers, key=lambda c: c.created_at, reverse=True)[:top_n]
+
+    return {
+        "total_customers": total_customers,
+        "customers_with_orders": len(customers_with_orders),
+        "repeat_customer_rate": round(repeat_rate, 3),
+        "top_spenders": [
+            {"email": c.email, "full_name": c.full_name, "orders_count": c.orders_count, "total_spent": c.total_spent}
+            for c in top_spenders
+        ],
+        "recent_signups": [
+            {"email": c.email, "full_name": c.full_name, "created_at": c.created_at.isoformat()}
+            for c in recent_signups
+        ],
+    }

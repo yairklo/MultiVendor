@@ -8,6 +8,7 @@ so the rest of the pipeline (sanitization, persistence, subscription limits) is
 exercised identically either way.
 """
 import re
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -72,16 +73,84 @@ _CREATE_PRODUCT_RE = re.compile(
     re.IGNORECASE,
 )
 
+_INVENTORY_HEALTH_RE = re.compile(r"low.?stock|out.?of.?stock|inventory\s+(?:health|status)", re.IGNORECASE)
+_SALES_REPORT_RE = re.compile(r"sales\s+report|how\s+much\s+revenue|revenue\s+report|sales\s+(?:this|for|summary)", re.IGNORECASE)
+_LIST_ORDERS_RE = re.compile(r"list\s+orders|show\s+(?:me\s+)?(?:the\s+)?orders|recent\s+orders", re.IGNORECASE)
+_CREATE_COUPON_RE = re.compile(
+    r"create\s+a?\s*coupon\s+([A-Za-z0-9_-]+)\s+for\s+(\d+(?:\.\d+)?)%\s*off",
+    re.IGNORECASE,
+)
+
 
 def _slugify(text: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
     return slug or "new-product"
 
 
+def _format_markdown_table(headers: List[str], rows: List[List[str]]) -> str:
+    lines = ["| " + " | ".join(headers) + " |", "| " + " | ".join("---" for _ in headers) + " |"]
+    lines += ["| " + " | ".join(str(c) for c in row) + " |" for row in rows]
+    return "\n".join(lines)
+
+
 async def run_mock_agent(
     user_message: str, tenant_slug: str, page_key: str, page_type: str, db: AsyncSession
 ) -> Dict[str, Any]:
     tool_calls: List[Dict[str, Any]] = []
+
+    if _INVENTORY_HEALTH_RE.search(user_message):
+        result = await execute_tool("get_inventory_health", {}, tenant_slug, db)
+        tool_calls.append({"name": "get_inventory_health", "input": {}, "output": result.output, "is_error": result.is_error})
+        if result.is_error:
+            return {"reply": f"I couldn't check inventory (mock mode): {result.output.get('error')}", "tool_calls": tool_calls}
+        out_of_stock = result.output["out_of_stock"]
+        low_stock = result.output["low_stock"]
+        if not out_of_stock and not low_stock:
+            return {"reply": "Done (mock mode) — inventory looks healthy, nothing out of stock or low.", "tool_calls": tool_calls}
+        rows = [
+            [i["sku"], i["stock_quantity"], "OUT OF STOCK" if i["stock_quantity"] <= 0 else "Low"]
+            for i in (out_of_stock + low_stock)
+        ]
+        table = _format_markdown_table(["SKU", "Stock", "Status"], rows)
+        return {"reply": f"Done (mock mode) — inventory health:\n\n{table}", "tool_calls": tool_calls}
+
+    if _LIST_ORDERS_RE.search(user_message):
+        result = await execute_tool("list_orders", {}, tenant_slug, db)
+        tool_calls.append({"name": "list_orders", "input": {}, "output": result.output, "is_error": result.is_error})
+        if result.is_error:
+            return {"reply": f"I couldn't list orders (mock mode): {result.output.get('error')}", "tool_calls": tool_calls}
+        orders = result.output[:10]
+        if not orders:
+            return {"reply": "Done (mock mode) — no orders yet.", "tool_calls": tool_calls}
+        rows = [[o["order_number"], o["status"], f"${o['total_amount']}"] for o in orders]
+        table = _format_markdown_table(["Order", "Status", "Total"], rows)
+        return {"reply": f"Done (mock mode) — most recent orders:\n\n{table}", "tool_calls": tool_calls}
+
+    if _SALES_REPORT_RE.search(user_message):
+        end = datetime.now(timezone.utc)
+        start = end - timedelta(days=30)
+        args = {"start_date": start.date().isoformat(), "end_date": end.date().isoformat()}
+        result = await execute_tool("get_sales_analytics", args, tenant_slug, db)
+        tool_calls.append({"name": "get_sales_analytics", "input": args, "output": result.output, "is_error": result.is_error})
+        if result.is_error:
+            return {"reply": f"I couldn't pull a sales report (mock mode): {result.output.get('error')}", "tool_calls": tool_calls}
+        o = result.output
+        reply = (
+            f"Done (mock mode) — sales for the last 30 days: **${o['total_revenue']}** revenue, "
+            f"**{o['orders_count']}** orders, **${o['aov']}** AOV."
+        )
+        return {"reply": reply, "tool_calls": tool_calls}
+
+    coupon_match = _CREATE_COUPON_RE.search(user_message)
+    if coupon_match:
+        code, pct = coupon_match.group(1).upper(), float(coupon_match.group(2))
+        valid_until = (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
+        args = {"code": code, "discount_type": "percentage", "discount_val": pct, "valid_until": valid_until}
+        result = await execute_tool("create_coupon", args, tenant_slug, db)
+        tool_calls.append({"name": "create_coupon", "input": args, "output": result.output, "is_error": result.is_error})
+        if result.is_error:
+            return {"reply": f"I tried to create that coupon but it failed (mock mode): {result.output.get('error')}", "tool_calls": tool_calls}
+        return {"reply": f"Done (mock mode) — created coupon '{code}' for {pct:.0f}% off, valid 30 days.", "tool_calls": tool_calls}
 
     create_match = _CREATE_PRODUCT_RE.search(user_message)
     if create_match:
@@ -173,7 +242,8 @@ async def run_mock_agent(
             "reply": (
                 "I'm running in offline mock mode (no GEMINI_API_KEY set), so I only understand simple commands "
                 "like \"make the hero banner larger\", \"move the video above the products\", \"add a gallery\", "
-                "\"remove the text block\", or \"add a product called X for $Y\". Try one of those, or set "
+                "\"remove the text block\", \"add a product called X for $Y\", \"show low stock\", \"sales "
+                "report\", \"list orders\", or \"create a coupon CODE for X% off\". Try one of those, or set "
                 "GEMINI_API_KEY to use the real Gemini agent."
             ),
             "tool_calls": tool_calls,
