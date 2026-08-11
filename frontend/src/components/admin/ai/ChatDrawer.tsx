@@ -125,7 +125,7 @@ export function ChatDrawer({
           placeholder="Describe a layout change or a product to add… (Shift+Enter for a new line)"
           disabled={isBusy}
           rows={2}
-          className="flex-1 resize-y rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 outline-none disabled:opacity-50"
+          className="flex-1 max-h-32 min-h-[2.5rem] resize-y overflow-y-auto rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 outline-none disabled:opacity-50"
         />
         <button
           type="submit"
