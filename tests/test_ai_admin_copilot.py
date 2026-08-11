@@ -5,9 +5,12 @@ from httpx import AsyncClient
 from sqlalchemy import select
 
 from app.models.ai_pending_action import AIPendingAction
-from app.services.ai_tool_executor import execute_tool
+from app.models.order import Order
+from app.models.tenant import Tenant
+from app.services.ai_tool_executor import execute_tool, DEFAULT_LIST_ORDERS_LIMIT, MAX_LIST_ORDERS_LIMIT
 from app.services import ai_pending_action_service
 from app.services.checkout_service import validate_coupon_service
+from app.services.ai_mock_agent import _format_markdown_table
 
 
 # ---------------------------------------------------------------------------
@@ -157,6 +160,48 @@ async def test_disabled_coupon_is_rejected_at_checkout(db_session):
 # ---------------------------------------------------------------------------
 # Orders
 # ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_list_orders_is_capped_even_when_the_store_has_many_orders(db_session):
+    tenant_id = (await db_session.execute(select(Tenant.id).where(Tenant.slug == "tenant-a"))).scalar_one()
+    for i in range(DEFAULT_LIST_ORDERS_LIMIT + 30):
+        db_session.add(Order(
+            tenant_id=tenant_id, user_id=4, order_number=f"ORD-BULK-{i}",
+            subtotal=10, total_amount=10, status="completed",
+        ))
+    await db_session.commit()
+
+    # No limit requested — falls back to the default cap, not every order.
+    default_result = await execute_tool("list_orders", {}, "tenant-a", db_session)
+    assert default_result.is_error is False
+    assert len(default_result.output) == DEFAULT_LIST_ORDERS_LIMIT
+
+    # A model asking for an enormous limit is still clamped to the hard max.
+    oversized_result = await execute_tool("list_orders", {"limit": 999999}, "tenant-a", db_session)
+    assert oversized_result.is_error is False
+    assert len(oversized_result.output) == MAX_LIST_ORDERS_LIMIT
+
+
+@pytest.mark.asyncio
+async def test_add_product_variant_rejects_non_object_attributes_json(db_session):
+    result = await execute_tool(
+        "add_product_variant",
+        {"product_id": 1, "sku": "SKU-BAD", "attributes_json": "not-an-object"},
+        "tenant-a",
+        db_session,
+    )
+    assert result.is_error is True
+    assert "attributes_json" in result.output["error"]
+
+
+def test_markdown_table_escapes_pipe_characters_in_cell_values():
+    table = _format_markdown_table(["Name", "Stock"], [["Mug | Special Edition", 5]])
+    data_row = table.splitlines()[2]
+    # Exactly two real column separators (the leading/trailing edges) — the
+    # pipe inside the product name must be escaped, not treated as a new column.
+    assert data_row.count(" | ") == 1
+    assert "Mug \\| Special Edition" in data_row
+
 
 @pytest.mark.asyncio
 async def test_list_orders_and_get_order_details_tools(db_session):

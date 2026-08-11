@@ -11,6 +11,15 @@ from app.schemas.ai_schemas import PendingConfirmation
 from app.services import ai_pending_action_service, catalog_service, coupon_service, order_service, store_page_service, tenant_service
 
 
+# Caps on list-shaped tool outputs — a tenant can have thousands of orders/
+# coupons, and dumping all of them into the model's context is both wasteful
+# and a real risk of blowing the context window, so every listing tool clamps
+# its result server-side rather than trusting the model to ask nicely.
+DEFAULT_LIST_ORDERS_LIMIT = 20
+MAX_LIST_ORDERS_LIMIT = 50
+MAX_LIST_COUPONS_LIMIT = 50
+
+
 class UngroundedReferenceError(ValueError):
     """Raised when a write tool references an entity id the model never verified via a read/list/create tool this turn."""
 
@@ -58,7 +67,6 @@ def _require_grounded(
             f"first to retrieve the real, current {entity_type}_id from the database — never guess or reuse "
             f"an id you haven't just looked up."
         )
-
 
 def _resolve_product_display_name(name: Any) -> str:
     if isinstance(name, dict):
@@ -217,9 +225,12 @@ async def execute_tool(
             if product_id is None:
                 raise ValueError("product_id is required")
             _require_grounded(context, "product", product_id, "get_product")
+            attributes_json = raw_input.get("attributes_json") or {}
+            if not isinstance(attributes_json, dict):
+                raise ValueError("attributes_json must be an object, e.g. {\"color\": \"red\", \"size\": \"M\"}")
             req = ProductVariantSchema(
                 sku=raw_input.get("sku", ""),
-                attributes_json=raw_input.get("attributes_json") or {},
+                attributes_json=attributes_json,
                 price_override=raw_input.get("price_override"),
                 stock_quantity=raw_input.get("stock_quantity", 0),
             )
@@ -248,7 +259,9 @@ async def execute_tool(
             if context:
                 for c in coupons:
                     context.mark("coupon", c.id)
-            return ToolExecutionResult(tool_name, [c.model_dump(mode="json") for c in coupons], False)
+            return ToolExecutionResult(
+                tool_name, [c.model_dump(mode="json") for c in coupons[:MAX_LIST_COUPONS_LIMIT]], False
+            )
 
         if tool_name == "toggle_coupon_status":
             coupon_id = raw_input.get("coupon_id")
@@ -266,12 +279,23 @@ async def execute_tool(
             def _parse(v):
                 return _dt.fromisoformat(v.replace("Z", "+00:00")) if v else None
 
+            # A tenant can accumulate thousands of orders — never let the model pull
+            # an unbounded result set into its own context window. Whatever it asks
+            # for (or nothing at all) is clamped into a sane range server-side.
+            requested_limit = raw_input.get("limit")
+            try:
+                limit = int(requested_limit) if requested_limit is not None else DEFAULT_LIST_ORDERS_LIMIT
+            except (TypeError, ValueError):
+                limit = DEFAULT_LIST_ORDERS_LIMIT
+            limit = max(1, min(limit, MAX_LIST_ORDERS_LIMIT))
+
             orders = await order_service.list_tenant_orders_service(
                 tenant_slug, db,
                 status=raw_input.get("status"),
                 start_date=_parse(raw_input.get("start_date")),
                 end_date=_parse(raw_input.get("end_date")),
                 customer_email=raw_input.get("customer_email"),
+                limit=limit,
             )
             if context:
                 for o in orders:
