@@ -106,6 +106,8 @@ def _sanitize_sections(
 
     sanitized: List[Dict[str, Any]] = []
     for raw in raw_sections:
+        if not isinstance(raw, dict):
+            raise HTTPException(status_code=400, detail=f"Each section must be an object with a 'type' field, got: {raw!r}")
         section_type = raw.get("type")
         if section_type not in SECTION_TYPES:
             raise HTTPException(status_code=400, detail=f"Invalid section type: {section_type}")
