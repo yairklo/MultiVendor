@@ -11,6 +11,8 @@ from app.schemas.ai_schemas import (
 )
 from app.services import ai_conversation_service, ai_pending_action_service, store_page_service
 from app.services.ai_agent_service import is_gemini_configured, run_agent_turn
+from app.services.catalog_service import get_store_config_service
+from app.schemas.tenant_schemas import TenantSettingsSchema
 
 ai_router = APIRouter(prefix="/api/v1/admin/store/{tenant_slug}/ai", tags=["AI Layout & Product Assistant"])
 
@@ -26,6 +28,19 @@ async def get_ai_status(
     admin: User = Depends(get_tenant_admin),
 ):
     return AIStatusResponse(provider="gemini" if is_gemini_configured() else "mock")
+
+
+@ai_router.get(
+    "/config",
+    response_model=TenantSettingsSchema,
+    summary="Get Admin Store Configuration (Drafts Included)",
+)
+async def get_admin_store_config(
+    tenant_slug: str = Path(...),
+    admin: User = Depends(get_tenant_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    return await get_store_config_service(tenant_slug, db, admin_preview=True)
 
 
 @ai_router.get(

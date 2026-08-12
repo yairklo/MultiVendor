@@ -11,6 +11,9 @@ import { useAiLayout } from '@/hooks/useAiLayout'
 import { useAutoSyncAIContext } from '@/hooks/useAutoSyncAIContext'
 import { useToast } from '@/context/ToastContext'
 import { useConfirm } from '@/context/ConfirmContext'
+import { StorefrontThemeProvider } from '@/context/StorefrontThemeContext'
+import { StorefrontHeader } from '@/components/storefront/StorefrontHeader'
+import { StorefrontFooter } from '@/components/storefront/StorefrontFooter'
 import { DispatchedAction, PageType, Section, StorePageSchema, StorePageSummary, StorePageVersionSummary } from '@/lib/ai/types'
 
 export default function AiLayoutPage() {
@@ -252,19 +255,29 @@ export default function AiLayoutPage() {
       )}
 
       <div className="grid flex-1 grid-cols-1 gap-4 overflow-hidden lg:grid-cols-[1fr_380px]">
-        <div
-          className="overflow-y-auto rounded-xl border border-gray-100 bg-gray-50 p-6"
-          style={{ backgroundColor: page?.background_color || undefined, color: page?.text_color || undefined }}
-        >
-          <DraggablePageEditor
-            page={page}
-            onChange={handleSectionsReorder}
-            onSave={handleSaveLayout}
-            saving={savingLayout}
-            tenantSlug={tenantSlug}
-            onAction={handleAction}
-            showTypeLabels
-          />
+        <div className="overflow-y-auto rounded-xl border border-gray-100 bg-gray-50 flex flex-col shadow-inner">
+          <StorefrontThemeProvider tenantSlug={tenantSlug} isAdminPreview>
+            <div className="pointer-events-none sticky top-0 z-10 opacity-75 grayscale-[0.2]">
+              <StorefrontHeader tenantSlug={tenantSlug} storeName={tenantSlug} />
+            </div>
+            <div 
+              className="flex-1 p-6 relative z-0"
+              style={{ backgroundColor: page?.background_color || undefined, color: page?.text_color || undefined }}
+            >
+              <DraggablePageEditor
+                page={page}
+                onChange={handleSectionsReorder}
+                onSave={handleSaveLayout}
+                saving={savingLayout}
+                tenantSlug={tenantSlug}
+                onAction={handleAction}
+                showTypeLabels
+              />
+            </div>
+            <div className="pointer-events-none opacity-75 grayscale-[0.2]">
+              <StorefrontFooter tenantSlug={tenantSlug} storeName={tenantSlug} />
+            </div>
+          </StorefrontThemeProvider>
         </div>
         <div className="min-h-[400px]">
           <ChatDrawer

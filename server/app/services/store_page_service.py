@@ -337,6 +337,12 @@ async def publish_page_service(
     # server's own clock disagrees with the DB server's.
     page.published_at = func.now()
 
+    if page.page_key == "home":
+        settings_result = await db.execute(select(TenantSettings).where(TenantSettings.tenant_id == tenant_id))
+        settings = settings_result.scalar_one_or_none()
+        if settings and settings.draft_template_key is not None:
+            settings.template_key = settings.draft_template_key
+
     await db.commit()
     await db.refresh(page)
     return _to_schema(page)
@@ -428,7 +434,7 @@ async def apply_storefront_template_service(tenant_slug: str, template_key: str,
     if not settings:
         settings = TenantSettings(tenant_id=tenant_id)
         db.add(settings)
-    settings.template_key = template_key
+    settings.draft_template_key = template_key
 
     await db.commit()
     return results

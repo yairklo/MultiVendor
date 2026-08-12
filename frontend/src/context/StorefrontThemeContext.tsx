@@ -20,16 +20,21 @@ const StorefrontThemeContext = createContext<StorefrontThemeContextValue | null>
 export function StorefrontThemeProvider({
   tenantSlug,
   children,
+  isAdminPreview = false,
 }: {
   tenantSlug: string
   children: React.ReactNode
+  isAdminPreview?: boolean
 }) {
   const [templateKey, setTemplateKey] = useState<string | null>(null)
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
-    apiClient(`/api/v1/store/${tenantSlug}/config`)
+    const endpoint = isAdminPreview
+      ? `/api/v1/admin/store/${tenantSlug}/ai/config`
+      : `/api/v1/store/${tenantSlug}/config`
+    apiClient(endpoint)
       .then((data) => {
         if (cancelled) return
         setTemplateKey(data.template_key ?? null)

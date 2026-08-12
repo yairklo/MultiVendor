@@ -49,5 +49,6 @@ class TenantSettings(Base):
     # applied — NULL until they pick one. Purely informational for the admin UI; applying a
     # template doesn't require this to already be set, it just stamps it going forward.
     template_key = Column(String(50), nullable=True)
+    draft_template_key = Column(String(50), nullable=True)
 
     tenant = relationship("Tenant", back_populates="settings")
