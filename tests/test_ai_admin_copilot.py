@@ -22,6 +22,8 @@ from app.schemas.ai_schemas import Section
 @pytest.mark.asyncio
 async def test_get_and_update_product_tools_are_scoped_to_tenant(db_session):
     get_result = await execute_tool("get_product", {"product_id": 1}, "tenant-a", db_session)
+    if get_result.is_error:
+        print(get_result.output)
     assert get_result.is_error is False
     assert get_result.output["id"] == 1
 
