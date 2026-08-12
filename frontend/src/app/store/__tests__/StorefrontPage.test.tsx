@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import StorefrontPage from '../[tenant_slug]/page'
+import { CatalogListing } from '@/components/storefront/CatalogListing'
 import { CartProvider } from '@/context/CartContext'
 import { ToastProvider } from '@/context/ToastContext'
 import { http, HttpResponse } from 'msw'
@@ -11,7 +11,11 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }))
 
-describe('StorefrontPage', () => {
+// The home page (app/store/[tenant_slug]/page.tsx) is now an async Server
+// Component that fetches the AI home layout server-side and isn't renderable
+// with RTL — this exercises CatalogListing, the client component that
+// actually owns the catalog/search/AI-page-vs-classic-grid behavior.
+describe('CatalogListing', () => {
   let mockCartItems: any[]
 
   beforeEach(() => {
@@ -19,13 +23,6 @@ describe('StorefrontPage', () => {
     mockCartItems = []
 
     server.use(
-      // No AI-managed home layout for this tenant in these tests — the classic
-      // product listing below must always be what renders. Mocked explicitly
-      // (rather than left unhandled) so this doesn't depend on whatever a real
-      // backend happens to have stored for "test-tenant" in a dev environment.
-      http.get('http://localhost:8000/api/v1/store/:tenant_slug/pages/:page_key', () => {
-        return HttpResponse.json({ detail: 'Not found' }, { status: 404 })
-      }),
       http.get('http://localhost:8000/api/v1/store/:tenant_slug/products', () => {
         return HttpResponse.json({
           meta: { total: 2, page: 1, page_size: 10, total_pages: 1 },
@@ -60,29 +57,29 @@ describe('StorefrontPage', () => {
     )
   })
 
-  const renderStorefront = () =>
+  const renderCatalog = (aiPage: any = null) =>
     render(
       <ToastProvider>
         <CartProvider>
-          <StorefrontPage params={{ tenant_slug: 'test-tenant' }} />
+          <CatalogListing tenantSlug="test-tenant" aiPage={aiPage} />
         </CartProvider>
       </ToastProvider>
     )
 
   it('renders the language switcher', async () => {
-    renderStorefront()
+    renderCatalog()
     expect(await screen.findByTestId('language-switcher')).toBeInTheDocument()
   })
 
   it('fetches and displays product grid based on tenant slug', async () => {
-    renderStorefront()
+    renderCatalog()
     expect(await screen.findByTestId('product-grid')).toBeInTheDocument()
     expect(await screen.findByText('Mock Product 1')).toBeInTheDocument()
   })
 
   it('adds item to cart when Add to Cart button is clicked', async () => {
     const user = userEvent.setup()
-    renderStorefront()
+    renderCatalog()
 
     // Wait for data to load
     await screen.findByText('Mock Product 1')
@@ -98,7 +95,7 @@ describe('StorefrontPage', () => {
 
   it('toggles dir="rtl" and localized strings when switching to Hebrew', async () => {
     const user = userEvent.setup()
-    const { container } = renderStorefront()
+    const { container } = renderCatalog()
 
     await screen.findByTestId('product-grid')
     expect(container.querySelector('[dir]')).toHaveAttribute('dir', 'ltr')
@@ -110,30 +107,24 @@ describe('StorefrontPage', () => {
   })
 
   describe('with an AI-managed home layout', () => {
-    beforeEach(() => {
-      server.use(
-        http.get('http://localhost:8000/api/v1/store/:tenant_slug/pages/:page_key', () => {
-          return HttpResponse.json({
-            page_key: 'home',
-            page_type: 'static_page',
-            title: 'Home',
-            sections: [
-              { id: 'sec_1', type: 'hero_banner', settings: { headline: 'AI Curated Homepage', size: 'medium' } },
-            ],
-          })
-        })
-      )
-    })
+    const aiPage = {
+      page_key: 'home',
+      page_type: 'static_page',
+      title: 'Home',
+      sections: [
+        { id: 'sec_1', type: 'hero_banner', settings: { headline: 'AI Curated Homepage', size: 'medium' } },
+      ],
+    }
 
     it('replaces the classic product grid with the AI layout while browsing', async () => {
-      renderStorefront()
+      renderCatalog(aiPage)
       expect(await screen.findByText('AI Curated Homepage')).toBeInTheDocument()
       expect(screen.queryByTestId('product-grid')).not.toBeInTheDocument()
     })
 
     it('falls back to the classic product grid once the shopper searches', async () => {
       const user = userEvent.setup()
-      renderStorefront()
+      renderCatalog(aiPage)
       await screen.findByText('AI Curated Homepage')
 
       await user.type(screen.getByLabelText('Search products'), 'Mock')

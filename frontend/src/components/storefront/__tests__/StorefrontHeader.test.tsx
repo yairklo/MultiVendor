@@ -14,14 +14,10 @@ function CartOpenProbe() {
 }
 
 describe('StorefrontHeader', () => {
-  beforeEach(() => {
-    document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/'
-  })
-
-  const renderHeader = () =>
+  const renderHeader = (isLoggedIn = false) =>
     render(
       <CartProvider>
-        <StorefrontHeader tenantSlug="test-tenant" storeName="Test Tenant" />
+        <StorefrontHeader tenantSlug="test-tenant" storeName="Test Tenant" isLoggedIn={isLoggedIn} />
         <CartOpenProbe />
       </CartProvider>
     )
@@ -46,14 +42,13 @@ describe('StorefrontHeader', () => {
     expect(screen.getByTestId('cart-open-state')).toHaveTextContent('open')
   })
 
-  it('links to Login when signed out, and My Orders when a session token is present', () => {
-    const { unmount } = renderHeader()
+  it('links to Login when signed out, and My Orders when isLoggedIn is true', () => {
+    const { unmount } = renderHeader(false)
     expect(screen.getByTestId('account-link')).toHaveTextContent('Login')
     expect(screen.getByTestId('account-link')).toHaveAttribute('href', '/login')
     unmount()
 
-    document.cookie = 'token=fake-jwt; path=/'
-    renderHeader()
+    renderHeader(true)
     expect(screen.getByTestId('account-link')).toHaveTextContent('My Orders')
     expect(screen.getByTestId('account-link')).toHaveAttribute('href', '/account/orders')
   })

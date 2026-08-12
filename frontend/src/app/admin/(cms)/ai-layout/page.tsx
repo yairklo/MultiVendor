@@ -258,7 +258,7 @@ export default function AiLayoutPage() {
         <div className="overflow-y-auto rounded-xl border border-gray-100 bg-gray-50 flex flex-col shadow-inner">
           <StorefrontThemeProvider tenantSlug={tenantSlug} isAdminPreview>
             <div className="pointer-events-none sticky top-0 z-10 opacity-75 grayscale-[0.2]">
-              <StorefrontHeader tenantSlug={tenantSlug} storeName={tenantSlug} />
+              <StorefrontHeader tenantSlug={tenantSlug} storeName={tenantSlug} isLoggedIn={false} />
             </div>
             <div
               className="flex-1 p-6 relative z-0"

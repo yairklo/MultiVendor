@@ -3,12 +3,22 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { getCookie } from 'cookies-next'
 import { Menu, ShoppingBag, X } from 'lucide-react'
 import { useCart } from '@/context/CartContext'
 import { useStorefrontTheme } from '@/context/StorefrontThemeContext'
 
-export function StorefrontHeader({ tenantSlug, storeName }: { tenantSlug: string; storeName: string }) {
+export function StorefrontHeader({
+  tenantSlug,
+  storeName,
+  isLoggedIn,
+}: {
+  tenantSlug: string
+  storeName: string
+  /** Resolved server-side from the token cookie — reading it client-side here would
+   * mismatch between the server-rendered HTML (no cookie access) and the client's
+   * first render, breaking hydration. */
+  isLoggedIn: boolean
+}) {
   const { theme } = useStorefrontTheme()
   const { cart, openDrawer } = useCart()
   const pathname = usePathname()
@@ -46,10 +56,10 @@ export function StorefrontHeader({ tenantSlug, storeName }: { tenantSlug: string
         <div className="flex items-center gap-3">
           <Link
             data-testid="account-link"
-            href={getCookie('token') ? '/account/orders' : '/login'}
+            href={isLoggedIn ? '/account/orders' : '/login'}
             className={`hidden text-sm md:inline ${theme.navLinkClass}`}
           >
-            {getCookie('token') ? 'My Orders' : 'Login'}
+            {isLoggedIn ? 'My Orders' : 'Login'}
           </Link>
           <button
             type="button"
@@ -84,11 +94,11 @@ export function StorefrontHeader({ tenantSlug, storeName }: { tenantSlug: string
             </Link>
           ))}
           <Link
-            href={getCookie('token') ? '/account/orders' : '/login'}
+            href={isLoggedIn ? '/account/orders' : '/login'}
             onClick={() => setMobileOpen(false)}
             className={`rounded-lg px-2 py-2 text-sm ${theme.navLinkClass}`}
           >
-            {getCookie('token') ? 'My Orders' : 'Login'}
+            {isLoggedIn ? 'My Orders' : 'Login'}
           </Link>
         </nav>
       )}

@@ -1,12 +1,15 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Search } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { apiClient } from '@/lib/api/apiClient'
 import { ProductCard } from './ProductCard'
 import { PageRenderer } from './PageRenderer'
 import { PaginationControls, PaginationMeta } from '@/components/ui/pagination-controls'
 import { ProductCardSkeleton } from '@/components/ui/skeleton'
+import { useToast } from '@/context/ToastContext'
+import { resolvePageKeyHref } from '@/lib/storefront-nav'
 import { DispatchedAction, StorePageSchema } from '@/lib/ai/types'
 
 const PAGE_SIZE = 12
@@ -28,23 +31,55 @@ const strings: Record<Lang, { noProducts: string; switcherLabel: string; searchP
 export function CatalogListing({
   tenantSlug,
   aiPage,
-  onAiAction,
+  initialProducts,
+  initialMeta,
+  initialCategories,
 }: {
   tenantSlug: string
   /** When set, shown instead of the classic grid while the shopper is just browsing (no active search/category filter). */
   aiPage?: StorePageSchema | null
-  onAiAction?: (action: DispatchedAction) => void
+  /** Server-fetched page-1/no-filter data, seeded in so first paint doesn't show a loading skeleton. */
+  initialProducts?: any[]
+  initialMeta?: PaginationMeta | null
+  initialCategories?: any[]
 }) {
-  const [products, setProducts] = useState<any[]>([])
-  const [productsLoading, setProductsLoading] = useState(true)
-  const [meta, setMeta] = useState<PaginationMeta | null>(null)
+  const router = useRouter()
+  const { showToast } = useToast()
+  const [products, setProducts] = useState<any[]>(initialProducts ?? [])
+  const [productsLoading, setProductsLoading] = useState(!initialProducts)
+  const [meta, setMeta] = useState<PaginationMeta | null>(initialMeta ?? null)
   const [page, setPage] = useState(1)
-  const [categories, setCategories] = useState<any[]>([])
+  const [categories, setCategories] = useState<any[]>(initialCategories ?? [])
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [categoryId, setCategoryId] = useState('')
   const [lang, setLang] = useState<Lang>('en')
   const t = strings[lang]
+
+  function handleAiAction(action: DispatchedAction) {
+    if (action.actionType === 'NAVIGATE') {
+      // Prefer page_key (an AI-authored button linking to another page on this
+      // store) — the AI is never told this store's URL structure, so it can
+      // only reference other pages by key, never by a guessed href.
+      if (typeof action.actionPayload?.page_key === 'string') {
+        router.push(resolvePageKeyHref(tenantSlug, action.actionPayload.page_key))
+        return
+      }
+      if (typeof action.actionPayload?.href === 'string') {
+        router.push(action.actionPayload.href)
+        return
+      }
+    }
+    if (action.actionType === 'ADD_TO_CART') {
+      showToast(`${action.label}: pick a product below to add it to your cart.`, 'info')
+      return
+    }
+    if (action.actionType === 'APPLY_COUPON') {
+      showToast(`${action.label}: apply your coupon code at checkout.`, 'info')
+      return
+    }
+    showToast(action.label, 'info')
+  }
 
   // Searching or filtering by category always drops back to the classic full
   // catalog listing — the AI/template home page is a curated landing page, not a search UI.
@@ -56,7 +91,12 @@ export function CatalogListing({
     return () => clearTimeout(handle)
   }, [search])
 
+  const skipInitialCategoriesFetch = useRef(!!initialCategories)
   useEffect(() => {
+    if (skipInitialCategoriesFetch.current) {
+      skipInitialCategoriesFetch.current = false
+      return
+    }
     apiClient(`/api/v1/store/${tenantSlug}/categories`)
       .then(setCategories)
       .catch((e) => console.error('Failed to load categories:', e))
@@ -66,7 +106,12 @@ export function CatalogListing({
     setPage(1)
   }, [debouncedSearch, categoryId])
 
+  const skipInitialProductsFetch = useRef(!!initialProducts)
   useEffect(() => {
+    if (skipInitialProductsFetch.current) {
+      skipInitialProductsFetch.current = false
+      return
+    }
     if (showAiPage) return
     setProductsLoading(true)
     const params = new URLSearchParams({ page: String(page), page_size: String(PAGE_SIZE) })
@@ -135,7 +180,7 @@ export function CatalogListing({
       </div>
 
       {showAiPage ? (
-        <PageRenderer page={aiPage!} tenantSlug={tenantSlug} onAction={onAiAction} />
+        <PageRenderer page={aiPage!} tenantSlug={tenantSlug} onAction={handleAiAction} />
       ) : (
         <>
           <div data-testid="product-grid" className="grid grid-cols-1 gap-6 md:grid-cols-3 lg:grid-cols-4">

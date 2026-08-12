@@ -1,9 +1,8 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi } from 'vitest'
-import EditProductPage from '../page'
+import { EditProductClient } from '../EditProductClient'
 
-const fetchProductMock = vi.fn()
 const updateProductMock = vi.fn()
 const pushMock = vi.fn()
 
@@ -12,26 +11,36 @@ vi.mock('next/navigation', () => ({
 }))
 
 vi.mock('@/hooks/useProducts', () => ({
-  useProducts: () => ({ fetchProduct: fetchProductMock, updateProduct: updateProductMock }),
+  useProducts: () => ({ updateProduct: updateProductMock, updateVariant: vi.fn() }),
 }))
 
-describe('EditProductPage', () => {
-  it('prefills the form with the fetched product and submits an update', async () => {
-    fetchProductMock.mockResolvedValueOnce({
-      id: 7,
-      slug: 'existing-product',
-      name: { en: 'Existing Product', he: 'מוצר קיים' },
-      description: { en: 'Old description', he: 'תיאור ישן' },
-      base_price: '40.00',
-      category_id: null,
-      is_active: true,
-    })
+// The product fetch (app/admin/(cms)/products/[id]/edit/page.tsx) now happens
+// server-side in an async Server Component and isn't renderable with RTL —
+// this exercises EditProductClient, the client form it feeds with the
+// already-fetched product as props.
+describe('EditProductClient', () => {
+  it('prefills the form with the given product and submits an update', async () => {
     updateProductMock.mockResolvedValueOnce({})
     const user = userEvent.setup()
 
-    render(<EditProductPage params={{ id: '7' }} />)
+    render(
+      <EditProductClient
+        productId="7"
+        categories={[]}
+        initialSlug="existing-product"
+        initialVariant={null}
+        initialValues={{
+          name: 'Existing Product',
+          description: 'Old description',
+          base_price: 40,
+          category_id: null,
+          stock_quantity: 0,
+          is_active: true,
+        }}
+      />
+    )
 
-    const nameInput = await screen.findByLabelText(/product name/i)
+    const nameInput = screen.getByLabelText(/product name/i)
     expect(nameInput).toHaveValue('Existing Product')
     expect(screen.getByLabelText(/base price/i)).toHaveValue(40)
     expect(screen.getByDisplayValue('existing-product')).toBeDisabled()
