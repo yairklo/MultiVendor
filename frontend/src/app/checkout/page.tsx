@@ -184,6 +184,10 @@ export default function CheckoutPage() {
             <p className="text-gray-600 mt-1">
               Total: <span className="font-bold">{formatCurrency(Number(payingOrder.total_amount))}</span>
             </p>
+            <p className="text-sm text-amber-700 mt-2">
+              This is a development environment — payment is simulated. Unpaid orders are automatically
+              cancelled and their stock released if left pending too long.
+            </p>
           </div>
           <div className="flex gap-3">
             <button
@@ -339,7 +343,7 @@ export default function CheckoutPage() {
               {requiresShippingAddress && (
                 <div className="flex justify-between text-gray-600">
                   <span>Shipping:</span>
-                  <span>${shippingCost.toFixed(2)}</span>
+                  <span>{formatCurrency(shippingCost)}</span>
                 </div>
               )}
               <div className="flex justify-between font-bold text-xl text-gray-900 pt-2 border-t">

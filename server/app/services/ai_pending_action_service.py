@@ -80,10 +80,12 @@ async def confirm_pending_action_service(tenant_slug: str, confirmation_id: str,
         elif action.tool_name == "update_order_status":
             result = await order_service.update_order_status_service(tenant_slug, args["order_id"], args["status"], db)
         elif action.tool_name == "apply_storefront_template":
-            # Apply template to draft pages only. Publishing is explicitly left
-            # to the store owner, satisfying the docstring constraint on publish_page_service.
+            # Seeds the draft pages then publishes them all in one transaction
+            # (publish_pages_service), so a failure partway through can't leave
+            # the storefront half-migrated to the new template.
             pages = await store_page_service.apply_storefront_template_service(tenant_slug, args["template_key"], db)
-            result = {"status": "ok", "template_key": args["template_key"], "pages": [p.model_dump(mode="json") for p in pages]}
+            published_pages = await store_page_service.publish_pages_service(tenant_slug, pages, db)
+            result = {"status": "ok", "template_key": args["template_key"], "pages": [p.model_dump(mode="json") for p in published_pages]}
         else:
             raise HTTPException(status_code=400, detail=f"Unknown pending action tool: {action.tool_name}")
             

@@ -262,10 +262,7 @@ async def post_apply_storefront_template(
     db: AsyncSession = Depends(get_db),
 ):
     pages = await store_page_service.apply_storefront_template_service(tenant_slug, template_key, db)
-    published_pages = []
-    for p in pages:
-        pub = await store_page_service.publish_page_service(tenant_slug, p.page_key, p.page_type, db)
-        published_pages.append(pub)
+    published_pages = await store_page_service.publish_pages_service(tenant_slug, pages, db)
     return ApplyStorefrontTemplateResponse(template_key=template_key, pages=published_pages)
 
 

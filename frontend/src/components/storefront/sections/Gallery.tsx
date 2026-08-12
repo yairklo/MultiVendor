@@ -1,5 +1,4 @@
 import { CSSProperties } from 'react'
-import Image from 'next/image'
 import { Section } from '@/lib/ai/types'
 
 export function Gallery({ section, themeStyle }: { section: Section; themeStyle: CSSProperties }) {
@@ -25,12 +24,12 @@ export function Gallery({ section, themeStyle }: { section: Section; themeStyle:
       ) : layout === 'carousel' ? (
         <div className="flex gap-3 overflow-x-auto pb-1">
           {images.map((url, i) => (
-            <Image
+            // eslint-disable-next-line @next/next/no-img-element -- arbitrary AI/admin-authored
+            // URLs with no host allowlist; see ProductCard.tsx for why next/image isn't used here.
+            <img
               key={i}
               src={url}
               alt=""
-              width={224}
-              height={224}
               className="aspect-square w-40 flex-none rounded-xl object-cover shadow-sm md:w-56"
             />
           ))}
@@ -38,7 +37,8 @@ export function Gallery({ section, themeStyle }: { section: Section; themeStyle:
       ) : (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           {images.map((url, i) => (
-            <Image key={i} src={url} alt="" width={400} height={400} className="aspect-square w-full rounded-xl object-cover shadow-sm" />
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={i} src={url} alt="" className="aspect-square w-full rounded-xl object-cover shadow-sm" />
           ))}
         </div>
       )}

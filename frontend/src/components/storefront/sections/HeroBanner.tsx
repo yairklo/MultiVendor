@@ -1,5 +1,4 @@
 import { CSSProperties, FocusEvent } from 'react'
-import Image from 'next/image'
 import { Section } from '@/lib/ai/types'
 
 const SIZE_HEIGHTS: Record<string, number> = { small: 160, medium: 280, large: 420 }
@@ -32,7 +31,9 @@ export function HeroBanner({
     >
       {imageUrl && (
         <>
-          <Image src={imageUrl} alt="" fill className="object-cover" />
+          {/* eslint-disable-next-line @next/next/no-img-element -- arbitrary AI/admin-authored
+              URL with no host allowlist; see ProductCard.tsx for why next/image isn't used here. */}
+          <img src={imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
           <div className="absolute inset-0 bg-black/35" />
         </>
       )}

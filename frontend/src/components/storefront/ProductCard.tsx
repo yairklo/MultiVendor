@@ -8,7 +8,6 @@ import { totalStock } from '@/lib/stock'
 import { StarRating } from '@/components/ui/star-rating'
 import { resolveCardStyleClasses, CardStyle } from '@/lib/product-card-styles'
 
-import Image from 'next/image'
 import { useCurrency } from '@/hooks/useCurrency'
 
 const STRINGS = {
@@ -68,12 +67,13 @@ export function ProductCard({
     <div className={`flex flex-col p-3 ${resolveCardStyleClasses(styleVariant)}`}>
       <Link href={`/store/${tenantSlug}/products/${product.slug}`} className="mb-2 block overflow-hidden rounded-lg">
         {image ? (
-          <Image 
-            src={image} 
-            alt={productName(product)} 
-            width={400} 
-            height={400} 
-            className="aspect-square w-full object-cover" 
+          // eslint-disable-next-line @next/next/no-img-element -- arbitrary vendor-supplied
+          // URLs with no host allowlist; next/image would require allowing every hostname,
+          // turning the server into an open image proxy (see next.config.ts history).
+          <img
+            src={image}
+            alt={productName(product)}
+            className="aspect-square w-full object-cover"
           />
         ) : (
           <div className="aspect-square w-full bg-gray-100" />

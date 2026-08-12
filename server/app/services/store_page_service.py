@@ -309,14 +309,7 @@ async def get_published_page_schema_service(
     return _to_published_schema(page)
 
 
-async def publish_page_service(
-    tenant_slug: str, page_key: str, page_type: str, db: AsyncSession
-) -> StorePageSchema:
-    """
-    Explicit store-owner action — never called by the AI or any tool. Copies the
-    current draft verbatim into the published snapshot the public storefront reads.
-    """
-    tenant_id = await _get_tenant_id(tenant_slug, db)
+async def _publish_page_no_commit(tenant_id: int, page_key: str, page_type: str, db: AsyncSession) -> StorePage:
     result = await db.execute(
         select(StorePage).where(
             StorePage.tenant_id == tenant_id, StorePage.page_key == page_key, StorePage.page_type == page_type
@@ -343,9 +336,43 @@ async def publish_page_service(
         if settings and settings.draft_template_key is not None:
             settings.template_key = settings.draft_template_key
 
+    return page
+
+
+async def publish_page_service(
+    tenant_slug: str, page_key: str, page_type: str, db: AsyncSession
+) -> StorePageSchema:
+    """
+    Explicit store-owner action — never invoked automatically by an AI tool call.
+    Copies the current draft verbatim into the published snapshot the public
+    storefront reads. Single-page counterpart to publish_pages_service below,
+    which the human-confirmed apply-template flow uses instead so a multi-page
+    publish commits atomically.
+    """
+    tenant_id = await _get_tenant_id(tenant_slug, db)
+    page = await _publish_page_no_commit(tenant_id, page_key, page_type, db)
     await db.commit()
     await db.refresh(page)
     return _to_schema(page)
+
+
+async def publish_pages_service(
+    tenant_slug: str, pages: List[StorePageSchema], db: AsyncSession
+) -> List[StorePageSchema]:
+    """
+    Publishes multiple pages in a single transaction — either all of them publish
+    or none do. Used after apply_storefront_template_service (reached only through
+    the human-confirmed pending-action flow or the explicit apply-template
+    endpoint, never called by the AI directly) so a failure partway through
+    can't leave the storefront with some pages published on the new template and
+    others still on the old one.
+    """
+    tenant_id = await _get_tenant_id(tenant_slug, db)
+    published = [await _publish_page_no_commit(tenant_id, p.page_key, p.page_type, db) for p in pages]
+    await db.commit()
+    for page in published:
+        await db.refresh(page)
+    return [_to_schema(page) for page in published]
 
 
 async def upsert_page_sections_service(
