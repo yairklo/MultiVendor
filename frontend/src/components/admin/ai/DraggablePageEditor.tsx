@@ -13,7 +13,14 @@ import { renderSections } from '@/components/storefront/PageRenderer'
 import { resolveDesignVariantClasses } from '@/lib/design-tokens'
 import { SectionPropertiesEditor } from './SectionPropertiesEditor'
 
-type RenderOpts = { onAction?: (action: DispatchedAction) => void; tenantSlug?: string; showTypeLabels?: boolean; onAskAI?: (id: string, prompt: string) => void; onEditSection?: (id: string) => void }
+type RenderOpts = {
+  onAction?: (action: DispatchedAction) => void
+  tenantSlug?: string
+  showTypeLabels?: boolean
+  onAskAI?: (id: string, prompt: string) => void
+  onEditSection?: (id: string) => void
+  onInlineEdit?: (sectionId: string, patch: Partial<Section>) => void
+}
 
 function SortableSectionCard({
   id, children, onEdit, onMergeNext, onUngroup,
@@ -326,9 +333,13 @@ export function DraggablePageEditor({
     })
   }
 
+  const patchSection = (id: string, patch: Partial<Section>) => {
+    onChange(patchSectionRecursively(page.sections, id, patch))
+  }
+
   const handleSectionPatch = (patch: Partial<Section>) => {
     if (!editingSectionId) return
-    onChange(patchSectionRecursively(page.sections, editingSectionId, patch))
+    patchSection(editingSectionId, patch)
   }
 
   return (
@@ -349,12 +360,13 @@ export function DraggablePageEditor({
           <DraggableSectionList 
             sections={page.sections} 
             onChange={onChange} 
-            opts={{ 
-              onAction, 
-              tenantSlug, 
-              showTypeLabels, 
-              onEditSection: (id) => setEditingSectionId(id) 
-            }} 
+            opts={{
+              onAction,
+              tenantSlug,
+              showTypeLabels,
+              onEditSection: (id) => setEditingSectionId(id),
+              onInlineEdit: patchSection,
+            }}
           />
         </div>
       </div>

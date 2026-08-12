@@ -1,8 +1,19 @@
-import { CSSProperties } from 'react'
+import { CSSProperties, FocusEvent } from 'react'
 import { Section } from '@/lib/ai/types'
 
-export function TextBlock({ section, themeStyle }: { section: Section; themeStyle: CSSProperties }) {
+export function TextBlock({
+  section, themeStyle, onInlineEdit,
+}: { section: Section; themeStyle: CSSProperties; onInlineEdit?: (sectionId: string, patch: Partial<Section>) => void }) {
   const fontSize = typeof section.settings.font_size === 'string' && section.settings.font_size ? section.settings.font_size : undefined
+  const heading = section.settings.heading ?? 'Text'
+  const body = section.settings.body ?? ''
+  const editableClass = onInlineEdit ? ' cursor-text rounded outline-none hover:bg-black/5 focus:bg-black/5 focus:ring-2 focus:ring-indigo-400' : ''
+
+  const commit = (key: 'heading' | 'body', current: string) => (e: FocusEvent<HTMLElement>) => {
+    const next = e.currentTarget.textContent ?? ''
+    if (next !== current) onInlineEdit?.(section.id, { settings: { ...section.settings, [key]: next } })
+  }
+
   return (
     <div
       className="rounded-2xl p-6"
@@ -13,8 +24,23 @@ export function TextBlock({ section, themeStyle }: { section: Section; themeStyl
         fontFamily: 'var(--section-font, inherit)',
       }}
     >
-      <h2 className="mb-2 text-xl font-bold" style={fontSize ? { fontSize } : undefined}>{section.settings.heading ?? 'Text'}</h2>
-      <p className="leading-relaxed text-current/80">{section.settings.body ?? ''}</p>
+      <h2
+        className={`mb-2 text-xl font-bold${editableClass}`}
+        style={fontSize ? { fontSize } : undefined}
+        contentEditable={!!onInlineEdit}
+        suppressContentEditableWarning={!!onInlineEdit}
+        onBlur={onInlineEdit ? commit('heading', heading) : undefined}
+      >
+        {heading}
+      </h2>
+      <p
+        className={`leading-relaxed text-current/80${editableClass}`}
+        contentEditable={!!onInlineEdit}
+        suppressContentEditableWarning={!!onInlineEdit}
+        onBlur={onInlineEdit ? commit('body', body) : undefined}
+      >
+        {body}
+      </p>
     </div>
   )
 }
