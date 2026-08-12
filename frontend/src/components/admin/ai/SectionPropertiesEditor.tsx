@@ -4,6 +4,81 @@ import { useState } from 'react'
 import { Section } from '@/lib/ai/types'
 import { Sparkles } from 'lucide-react'
 
+const FONT_FAMILIES: { label: string; value: string }[] = [
+  { label: 'Default', value: '' },
+  { label: 'Serif', value: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif' },
+  { label: 'Mono', value: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace' },
+  { label: 'Rounded', value: '"Trebuchet MS", Verdana, ui-rounded, system-ui, sans-serif' },
+]
+
+const FONT_SIZES: { label: string; value: string }[] = [
+  { label: 'Default', value: '' },
+  { label: 'Small', value: '1.125rem' },
+  { label: 'Medium', value: '1.5rem' },
+  { label: 'Large', value: '2rem' },
+  { label: 'Extra Large', value: '2.75rem' },
+]
+
+function ColorField({
+  label, value, onChange, fallback,
+}: { label: string; value: string; onChange: (v: string) => void; fallback: string }) {
+  const swatchValue = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(value) ? value : fallback
+  return (
+    <div className="flex flex-col gap-1">
+      <label className="text-xs font-semibold text-gray-700">{label}</label>
+      <div className="flex items-center gap-2">
+        <input
+          type="color"
+          aria-label={`${label} swatch`}
+          className="h-9 w-9 shrink-0 cursor-pointer rounded-md border p-0.5"
+          value={swatchValue}
+          onChange={(e) => onChange(e.target.value)}
+        />
+        <input
+          type="text"
+          placeholder={fallback}
+          className="flex-1 rounded-md border p-2 text-sm"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      </div>
+    </div>
+  )
+}
+
+function FontFields({
+  settings, onChange,
+}: { settings: Record<string, any>; onChange: (key: string, value: any) => void }) {
+  return (
+    <>
+      <div className="flex flex-col gap-1">
+        <label className="text-xs font-semibold text-gray-700">Font</label>
+        <select
+          className="rounded-md border p-2 text-sm"
+          value={settings.font_family ?? ''}
+          onChange={(e) => onChange('font_family', e.target.value)}
+        >
+          {FONT_FAMILIES.map((f) => (
+            <option key={f.label} value={f.value}>{f.label}</option>
+          ))}
+        </select>
+      </div>
+      <div className="flex flex-col gap-1">
+        <label className="text-xs font-semibold text-gray-700">Heading Size</label>
+        <select
+          className="rounded-md border p-2 text-sm"
+          value={settings.font_size ?? ''}
+          onChange={(e) => onChange('font_size', e.target.value)}
+        >
+          {FONT_SIZES.map((f) => (
+            <option key={f.label} value={f.value}>{f.label}</option>
+          ))}
+        </select>
+      </div>
+    </>
+  )
+}
+
 export function SectionPropertiesEditor({
   section,
   onChange,
@@ -28,15 +103,43 @@ export function SectionPropertiesEditor({
         return (
           <>
             {section.type === 'hero_banner' ? (
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-gray-700">Headline</label>
-                <input
-                  type="text"
-                  className="rounded-md border p-2 text-sm"
-                  value={section.settings.headline ?? ''}
-                  onChange={(e) => handleSettingChange('headline', e.target.value)}
-                />
-              </div>
+              <>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-semibold text-gray-700">Headline</label>
+                  <input
+                    type="text"
+                    className="rounded-md border p-2 text-sm"
+                    value={section.settings.headline ?? ''}
+                    onChange={(e) => handleSettingChange('headline', e.target.value)}
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <div className="flex flex-1 flex-col gap-1">
+                    <label className="text-xs font-semibold text-gray-700">Size</label>
+                    <select
+                      className="rounded-md border p-2 text-sm"
+                      value={section.settings.size ?? 'medium'}
+                      onChange={(e) => handleSettingChange('size', e.target.value)}
+                    >
+                      <option value="small">Small</option>
+                      <option value="medium">Medium</option>
+                      <option value="large">Large</option>
+                    </select>
+                  </div>
+                  <div className="flex flex-1 flex-col gap-1">
+                    <label className="text-xs font-semibold text-gray-700">Alignment</label>
+                    <select
+                      className="rounded-md border p-2 text-sm"
+                      value={section.settings.alignment ?? 'center'}
+                      onChange={(e) => handleSettingChange('alignment', e.target.value)}
+                    >
+                      <option value="left">Left</option>
+                      <option value="center">Center</option>
+                      <option value="right">Right</option>
+                    </select>
+                  </div>
+                </div>
+              </>
             ) : (
               <>
                 <div className="flex flex-col gap-1">
@@ -59,26 +162,19 @@ export function SectionPropertiesEditor({
                 </div>
               </>
             )}
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold text-gray-700">Background Color</label>
-              <input
-                type="text"
-                placeholder="#ffffff"
-                className="rounded-md border p-2 text-sm"
-                value={section.settings.background_color ?? ''}
-                onChange={(e) => handleSettingChange('background_color', e.target.value)}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold text-gray-700">Text Color</label>
-              <input
-                type="text"
-                placeholder="#000000"
-                className="rounded-md border p-2 text-sm"
-                value={section.settings.text_color ?? ''}
-                onChange={(e) => handleSettingChange('text_color', e.target.value)}
-              />
-            </div>
+            <FontFields settings={section.settings} onChange={handleSettingChange} />
+            <ColorField
+              label="Background Color"
+              fallback="#ffffff"
+              value={section.settings.background_color ?? ''}
+              onChange={(v) => handleSettingChange('background_color', v)}
+            />
+            <ColorField
+              label="Text Color"
+              fallback="#000000"
+              value={section.settings.text_color ?? ''}
+              onChange={(v) => handleSettingChange('text_color', v)}
+            />
           </>
         )
       case 'grid_container':

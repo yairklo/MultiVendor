@@ -7,6 +7,7 @@ export function HeroBanner({ section, themeStyle }: { section: Section; themeSty
   const size = section.settings.size ?? 'medium'
   const height = SIZE_HEIGHTS[size] ?? SIZE_HEIGHTS.medium
   const alignment = section.settings.alignment === 'left' ? 'items-start text-left' : section.settings.alignment === 'right' ? 'items-end text-right' : 'items-center text-center'
+  const fontSize = typeof section.settings.font_size === 'string' && section.settings.font_size ? section.settings.font_size : undefined
 
   return (
     <div
@@ -16,12 +17,13 @@ export function HeroBanner({ section, themeStyle }: { section: Section; themeSty
         height,
         background: 'var(--section-bg, linear-gradient(135deg, #eef2ff, #e0e7ff))',
         color: 'var(--section-text, #1e293b)',
+        fontFamily: 'var(--section-font, inherit)',
       }}
     >
       <span className="inline-block w-fit rounded-full bg-white/70 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-700">
         {size}
       </span>
-      <h1 className="text-3xl font-bold md:text-4xl">{section.settings.headline ?? 'Hero Banner'}</h1>
+      <h1 className="text-3xl font-bold md:text-4xl" style={fontSize ? { fontSize } : undefined}>{section.settings.headline ?? 'Hero Banner'}</h1>
       {section.media && (
         <span className="text-xs text-current/70">image: {section.media.url}</span>
       )}
