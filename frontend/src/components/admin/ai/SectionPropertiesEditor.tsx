@@ -27,26 +27,38 @@ export function SectionPropertiesEditor({
       case 'hero_banner':
         return (
           <>
-            {section.type === 'hero_banner' && (
+            {section.type === 'hero_banner' ? (
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-gray-700">Title</label>
+                <label className="text-xs font-semibold text-gray-700">Headline</label>
                 <input
                   type="text"
                   className="rounded-md border p-2 text-sm"
-                  value={section.settings.title ?? ''}
-                  onChange={(e) => handleSettingChange('title', e.target.value)}
+                  value={section.settings.headline ?? ''}
+                  onChange={(e) => handleSettingChange('headline', e.target.value)}
                 />
               </div>
+            ) : (
+              <>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-semibold text-gray-700">Heading</label>
+                  <input
+                    type="text"
+                    className="rounded-md border p-2 text-sm"
+                    value={section.settings.heading ?? ''}
+                    onChange={(e) => handleSettingChange('heading', e.target.value)}
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-semibold text-gray-700">Body</label>
+                  <textarea
+                    className="rounded-md border p-2 text-sm"
+                    rows={4}
+                    value={section.settings.body ?? ''}
+                    onChange={(e) => handleSettingChange('body', e.target.value)}
+                  />
+                </div>
+              </>
             )}
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold text-gray-700">Text</label>
-              <textarea
-                className="rounded-md border p-2 text-sm"
-                rows={4}
-                value={section.settings.text ?? ''}
-                onChange={(e) => handleSettingChange('text', e.target.value)}
-              />
-            </div>
             <div className="flex flex-col gap-1">
               <label className="text-xs font-semibold text-gray-700">Background Color</label>
               <input
