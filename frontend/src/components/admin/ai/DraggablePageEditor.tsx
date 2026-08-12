@@ -11,10 +11,11 @@ import { useState } from 'react'
 import { DispatchedAction, Section, StorePageSchema } from '@/lib/ai/types'
 import { renderSections } from '@/components/storefront/PageRenderer'
 import { resolveDesignVariantClasses } from '@/lib/design-tokens'
+import { SectionPropertiesEditor } from './SectionPropertiesEditor'
 
-type RenderOpts = { onAction?: (action: DispatchedAction) => void; tenantSlug?: string; showTypeLabels?: boolean; onAskAI?: (id: string, prompt: string) => void }
+type RenderOpts = { onAction?: (action: DispatchedAction) => void; tenantSlug?: string; showTypeLabels?: boolean; onAskAI?: (id: string, prompt: string) => void; onEditSection?: (id: string) => void }
 
-function SortableSectionCard({ id, children }: { id: string; children: ReactNode }) {
+function SortableSectionCard({ id, section, children, onEdit }: { id: string; section: Section; children: ReactNode; onEdit: (id: string) => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
   const style: CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -22,16 +23,26 @@ function SortableSectionCard({ id, children }: { id: string; children: ReactNode
     opacity: isDragging ? 0.5 : 1,
   }
   return (
-    <div ref={setNodeRef} style={style} className="group relative">
-      <button
-        type="button"
-        className="absolute -left-7 top-1/2 hidden -translate-y-1/2 cursor-grab items-center rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 group-hover:flex active:cursor-grabbing"
-        {...attributes}
-        {...listeners}
-        aria-label="Drag to reorder"
-      >
-        <GripVertical className="h-4 w-4" />
-      </button>
+    <div ref={setNodeRef} style={style} className="relative group">
+      <div className="absolute -left-3 -top-3 z-10 flex items-center gap-1 rounded-md bg-white/90 p-1 shadow-sm backdrop-blur border border-gray-200">
+        <button
+          type="button"
+          className="cursor-grab p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 active:cursor-grabbing rounded"
+          {...attributes}
+          {...listeners}
+          aria-label="Drag to reorder"
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          className="p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 rounded"
+          onClick={() => onEdit(id)}
+          aria-label="Edit Properties"
+        >
+          <Pencil className="h-4 w-4" />
+        </button>
+      </div>
       {children}
     </div>
   )
@@ -84,8 +95,9 @@ function DraggableSectionList({
           {sections.map((section) => (
             <SortableSectionCard 
               key={section.id} 
+              id={section.id}
               section={section}
-              onChange={(patch) => onChange(updateChildAt(sections, section.id, patch))}
+              onEdit={(id) => opts.onEditSection?.(id)}
             >
               {section.type === 'grid_container' ? (
                 <GridContainerEditor
@@ -178,24 +190,102 @@ export function DraggablePageEditor({
   tenantSlug?: string
   showTypeLabels?: boolean
 }) {
+  const [editingSectionId, setEditingSectionId] = useState<string | null>(null)
+
   if (!page) {
     return <div className="p-8 text-center text-gray-400">Loading page…</div>
   }
 
+  // Find the currently edited section recursively
+  const findSection = (sections: Section[], id: string): Section | undefined => {
+    for (const sec of sections) {
+      if (sec.id === id) return sec
+      if (sec.children) {
+        const found = findSection(sec.children, id)
+        if (found) return found
+      }
+      if (sec.zones) {
+        for (const zone of Object.values(sec.zones)) {
+          if (zone) {
+            const found = findSection(zone, id)
+            if (found) return found
+          }
+        }
+      }
+    }
+    return undefined
+  }
+
+  const editingSection = editingSectionId ? findSection(page.sections, editingSectionId) : null
+
+  // Update a nested section
+  const patchSectionRecursively = (sections: Section[], id: string, patch: Partial<Section>): Section[] => {
+    return sections.map((sec) => {
+      if (sec.id === id) {
+        return { ...sec, ...patch }
+      }
+      if (sec.children) {
+        return { ...sec, children: patchSectionRecursively(sec.children, id, patch) }
+      }
+      if (sec.zones) {
+        const newZones: any = {}
+        for (const [zoneName, zoneSections] of Object.entries(sec.zones)) {
+          if (zoneSections) {
+            newZones[zoneName] = patchSectionRecursively(zoneSections, id, patch)
+          }
+        }
+        return { ...sec, zones: newZones }
+      }
+      return sec
+    })
+  }
+
+  const handleSectionPatch = (patch: Partial<Section>) => {
+    if (!editingSectionId) return
+    onChange(patchSectionRecursively(page.sections, editingSectionId, patch))
+  }
+
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-gray-400">Hover a section and drag its handle to reorder.</p>
-        <button
-          type="button"
-          onClick={onSave}
-          disabled={saving}
-          className="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-gray-800 disabled:opacity-50"
-        >
-          {saving ? 'Saving…' : 'Save Layout'}
-        </button>
+    <div className="flex w-full h-[calc(100vh-100px)]">
+      <div className="flex-1 overflow-y-auto px-4">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-gray-400">Use the toolbar on the left of each section to reorder or edit.</p>
+            <button
+              type="button"
+              onClick={onSave}
+              disabled={saving}
+              className="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-gray-800 disabled:opacity-50"
+            >
+              {saving ? 'Saving…' : 'Save Layout'}
+            </button>
+          </div>
+          <DraggableSectionList 
+            sections={page.sections} 
+            onChange={onChange} 
+            opts={{ 
+              onAction, 
+              tenantSlug, 
+              showTypeLabels, 
+              onEditSection: (id) => setEditingSectionId(id) 
+            }} 
+          />
+        </div>
       </div>
-      <DraggableSectionList sections={page.sections} onChange={onChange} opts={{ onAction, tenantSlug, showTypeLabels, onAskAI }} />
+      
+      {editingSection && (
+        <div className="w-[350px] shrink-0 border-l border-gray-200">
+          <SectionPropertiesEditor
+            section={editingSection}
+            onChange={handleSectionPatch}
+            onClose={() => setEditingSectionId(null)}
+            onAskAI={(id, prompt) => {
+              // The AI chat integration would happen here
+              // For now, just logging or you can pass down an actual onAskAI prop if provided by layout
+            }}
+          />
+        </div>
+      )}
     </div>
   )
 }
