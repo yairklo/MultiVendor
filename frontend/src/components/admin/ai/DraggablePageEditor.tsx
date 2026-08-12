@@ -24,7 +24,7 @@ function SortableSectionCard({ id, children, onEdit }: { id: string; children: R
   }
   return (
     <div ref={setNodeRef} style={style} className="relative group">
-      <div className="absolute -left-3 -top-3 z-10 flex items-center gap-1 rounded-md bg-white/90 p-1 shadow-sm backdrop-blur border border-gray-200">
+      <div className="absolute -right-3 -top-3 z-20 flex items-center gap-1 rounded-md bg-white/90 p-1 shadow-sm backdrop-blur border border-gray-200">
         <button
           type="button"
           className="cursor-grab p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 active:cursor-grabbing rounded"
@@ -250,8 +250,8 @@ export function DraggablePageEditor({
     <div className="flex w-full h-[calc(100vh-100px)]">
       <div className="flex-1 overflow-y-auto px-4">
         <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-gray-400">Use the toolbar on the left of each section to reorder or edit.</p>
+          <div className="sticky top-0 z-30 flex items-center justify-between bg-gray-50/95 py-2 backdrop-blur">
+            <p className="text-xs text-gray-400">Use the toolbar on each section to reorder or edit.</p>
             <button
               type="button"
               onClick={onSave}
