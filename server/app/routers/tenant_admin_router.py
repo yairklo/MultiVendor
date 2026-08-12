@@ -22,7 +22,7 @@ from app.services.catalog_service import (
 )
 from app.services.tenant_service import (
     update_store_settings_service, update_tenant_service, get_tenant_analytics_service,
-    upgrade_subscription_service, get_current_subscription_service
+    upgrade_subscription_service, get_current_subscription_service, get_top_selling_products_service
 )
 from app.services.order_service import (
     update_order_status_service, list_tenant_orders_service, get_tenant_order_service,
@@ -273,6 +273,20 @@ async def get_analytics(
     db: AsyncSession = Depends(get_db)
 ):
     return await get_tenant_analytics_service(tenant_slug, start_date, end_date, db)
+
+@tenant_admin_router.get(
+    "/analytics/top-products",
+    summary="Get Top Selling Products"
+)
+async def get_top_selling_products(
+    start_date: str = Query(...),
+    end_date: str = Query(...),
+    limit: int = Query(5),
+    tenant_slug: str = Path(...),
+    admin: User = Depends(get_tenant_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    return await get_top_selling_products_service(tenant_slug, start_date, end_date, db, limit)
 
 
 # ORDERS
