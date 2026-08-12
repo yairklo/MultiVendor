@@ -15,6 +15,10 @@ vi.mock('@/hooks/useCurrency', () => ({
   }),
 }))
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() })
+}))
+
 const physicalCart: Cart = {
   cart_id: 'cart-1',
   tenant_id: 1,
@@ -119,6 +123,16 @@ describe('CheckoutPage', () => {
 
     expect(await screen.findByText(/SAVE10 applied/i)).toBeInTheDocument()
     expect(screen.getByText('-$9.90')).toBeInTheDocument()
-    expect(screen.getByText('$89.10')).toBeInTheDocument()
+    
+    // Subtotal: 99.00
+    // Discount: -9.90
+    // Standard Shipping: +5.00
+    // Total: 94.10
+    expect(screen.getByText('$94.10')).toBeInTheDocument()
+
+    // Select Express Shipping
+    await user.click(screen.getByLabelText(/Express Shipping/i))
+    // Total should now be 99.00 - 9.90 + 15.00 = 104.10
+    expect(screen.getByText('$104.10')).toBeInTheDocument()
   })
 })

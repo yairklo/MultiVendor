@@ -15,18 +15,10 @@ describe('Admin Dashboard', () => {
             orders_count: 400
           })
         }),
-        http.get('http://localhost:8000/api/v1/admin/store/:slug/analytics/top-products', () => {
-          return HttpResponse.json([])
-        }),
-        http.get('http://localhost:8000/api/v1/admin/store/:slug/orders', () => {
-          return HttpResponse.json([])
-        }),
-        http.get('http://localhost:8000/api/v1/store/:slug/products', () => {
-          return HttpResponse.json({ data: [] })
-        }),
-        http.get('http://localhost:8000/api/v1/admin/store/:slug/reviews', () => {
-          return HttpResponse.json([])
-        })
+        http.get('http://localhost:8000/api/v1/admin/store/:slug/analytics/top-products', () => HttpResponse.json([])),
+        http.get('http://localhost:8000/api/v1/admin/store/:slug/orders', () => HttpResponse.json([])),
+        http.get('http://localhost:8000/api/v1/store/:slug/products', () => HttpResponse.json({ data: [] })),
+        http.get('http://localhost:8000/api/v1/admin/store/:slug/reviews', () => HttpResponse.json([]))
       )
   })
 
