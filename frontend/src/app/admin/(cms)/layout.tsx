@@ -37,8 +37,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: 'Customers', href: '/admin/customers', icon: Users },
     { name: 'Coupons', href: '/admin/coupons', icon: Tag },
     { name: 'Reviews', href: '/admin/reviews', icon: Star },
-    { name: 'Templates', href: '/admin/templates', icon: Palette },
-    { name: 'AI Layout', href: '/admin/ai-layout', icon: Sparkles },
+    { name: 'Site Design', href: '/admin/ai-layout', icon: Palette },
+    { name: 'AI Copilot', href: '/admin/copilot', icon: Sparkles },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
   ]
 

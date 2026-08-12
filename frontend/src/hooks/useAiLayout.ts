@@ -85,6 +85,16 @@ export function useAiLayout() {
     })
   }
 
+  const fetchTemplates = async (): Promise<any[]> => {
+    return apiClient(`/api/v1/admin/store/${tenantSlug}/ai/templates`)
+  }
+
+  const applyTemplate = async (templateKey: string): Promise<any> => {
+    return apiClient(`/api/v1/admin/store/${tenantSlug}/ai/templates/${templateKey}/apply`, {
+      method: 'POST',
+    })
+  }
+
   return {
     tenantSlug,
     fetchStatus,
@@ -99,5 +109,7 @@ export function useAiLayout() {
     confirmPendingAction,
     cancelPendingAction,
     saveLayout,
+    fetchTemplates,
+    applyTemplate,
   }
 }

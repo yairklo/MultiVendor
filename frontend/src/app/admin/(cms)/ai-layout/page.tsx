@@ -6,6 +6,7 @@ import { DraggablePageEditor } from '@/components/admin/ai/DraggablePageEditor'
 import { ContextBadge } from '@/components/admin/ai/ContextBadge'
 import { ChatDrawer } from '@/components/admin/ai/ChatDrawer'
 import { VersionHistoryPanel } from '@/components/admin/ai/VersionHistoryPanel'
+import { TemplatePicker } from '@/components/admin/ai/TemplatePicker'
 import { useAiLayout } from '@/hooks/useAiLayout'
 import { useAutoSyncAIContext } from '@/hooks/useAutoSyncAIContext'
 import { useToast } from '@/context/ToastContext'
@@ -16,13 +17,14 @@ export default function AiLayoutPage() {
   const {
     tenantSlug, fetchStatus, fetchPageTargets, fetchPageSchema, sendChatMessage,
     fetchPageVersions, revertToVersion, fetchConversation, clearConversation, publishPage,
-    confirmPendingAction, cancelPendingAction, saveLayout,
+    confirmPendingAction, cancelPendingAction, saveLayout, fetchTemplates, applyTemplate,
   } = useAiLayout()
   const { pageKey, pageType, messages, setMessages, setContext } = useAutoSyncAIContext()
   const { showToast } = useToast()
   const { confirm } = useConfirm()
 
   const [targets, setTargets] = useState<StorePageSummary[]>([])
+  const [templates, setTemplates] = useState<any[]>([])
   const [page, setPage] = useState<StorePageSchema | null>(null)
   const [provider, setProvider] = useState<'gemini' | 'mock' | null>(null)
   const [isBusy, setIsBusy] = useState(false)
@@ -31,10 +33,12 @@ export default function AiLayoutPage() {
   const [publishing, setPublishing] = useState(false)
   const [resolvingConfirmationId, setResolvingConfirmationId] = useState<string | null>(null)
   const [savingLayout, setSavingLayout] = useState(false)
+  const [applyingTemplate, setApplyingTemplate] = useState(false)
 
   useEffect(() => {
     fetchStatus().then((s) => setProvider(s.provider)).catch(() => {})
     fetchPageTargets().then(setTargets).catch((err) => showToast(err.message, 'error'))
+    fetchTemplates().then(setTemplates).catch(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -190,6 +194,29 @@ export default function AiLayoutPage() {
     }
   }
 
+  async function handleApplyTemplate(templateKey: string) {
+    const ok = await confirm({
+      title: 'Apply Template?',
+      description: 'This will replace the DRAFT versions of your Home, About, and Contact pages with the selected template. You can preview changes before publishing.',
+      confirmLabel: 'Apply Template',
+    })
+    if (!ok) return
+
+    setApplyingTemplate(true)
+    try {
+      await applyTemplate(templateKey)
+      // Reload the current page draft
+      const reloadedPage = await fetchPageSchema(pageKey, pageType)
+      setPage(reloadedPage)
+      fetchPageVersions(pageKey, pageType).then(setVersions).catch(() => {})
+      showToast('Template applied to drafts. Please review and publish when ready.', 'success')
+    } catch (err: any) {
+      showToast(err.message || 'Failed to apply template', 'error')
+    } finally {
+      setApplyingTemplate(false)
+    }
+  }
+
   return (
     <div className="flex h-full flex-col gap-4">
       <h1 className="text-3xl font-bold text-gray-900">AI Layout & Product Assistant</h1>
@@ -198,6 +225,7 @@ export default function AiLayoutPage() {
         <div className="flex-1">
           <ContextBadge targets={targets} pageKey={pageKey} pageType={pageType} provider={provider} onChange={setContext} />
         </div>
+        <TemplatePicker templates={templates} onApply={handleApplyTemplate} isApplying={applyingTemplate} />
         <VersionHistoryPanel
           versions={versions}
           onRevert={handleRevert}

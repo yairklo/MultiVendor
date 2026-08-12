@@ -404,11 +404,8 @@ async def list_storefront_templates_service() -> List[StorefrontTemplateMeta]:
 
 async def apply_storefront_template_service(tenant_slug: str, template_key: str, db: AsyncSession) -> List[StorePageSchema]:
     """
-    Seeds (or overwrites) this tenant's home/about/contact draft pages from a premium template,
-    then immediately publishes each one — unlike every other write in this module, a seller
-    picking a template expects their storefront to look like it right away, not to sit as an
-    unpublished draft. Every edit after this still goes through the normal draft -> explicit
-    Publish flow untouched.
+    Seeds (or overwrites) this tenant's home/about/contact draft pages from a premium template.
+    Does NOT publish automatically. It updates the draft versions so they can be previewed in the layout editor.
     """
     template = get_storefront_template(template_key)
     if not template:
@@ -418,14 +415,13 @@ async def apply_storefront_template_service(tenant_slug: str, template_key: str,
 
     results: List[StorePageSchema] = []
     for page_key, page_content in template["pages"].items():
-        await upsert_page_sections_service(
+        draft = await upsert_page_sections_service(
             tenant_slug, page_key, "static_page", page_content["sections"], db,
             title=page_content.get("title"),
             background_color=page_content.get("background_color"),
             text_color=page_content.get("text_color"),
         )
-        published = await publish_page_service(tenant_slug, page_key, "static_page", db)
-        results.append(published)
+        results.append(draft)
 
     settings_result = await db.execute(select(TenantSettings).where(TenantSettings.tenant_id == tenant_id))
     settings = settings_result.scalar_one_or_none()
