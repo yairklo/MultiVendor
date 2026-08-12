@@ -4,17 +4,18 @@ from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
 SectionType = Literal[
     "hero_banner", "product_grid", "video_embed", "text_block", "gallery", "button_group", "table",
-    "grid_container", "two_column_layout",
+    "grid_container", "two_column_layout", "feature_highlights", "testimonials",
 ]
 PageType = Literal["static_page", "template"]
 MediaType = Literal["image", "video"]
 ButtonVariant = Literal["primary", "secondary", "outline"]
 ButtonActionType = Literal["NAVIGATE", "OPEN_MODAL", "ADD_TO_CART", "APPLY_COUPON"]
 DesignVariant = Literal["primary", "accent", "secondary", "muted", "neutral"]
+CardStyle = Literal["default", "framed", "minimal"]
 
 SECTION_TYPES: tuple = (
     "hero_banner", "product_grid", "video_embed", "text_block", "gallery", "button_group", "table",
-    "grid_container", "two_column_layout",
+    "grid_container", "two_column_layout", "feature_highlights", "testimonials",
 )
 BUTTON_ACTION_TYPES: tuple = ("NAVIGATE", "OPEN_MODAL", "ADD_TO_CART", "APPLY_COUPON")
 BUTTON_VARIANTS: tuple = ("primary", "secondary", "outline")
@@ -24,6 +25,10 @@ CONTAINER_SECTION_TYPES: tuple = ("grid_container", "two_column_layout")
 # maps each to a literal, statically-scanned class string) — kept separate from the free-text
 # background_color/text_color path the original 7 section types use.
 DESIGN_VARIANTS: tuple = ("primary", "accent", "secondary", "muted", "neutral")
+# AI-selectable product card presentation for product_grid sections (frontend/src/lib/
+# product-card-styles.ts maps each to a literal, statically-scanned class string) — lets the AI
+# restyle how product cards look without ever touching the card's markup or its Add to Cart wiring.
+CARD_STYLES: tuple = ("default", "framed", "minimal")
 # A store's page tree is user/AI-authored — cap nesting so a hallucinated or malicious payload
 # can't produce pathologically deep recursion server- or client-side.
 MAX_SECTION_NESTING_DEPTH = 3
@@ -173,6 +178,16 @@ class SalesAnalyticsResponse(BaseModel):
     aov: float
     daily: List[Dict[str, Any]]
     top_selling_products: List[TopSellingProduct]
+
+class StorefrontTemplateSummary(BaseModel):
+    key: str
+    name: str
+    tagline: str
+    swatch: Dict[str, str]
+
+class ApplyStorefrontTemplateResponse(BaseModel):
+    template_key: str
+    pages: List[StorePageSchema]
 
 class CustomerInsightsResponse(BaseModel):
     total_customers: int

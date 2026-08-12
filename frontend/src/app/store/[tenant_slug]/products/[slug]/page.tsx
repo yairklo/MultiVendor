@@ -9,6 +9,7 @@ import { useToast } from '@/context/ToastContext'
 import { totalStock } from '@/lib/stock'
 import { StarRating } from '@/components/ui/star-rating'
 import { Star } from 'lucide-react'
+import { useStorefrontTheme } from '@/context/StorefrontThemeContext'
 
 type Params = { tenant_slug: string; slug: string }
 
@@ -33,6 +34,7 @@ export default function ProductDetailPage(props: { params: Promise<Params> | Par
   const [submittingReview, setSubmittingReview] = useState(false)
   const { addItem, openDrawer } = useCart()
   const { showToast } = useToast()
+  const { theme } = useStorefrontTheme()
 
   const loadProduct = (tenantSlug: string, slug: string) => {
     setLoading(true)
@@ -138,7 +140,7 @@ export default function ProductDetailPage(props: { params: Promise<Params> | Par
           </div>
 
           <div>
-            <h1 className="text-2xl font-bold mb-2">{name}</h1>
+            <h1 className={`text-2xl font-bold mb-2 ${theme.headingFont}`}>{name}</h1>
             {product.review_count > 0 && (
               <div className="flex items-center gap-2 mb-2">
                 <StarRating rating={product.average_rating} />
@@ -189,7 +191,7 @@ export default function ProductDetailPage(props: { params: Promise<Params> | Par
             <button
               onClick={handleAddToCart}
               disabled={outOfStock || adding}
-              className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`w-full px-4 py-3 font-medium active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${theme.primaryButtonClass}`}
             >
               {outOfStock ? 'Out of stock' : adding ? 'Adding...' : 'Add to Cart'}
             </button>

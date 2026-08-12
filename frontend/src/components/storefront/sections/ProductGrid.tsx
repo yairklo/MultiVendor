@@ -1,16 +1,10 @@
 'use client'
 
 import { CSSProperties, useEffect, useState } from 'react'
-import Link from 'next/link'
 import { Section } from '@/lib/ai/types'
 import { apiClient } from '@/lib/api/apiClient'
-import { useCart } from '@/context/CartContext'
-import { totalStock } from '@/lib/stock'
-import { StarRating } from '@/components/ui/star-rating'
-
-function productName(p: any): string {
-  return typeof p.name === 'object' ? p.name?.en || p.name?.he || Object.values(p.name ?? {})[0] || '' : p.name
-}
+import { ProductCard } from '../ProductCard'
+import { CardStyle } from '@/lib/product-card-styles'
 
 export function ProductGrid({
   section,
@@ -24,9 +18,8 @@ export function ProductGrid({
 }) {
   const columns = Number(section.settings.columns ?? 4)
   const categoryId = section.settings.category_id
+  const cardStyle: CardStyle = section.settings.card_style ?? 'default'
   const [products, setProducts] = useState<any[] | null>(null)
-  const [quantities, setQuantities] = useState<Record<number, number>>({})
-  const { addItem } = useCart()
 
   useEffect(() => {
     if (!tenantSlug) {
@@ -48,19 +41,6 @@ export function ProductGrid({
     }
   }, [tenantSlug, categoryId, columns])
 
-  const getQuantity = (id: number) => quantities[id] ?? 1
-
-  async function handleAddToCart(p: any) {
-    const variantId = p.variants?.[0]?.id
-    if (!variantId || !tenantSlug) return
-    try {
-      await addItem(tenantSlug, variantId, getQuantity(p.id))
-      setQuantities((prev) => ({ ...prev, [p.id]: 1 }))
-    } catch {
-      // CartContext surfaces its own errors; nothing further to do here.
-    }
-  }
-
   return (
     <div
       className="rounded-2xl p-6"
@@ -81,34 +61,10 @@ export function ProductGrid({
         )}
 
         {products !== null &&
-          products.map((p) => {
-            const stock = totalStock(p.variants)
-            const stockKnown = Number.isFinite(stock)
-            const outOfStock = stockKnown && stock <= 0
-            return (
-              <div key={p.id} className="flex flex-col rounded-xl border border-gray-100 bg-white p-3 shadow-sm">
-                <Link href={`/store/${tenantSlug}/products/${p.slug}`} className="mb-2 hover:text-blue-600">
-                  <div className="mb-2 aspect-square rounded-lg bg-gray-100" />
-                  <span className="text-sm font-semibold text-gray-900">{productName(p)}</span>
-                </Link>
-                {p.review_count > 0 && (
-                  <div className="mb-1 flex items-center gap-1">
-                    <StarRating rating={p.average_rating} size={12} />
-                    <span className="text-xs text-gray-400">({p.review_count})</span>
-                  </div>
-                )}
-                <span className="mb-2 text-sm text-gray-500">${p.base_price ?? p.price}</span>
-                <button
-                  type="button"
-                  disabled={outOfStock}
-                  onClick={() => handleAddToCart(p)}
-                  className="mt-auto rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {outOfStock ? 'Out of stock' : 'Add to Cart'}
-                </button>
-              </div>
-            )
-          })}
+          tenantSlug &&
+          products.map((p) => (
+            <ProductCard key={p.id} product={p} tenantSlug={tenantSlug} styleVariant={cardStyle} />
+          ))}
       </div>
       {section.settings.collection && !categoryId && (
         <div className="mt-3 text-xs text-current/60">collection: {section.settings.collection}</div>

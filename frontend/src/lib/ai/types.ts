@@ -8,6 +8,8 @@ export type SectionType =
   | 'table'
   | 'grid_container'
   | 'two_column_layout'
+  | 'feature_highlights'
+  | 'testimonials'
 
 export type DesignVariant = 'primary' | 'accent' | 'secondary' | 'muted' | 'neutral'
 

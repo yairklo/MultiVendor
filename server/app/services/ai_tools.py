@@ -35,7 +35,7 @@ _SECTION_SCHEMA_DEFS: Dict[str, Any] = {
                 "type": "string",
                 "enum": [
                     "hero_banner", "product_grid", "video_embed", "text_block", "gallery", "button_group", "table",
-                    "grid_container", "two_column_layout",
+                    "grid_container", "two_column_layout", "feature_highlights", "testimonials",
                 ],
                 "description": "The section component type to render.",
             },
@@ -44,11 +44,14 @@ _SECTION_SCHEMA_DEFS: Dict[str, Any] = {
                 "description": (
                     "Arbitrary type-specific settings — use exactly these key names, the frontend components only "
                     "read these: hero_banner: {headline, size: 'small'|'medium'|'large', alignment: 'left'|'center'|"
-                    "'right'}. product_grid: {title, columns (number), category_id?: number} renders REAL live "
-                    "products from this store, filtered to that category if category_id is given (look it up via the "
-                    "store's categories if the user names one) or the newest products otherwise — never invent "
-                    "product data yourself, this section always pulls the real catalog. video_embed: {title, autoplay "
-                    "(bool)}. text_block: {heading, body}. gallery: {layout: 'grid'|'carousel', thumbnails (bool)}. "
+                    "'right'}. product_grid: {title, columns (number), category_id?: number, card_style?: "
+                    "'default'|'framed'|'minimal'} renders REAL live products from this store, filtered to that "
+                    "category if category_id is given (look it up via the store's categories if the user names one) "
+                    "or the newest products otherwise — never invent product data yourself, this section always "
+                    "pulls the real catalog and every card already has a working Add to Cart button; card_style "
+                    "only changes how the card looks, never what it does. video_embed: {title, autoplay (bool)}. "
+                    "text_block: {heading, body}. gallery: {title?, layout: 'grid'|'carousel', images?: string[] "
+                    "(real image URLs — shows placeholder boxes if omitted)}. "
                     "table: {title?, headers: string[], rows: string[][] (each row same length as headers)}. "
                     "button_group: {buttons: [{label, variant?: 'primary'|'secondary'|'outline', actionType: "
                     "'NAVIGATE'|'OPEN_MODAL'|'ADD_TO_CART'|'APPLY_COUPON', actionPayload?}]} — note actionType/"
@@ -60,8 +63,11 @@ _SECTION_SCHEMA_DEFS: Dict[str, Any] = {
                     "including a brand new one you are creating in the same or a follow-up update_page_sections call "
                     "— you do not know and must never guess this store's URL, the frontend resolves page_key to the "
                     "correct link automatically. Only use {href: '/some/path'} for a fixed, non-page destination "
-                    "(e.g. '/shop'). On any of the 7 leaf section types above, background_color/background/"
-                    "theme_color/theme and text_color/color are honored as CSS colors. grid_container: "
+                    "(e.g. '/shop'). feature_highlights: {title?, items: [{icon?: string (a lucide-react icon name "
+                    "like 'Truck'|'ShieldCheck'|'RotateCcw'|'Sparkles', title, text}]} — a row of short value-prop "
+                    "cards (e.g. free shipping / secure payment / easy returns). testimonials: {title?, items: "
+                    "[{quote, author, role?}]} — customer quote cards. On any leaf section type, background_color/"
+                    "background/theme_color/theme and text_color/color are honored as CSS colors. grid_container: "
                     "{columns (number, e.g. 3), design_variant?: 'primary'|'accent'|'secondary'|'muted'|'neutral'}. "
                     "two_column_layout: {design_variant?: same 5 values}. Containers do NOT read background_color — "
                     "design_variant is the only way to theme a grid_container/two_column_layout."
@@ -224,6 +230,39 @@ ai_tools: List[ToolDefinition] = [
                 },
             },
             "required": ["name", "slug", "base_price", "variants"],
+        },
+    },
+    # --- Storefront templates ---------------------------------------------
+    {
+        "name": "list_storefront_templates",
+        "description": (
+            "List the 3 premium storefront templates a seller can pick from (key, name, tagline, color swatch). "
+            "Call this when the user wants to change their store's overall look, asks what templates are "
+            "available, or hasn't picked one yet."
+        ),
+        "parameters": {"type": "object", "properties": {}, "required": []},
+    },
+    {
+        "name": "apply_storefront_template",
+        "description": (
+            "Switch this store to one of the 3 premium templates — seeds fresh, on-brand home/about/contact "
+            "pages and publishes them immediately, so the change is live right away. This OVERWRITES whatever "
+            "is currently on the home/about/contact pages, including anything the seller has customized, so it "
+            "always requires the user's explicit confirmation first: this tool never applies anything itself, "
+            "it only stages the change and returns a confirmation id — a human must click Confirm in the UI. "
+            "Never say the template has been applied until they've actually confirmed. After it's confirmed, "
+            "sections on the new pages can be further customized the same way as any other page, with "
+            "get_page_schema/update_page_sections."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "template_key": {
+                    "type": "string",
+                    "description": "One of the keys returned by list_storefront_templates, e.g. 'aurora'.",
+                },
+            },
+            "required": ["template_key"],
         },
     },
     # --- Catalog & inventory management ---------------------------------

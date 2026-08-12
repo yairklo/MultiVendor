@@ -5,8 +5,9 @@ from app.db.session import get_db
 from app.deps import get_tenant_admin
 from app.models.user import User
 from app.schemas.ai_schemas import (
-    AIChatRequest, AIChatResponse, AIStatusResponse, ConversationResponse, PageType, PendingConfirmation,
-    SavePageSectionsRequest, StorePageSchema, StorePageSummary, StorePageVersionSummary, ToolCallRecord
+    AIChatRequest, AIChatResponse, AIStatusResponse, ApplyStorefrontTemplateResponse, ConversationResponse, PageType,
+    PendingConfirmation, SavePageSectionsRequest, StorePageSchema, StorePageSummary, StorePageVersionSummary,
+    StorefrontTemplateSummary, ToolCallRecord
 )
 from app.services import ai_conversation_service, ai_pending_action_service, store_page_service
 from app.services.ai_agent_service import is_gemini_configured, run_agent_turn
@@ -214,6 +215,39 @@ async def get_conversation(
 ):
     messages = await ai_conversation_service.get_conversation_messages_service(tenant_slug, page_key, page_type, db)
     return ConversationResponse(messages=messages)
+
+
+@ai_router.get(
+    "/templates",
+    response_model=list[StorefrontTemplateSummary],
+    summary="List Premium Storefront Templates",
+    description="Lists the 3 selectable storefront templates (name/tagline/color swatch) a seller can apply.",
+)
+async def get_storefront_templates(
+    tenant_slug: str = Path(...),
+    admin: User = Depends(get_tenant_admin),
+):
+    return await store_page_service.list_storefront_templates_service()
+
+
+@ai_router.post(
+    "/templates/{template_key}/apply",
+    response_model=ApplyStorefrontTemplateResponse,
+    summary="Apply a Premium Storefront Template",
+    description=(
+        "Seeds (overwriting) this store's home/about/contact pages from the chosen template and publishes them "
+        "immediately, so the storefront reflects the new template right away. Every edit made after this still "
+        "goes through the normal draft -> explicit Publish flow."
+    ),
+)
+async def post_apply_storefront_template(
+    template_key: str = Path(...),
+    tenant_slug: str = Path(...),
+    admin: User = Depends(get_tenant_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    pages = await store_page_service.apply_storefront_template_service(tenant_slug, template_key, db)
+    return ApplyStorefrontTemplateResponse(template_key=template_key, pages=pages)
 
 
 @ai_router.delete(

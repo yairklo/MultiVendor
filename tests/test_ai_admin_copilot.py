@@ -6,11 +6,13 @@ from sqlalchemy import select
 
 from app.models.ai_pending_action import AIPendingAction
 from app.models.order import Order
-from app.models.tenant import Tenant
+from app.models.tenant import Tenant, TenantSettings
 from app.services.ai_tool_executor import execute_tool, DEFAULT_LIST_ORDERS_LIMIT, MAX_LIST_ORDERS_LIMIT
 from app.services import ai_pending_action_service
 from app.services.checkout_service import validate_coupon_service
 from app.services.ai_mock_agent import _format_markdown_table
+from app.services.storefront_templates import STOREFRONT_TEMPLATES
+from app.schemas.ai_schemas import Section
 
 
 # ---------------------------------------------------------------------------
@@ -334,3 +336,136 @@ async def test_chat_response_surfaces_pending_confirmation_end_to_end(async_clie
 
     gone = await execute_tool("get_product", {"product_id": 1}, "tenant-a", db_session)
     assert gone.is_error is True
+
+
+# ---------------------------------------------------------------------------
+# Storefront templates
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_list_storefront_templates_tool_returns_all_three(db_session):
+    result = await execute_tool("list_storefront_templates", {}, "tenant-a", db_session)
+    assert result.is_error is False
+    keys = {t["key"] for t in result.output}
+    assert keys == {"aurora", "atelier", "nova"}
+
+
+@pytest.mark.asyncio
+async def test_apply_storefront_template_only_stages_until_confirmed(async_client: AsyncClient, db_session):
+    # Calling the tool alone must NOT touch any pages — it only stages the switch.
+    result = await execute_tool("apply_storefront_template", {"template_key": "aurora"}, "tenant-a", db_session)
+    assert result.is_error is False
+    assert result.pending_confirmation is not None
+
+    unpublished_home = await async_client.get("/api/v1/store/tenant-a/pages/about")
+    assert unpublished_home.status_code == 404  # tenant-a's seed data never published an "about" page
+
+    await ai_pending_action_service.confirm_pending_action_service(
+        "tenant-a", result.pending_confirmation.id, db_session
+    )
+
+    # Confirming actually seeds AND publishes home/about/contact immediately.
+    home_resp = await async_client.get("/api/v1/store/tenant-a/pages/home")
+    about_resp = await async_client.get("/api/v1/store/tenant-a/pages/about")
+    contact_resp = await async_client.get("/api/v1/store/tenant-a/pages/contact")
+    assert home_resp.status_code == 200
+    assert about_resp.status_code == 200
+    assert contact_resp.status_code == 200
+    home_types = [s["type"] for s in home_resp.json()["sections"]]
+    assert "hero_banner" in home_types
+    assert "product_grid" in home_types
+
+    # Confirming also stamps which template this tenant is now on.
+    settings = (await db_session.execute(
+        select(TenantSettings).where(TenantSettings.tenant_id == 1)
+    )).scalar_one_or_none()
+    assert settings is not None
+    assert settings.template_key == "aurora"
+
+
+@pytest.mark.asyncio
+async def test_apply_storefront_template_rejects_unknown_key(db_session):
+    result = await execute_tool("apply_storefront_template", {"template_key": "not-a-real-template"}, "tenant-a", db_session)
+    assert result.is_error is True
+
+
+@pytest.mark.asyncio
+async def test_apply_storefront_template_is_tenant_scoped_on_confirm(async_client: AsyncClient, db_session):
+    result = await execute_tool("apply_storefront_template", {"template_key": "nova"}, "tenant-a", db_session)
+    confirmation_id = result.pending_confirmation.id
+
+    with pytest.raises(Exception):
+        await ai_pending_action_service.confirm_pending_action_service("tenant-b", confirmation_id, db_session)
+
+    # tenant-b never got a nova storefront out of tenant-a's staged action.
+    tenant_b_home = await async_client.get("/api/v1/store/tenant-b/pages/home")
+    assert tenant_b_home.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_every_storefront_template_page_is_schema_valid():
+    # Catches a malformed section (bad type, missing required settings, over-deep nesting)
+    # in the static template data itself, independent of the sanitizer/apply flow.
+    assert {t["key"] for t in STOREFRONT_TEMPLATES} == {"aurora", "atelier", "nova"}
+    for template in STOREFRONT_TEMPLATES:
+        for page_key, page_content in template["pages"].items():
+            sections = [Section(**s) for s in page_content["sections"]]
+            assert len(sections) > 0, f"{template['key']}/{page_key} has no sections"
+
+
+# ---------------------------------------------------------------------------
+# Router-level: direct (non-AI) template list/apply endpoints — what the admin
+# "Templates" picker page actually calls, distinct from the AI-gated tool path above.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_get_templates_router_endpoint_lists_all_three(async_client: AsyncClient, seed_tokens):
+    headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+    response = await async_client.get("/api/v1/admin/store/tenant-a/ai/templates", headers=headers)
+    assert response.status_code == 200
+    keys = {t["key"] for t in response.json()}
+    assert keys == {"aurora", "atelier", "nova"}
+
+
+@pytest.mark.asyncio
+async def test_get_templates_router_endpoint_requires_tenant_admin(async_client: AsyncClient, seed_tokens):
+    headers = {"Authorization": seed_tokens["customer_a"]}
+    response = await async_client.get("/api/v1/admin/store/tenant-a/ai/templates", headers=headers)
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_apply_templates_router_endpoint_executes_immediately_and_is_tenant_scoped(
+    async_client: AsyncClient, seed_tokens
+):
+    # Unlike the AI tool path, the direct admin-UI endpoint is the confirmation
+    # (the frontend's own ConfirmContext dialog) — no pending-action staging.
+    headers_a = {"Authorization": seed_tokens["tenant_admin_a"]}
+
+    cross_tenant = await async_client.post(
+        "/api/v1/admin/store/tenant-b/ai/templates/nova/apply", headers=headers_a
+    )
+    assert cross_tenant.status_code == 403
+
+    response = await async_client.post("/api/v1/admin/store/tenant-a/ai/templates/nova/apply", headers=headers_a)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["template_key"] == "nova"
+    assert {p["page_key"] for p in body["pages"]} == {"home", "about", "contact"}
+    assert all(p["has_unpublished_changes"] is False for p in body["pages"])  # published immediately
+
+    live_home = await async_client.get("/api/v1/store/tenant-a/pages/home")
+    assert live_home.status_code == 200
+
+    # tenant-b's own storefront is untouched by tenant-a applying a template.
+    tenant_b_home = await async_client.get("/api/v1/store/tenant-b/pages/home")
+    assert tenant_b_home.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_apply_templates_router_endpoint_rejects_unknown_key(async_client: AsyncClient, seed_tokens):
+    headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+    response = await async_client.post(
+        "/api/v1/admin/store/tenant-a/ai/templates/not-a-real-template/apply", headers=headers
+    )
+    assert response.status_code == 404

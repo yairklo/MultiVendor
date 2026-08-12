@@ -46,6 +46,16 @@ const page: StorePageSchema = {
         right: [{ id: 's9b', type: 'text_block', settings: { heading: SCRIPT_PAYLOAD, body: XSS_PAYLOAD } }],
       },
     },
+    {
+      id: 's10',
+      type: 'feature_highlights',
+      settings: { title: XSS_PAYLOAD, items: [{ icon: 'Truck', title: XSS_PAYLOAD, text: SCRIPT_PAYLOAD }] },
+    },
+    {
+      id: 's11',
+      type: 'testimonials',
+      settings: { title: XSS_PAYLOAD, items: [{ quote: XSS_PAYLOAD, author: SCRIPT_PAYLOAD, role: XSS_PAYLOAD }] },
+    },
   ],
 }
 
