@@ -8,6 +8,9 @@ import { totalStock } from '@/lib/stock'
 import { StarRating } from '@/components/ui/star-rating'
 import { resolveCardStyleClasses, CardStyle } from '@/lib/product-card-styles'
 
+import Image from 'next/image'
+import { useCurrency } from '@/hooks/useCurrency'
+
 const STRINGS = {
   en: { addToCart: 'Add to Cart', outOfStock: 'Out of stock', adding: 'Adding…' },
   he: { addToCart: 'הוסף לעגלה', outOfStock: 'אזל מהמלאי', adding: 'מוסיף…' },
@@ -37,6 +40,7 @@ export function ProductCard({
 }) {
   const { addItem } = useCart()
   const { theme } = useStorefrontTheme()
+  const { formatCurrency } = useCurrency()
   const [quantity, setQuantity] = useState(1)
   const [adding, setAdding] = useState(false)
   const t = STRINGS[lang]
@@ -62,11 +66,17 @@ export function ProductCard({
 
   return (
     <div className={`flex flex-col p-3 ${resolveCardStyleClasses(styleVariant)}`}>
-      <Link href={`/store/${tenantSlug}/products/${product.slug}`} className="mb-2 block">
+      <Link href={`/store/${tenantSlug}/products/${product.slug}`} className="mb-2 block overflow-hidden rounded-lg">
         {image ? (
-          <img src={image} alt={productName(product)} className="aspect-square w-full rounded-lg object-cover" />
+          <Image 
+            src={image} 
+            alt={productName(product)} 
+            width={400} 
+            height={400} 
+            className="aspect-square w-full object-cover" 
+          />
         ) : (
-          <div className="aspect-square w-full rounded-lg bg-gray-100" />
+          <div className="aspect-square w-full bg-gray-100" />
         )}
       </Link>
       <Link
@@ -81,7 +91,7 @@ export function ProductCard({
           <span className="text-xs text-gray-400">({product.review_count})</span>
         </div>
       )}
-      <span className="mt-1 text-sm font-medium text-gray-700">${product.base_price ?? product.price}</span>
+      <span className="mt-1 text-sm font-medium text-gray-700">{formatCurrency(product.base_price ?? product.price)}</span>
 
       <button
         type="button"

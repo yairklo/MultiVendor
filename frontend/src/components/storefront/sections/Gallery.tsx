@@ -1,4 +1,5 @@
 import { CSSProperties } from 'react'
+import Image from 'next/image'
 import { Section } from '@/lib/ai/types'
 
 export function Gallery({ section, themeStyle }: { section: Section; themeStyle: CSSProperties }) {
@@ -24,10 +25,12 @@ export function Gallery({ section, themeStyle }: { section: Section; themeStyle:
       ) : layout === 'carousel' ? (
         <div className="flex gap-3 overflow-x-auto pb-1">
           {images.map((url, i) => (
-            <img
+            <Image
               key={i}
               src={url}
               alt=""
+              width={224}
+              height={224}
               className="aspect-square w-40 flex-none rounded-xl object-cover shadow-sm md:w-56"
             />
           ))}
@@ -35,7 +38,7 @@ export function Gallery({ section, themeStyle }: { section: Section; themeStyle:
       ) : (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           {images.map((url, i) => (
-            <img key={i} src={url} alt="" className="aspect-square w-full rounded-xl object-cover shadow-sm" />
+            <Image key={i} src={url} alt="" width={400} height={400} className="aspect-square w-full rounded-xl object-cover shadow-sm" />
           ))}
         </div>
       )}

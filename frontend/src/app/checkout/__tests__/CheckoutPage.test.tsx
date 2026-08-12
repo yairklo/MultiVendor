@@ -8,6 +8,13 @@ import { http, HttpResponse } from 'msw'
 import { server } from '../../../mocks/server'
 import type { Cart } from '@/lib/cart'
 
+vi.mock('@/hooks/useCurrency', () => ({
+  useCurrency: () => ({
+    formatCurrency: (amount: number) => `$${amount.toFixed(2)}`,
+    currency: 'USD',
+  }),
+}))
+
 const physicalCart: Cart = {
   cart_id: 'cart-1',
   tenant_id: 1,

@@ -7,10 +7,12 @@ import { useOrders } from '@/hooks/useOrders'
 import { orderStatusClass as statusClass, orderStatusLabel as statusLabel } from '@/lib/orderStatus'
 import { useToast } from '@/context/ToastContext'
 import { useConfirm } from '@/context/ConfirmContext'
+import { useCurrency } from '@/hooks/useCurrency'
 
 export default function MyOrdersPage() {
   const router = useRouter()
   const { fetchOrders, cancelOrder, payOrder } = useOrders()
+  const { formatCurrency } = useCurrency()
   const { showToast } = useToast()
   const { confirm } = useConfirm()
   const [orders, setOrders] = useState<any[]>([])
@@ -109,13 +111,13 @@ export default function MyOrdersPage() {
                   {order.items?.map((item: any) => (
                     <div key={item.id} className="flex justify-between">
                       <span>{item.product_name} &times; {item.quantity}</span>
-                      <span>${Number(item.unit_price * item.quantity).toFixed(2)}</span>
+                      <span>{formatCurrency(Number(item.unit_price * item.quantity))}</span>
                     </div>
                   ))}
                 </div>
 
                 <div className="flex justify-between items-center border-t pt-3">
-                  <span className="font-bold">Total: ${Number(order.total_amount).toFixed(2)}</span>
+                  <span className="font-bold">Total: {formatCurrency(Number(order.total_amount))}</span>
                   <div className="flex gap-2">
                     {canCancel && (
                       <button

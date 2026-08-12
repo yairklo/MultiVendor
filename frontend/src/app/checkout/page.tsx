@@ -6,9 +6,11 @@ import { getActiveCart } from '@/lib/cart'
 import { useCart } from '@/context/CartContext'
 import { useOrders } from '@/hooks/useOrders'
 import { useToast } from '@/context/ToastContext'
+import { useCurrency } from '@/hooks/useCurrency'
 
 export default function CheckoutPage() {
   const { cart, loading, clear } = useCart()
+  const { formatCurrency } = useCurrency()
   const { payOrder, cancelOrder } = useOrders()
   const { showToast } = useToast()
   const [error, setError] = useState<string>('')
@@ -153,7 +155,7 @@ export default function CheckoutPage() {
           <div>
             <h2 className="text-xl font-semibold">Order {payingOrder.order_number} is awaiting payment</h2>
             <p className="text-gray-600 mt-1">
-              Total: <span className="font-bold">${Number(payingOrder.total_amount).toFixed(2)}</span>
+              Total: <span className="font-bold">{formatCurrency(Number(payingOrder.total_amount))}</span>
             </p>
             <p className="text-sm text-amber-700 mt-2">
               This is a development environment — payment is simulated. Unpaid orders are automatically
@@ -207,7 +209,7 @@ export default function CheckoutPage() {
             {cart.items.map(item => (
               <div key={item.id} className="flex justify-between items-center py-2 border-b text-gray-700">
                 <span>{item.product_name} &times; {item.quantity}</span>
-                <span className="font-medium">${Number(item.total_price).toFixed(2)}</span>
+                <span className="font-medium">{formatCurrency(Number(item.total_price))}</span>
               </div>
             ))}
           </div>
@@ -297,17 +299,17 @@ export default function CheckoutPage() {
             <div className="space-y-2 mb-6">
               <div className="flex justify-between text-gray-600">
                 <span>Subtotal:</span>
-                <span>${subtotal.toFixed(2)}</span>
+                <span>{formatCurrency(subtotal)}</span>
               </div>
               {appliedCoupon && (
                 <div className="flex justify-between text-green-600">
                   <span>Discount ({appliedCoupon.code}):</span>
-                  <span>-${discountAmount.toFixed(2)}</span>
+                  <span>-{formatCurrency(discountAmount)}</span>
                 </div>
               )}
               <div className="flex justify-between font-bold text-xl text-gray-900 pt-2 border-t">
                 <span>Total:</span>
-                <span>${total.toFixed(2)}</span>
+                <span>{formatCurrency(total)}</span>
               </div>
             </div>
             <button
