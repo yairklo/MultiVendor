@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { deleteCookie, getCookie } from 'cookies-next'
 import {
   LayoutDashboard, Package, FolderTree, ShoppingCart, Users, Tag, Star,
-  Settings, LogOut, Menu, X, Sparkles,
+  Settings, LogOut, Menu, X, Sparkles, Palette,
 } from 'lucide-react'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -37,6 +37,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: 'Customers', href: '/admin/customers', icon: Users },
     { name: 'Coupons', href: '/admin/coupons', icon: Tag },
     { name: 'Reviews', href: '/admin/reviews', icon: Star },
+    { name: 'Templates', href: '/admin/templates', icon: Palette },
     { name: 'AI Layout', href: '/admin/ai-layout', icon: Sparkles },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
   ]

@@ -9,14 +9,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.tenant import Tenant
 from app.models.ai_pending_action import AIPendingAction
 from app.schemas.ai_schemas import PendingConfirmation
-from app.services import catalog_service, order_service
+from app.services import catalog_service, order_service, store_page_service
 
 PENDING_ACTION_TTL_MINUTES = 15
 
 # Tools that never execute directly — create_pending_action_service stages them
 # instead, and only confirm_pending_action_service (triggered by a real button
 # click, never the AI itself) actually runs the underlying service call.
-GATED_TOOLS = ("delete_product", "update_order_status")
+GATED_TOOLS = ("delete_product", "update_order_status", "apply_storefront_template")
 
 
 async def _get_tenant_id(tenant_slug: str, db: AsyncSession) -> int:
@@ -78,6 +78,9 @@ async def confirm_pending_action_service(tenant_slug: str, confirmation_id: str,
         result = {"status": "ok", "product_id": args["product_id"], "deleted": True}
     elif action.tool_name == "update_order_status":
         result = await order_service.update_order_status_service(tenant_slug, args["order_id"], args["status"], db)
+    elif action.tool_name == "apply_storefront_template":
+        pages = await store_page_service.apply_storefront_template_service(tenant_slug, args["template_key"], db)
+        result = {"status": "ok", "template_key": args["template_key"], "pages": [p.model_dump(mode="json") for p in pages]}
     else:
         raise HTTPException(status_code=400, detail=f"Unknown pending action tool: {action.tool_name}")
 

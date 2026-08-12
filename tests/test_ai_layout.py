@@ -629,3 +629,60 @@ async def test_customer_cannot_manually_save_page_schema(async_client: AsyncClie
         "/api/v1/admin/store/tenant-a/ai/page-schema", json=payload, headers=headers
     )
     assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_update_page_sections_accepts_feature_highlights_and_testimonials(
+    async_client: AsyncClient, db_session
+):
+    result = await execute_tool(
+        "update_page_sections",
+        {
+            "page_key": "premium-sections",
+            "page_type": "static_page",
+            "sections": [
+                {
+                    "type": "feature_highlights",
+                    "settings": {"title": "Why us", "items": [{"icon": "Truck", "title": "Fast shipping", "text": "..."}]},
+                },
+                {
+                    "type": "testimonials",
+                    "settings": {"title": "Reviews", "items": [{"quote": "Great!", "author": "A."}]},
+                },
+            ],
+        },
+        "tenant-a",
+        db_session,
+    )
+    assert result.is_error is False
+    types = [s["type"] for s in result.output["sections"]]
+    assert types == ["feature_highlights", "testimonials"]
+
+
+@pytest.mark.asyncio
+async def test_product_grid_card_style_is_clamped_to_allow_list(async_client: AsyncClient, db_session):
+    valid = await execute_tool(
+        "update_page_sections",
+        {
+            "page_key": "card-style-valid",
+            "page_type": "static_page",
+            "sections": [{"type": "product_grid", "settings": {"title": "Shop", "columns": 3, "card_style": "framed"}}],
+        },
+        "tenant-a",
+        db_session,
+    )
+    assert valid.is_error is False
+    assert valid.output["sections"][0]["settings"]["card_style"] == "framed"
+
+    invalid = await execute_tool(
+        "update_page_sections",
+        {
+            "page_key": "card-style-invalid",
+            "page_type": "static_page",
+            "sections": [{"type": "product_grid", "settings": {"title": "Shop", "card_style": "javascript:alert(1)"}}],
+        },
+        "tenant-a",
+        db_session,
+    )
+    assert invalid.is_error is False
+    assert "card_style" not in invalid.output["sections"][0]["settings"]
