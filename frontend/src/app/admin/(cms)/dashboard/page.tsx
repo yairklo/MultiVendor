@@ -219,7 +219,23 @@ export default function Dashboard() {
                       <Package className="h-5 w-5 text-gray-400" />
                     </div>
                     <div className="ml-4 space-y-1 overflow-hidden">
-                      <p className="text-sm font-medium leading-none truncate pr-4" title={p.product_name}>{p.product_name}</p>
+                      <p className="text-sm font-medium leading-none truncate pr-4" title={
+                        (() => {
+                          let name = p.product_name;
+                          if (typeof name === 'string' && name.startsWith('{')) {
+                            try { name = JSON.parse(name); } catch(e) {}
+                          }
+                          return typeof name === 'object' && name !== null ? (name.en || name.he || 'Unnamed') : (name || 'Unnamed');
+                        })()
+                      }>
+                        {(() => {
+                          let name = p.product_name;
+                          if (typeof name === 'string' && name.startsWith('{')) {
+                            try { name = JSON.parse(name); } catch(e) {}
+                          }
+                          return typeof name === 'object' && name !== null ? (name.en || name.he || 'Unnamed') : (name || 'Unnamed');
+                        })()}
+                      </p>
                       <p className="text-sm text-gray-500">SKU: {p.sku || 'N/A'} &middot; {p.quantity_sold} sold</p>
                     </div>
                     <div className="ml-auto font-medium text-emerald-600">

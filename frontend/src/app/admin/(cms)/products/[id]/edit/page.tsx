@@ -19,10 +19,14 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 const formSchema = z.object({
-  name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
-  description: z.string().optional(),
+  name_en: z.string().min(2, { message: 'English name must be at least 2 characters.' }),
+  name_he: z.string().optional(),
+  description_en: z.string().optional(),
+  description_he: z.string().optional(),
+  image_url: z.string().optional(),
   base_price: z.coerce.number().gt(0, 'Price must be positive'),
   category_id: z.coerce.number().optional().nullable(),
   stock_quantity: z.coerce.number().min(0, 'Quantity cannot be negative'),
@@ -52,8 +56,11 @@ export default function EditProductPage(props: { params: Promise<{ id: string }>
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: '',
-      description: '',
+      name_en: '',
+      name_he: '',
+      description_en: '',
+      description_he: '',
+      image_url: '',
       base_price: 0,
       category_id: null,
       stock_quantity: 0,
@@ -74,10 +81,11 @@ export default function EditProductPage(props: { params: Promise<{ id: string }>
         const firstVariant = product.variants?.[0] ?? null
         setVariant(firstVariant)
         form.reset({
-          name: typeof product.name === 'object' ? (product.name?.en || product.name?.he || '') : product.name,
-          description: typeof product.description === 'object'
-            ? (product.description?.en || product.description?.he || '')
-            : (product.description || ''),
+          name_en: typeof product.name === 'object' ? (product.name?.en || '') : (product.name || ''),
+          name_he: typeof product.name === 'object' ? (product.name?.he || '') : '',
+          description_en: typeof product.description === 'object' ? (product.description?.en || '') : (product.description || ''),
+          description_he: typeof product.description === 'object' ? (product.description?.he || '') : '',
+          image_url: product.primary_image_url || product.images?.[0] || '',
           base_price: Number(product.base_price),
           category_id: product.category_id ?? null,
           stock_quantity: firstVariant?.stock_quantity ?? 0,
@@ -94,12 +102,20 @@ export default function EditProductPage(props: { params: Promise<{ id: string }>
     setLoading(true)
     setError('')
     try {
-      const payload = {
-        name: { en: values.name, he: values.name },
-        description: values.description ? { en: values.description, he: values.description } : undefined,
+      const payload: any = {
+        name: { en: values.name_en, he: values.name_he || values.name_en },
+        description: { en: values.description_en || '', he: values.description_he || values.description_en || '' },
         base_price: values.base_price,
         category_id: values.category_id || undefined,
         is_active: values.is_active,
+      }
+
+      // NOTE: server/app/schemas/catalog_schemas.py's ProductUpdateRequest doesn't declare an
+      // `images` field yet (only ProductCreateRequest does), so the backend currently ignores
+      // this on update. We still send it so the edit flow starts working the moment the backend
+      // adds support, without needing another frontend change.
+      if (values.image_url) {
+        payload.images = [values.image_url]
       }
 
       await updateProduct(productId, payload)
@@ -142,34 +158,85 @@ export default function EditProductPage(props: { params: Promise<{ id: string }>
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Product Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g. Vintage T-Shirt" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="name_en"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Product Name (English)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. Vintage T-Shirt" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="name_he"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Product Name (Hebrew)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. חולצת וינטג'" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <div>
                 <label className="text-sm font-medium mb-2 block text-gray-500">Slug</label>
                 <Input value={slug} disabled readOnly />
               </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="description_en"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description (English)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Description..." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="description_he"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description (Hebrew)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="תיאור..." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
               <FormField
                 control={form.control}
-                name="description"
+                name="image_url"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description</FormLabel>
+                    <FormLabel>Image URL</FormLabel>
                     <FormControl>
-                      <Input placeholder="Description..." {...field} />
+                      <Input placeholder="https://example.com/image.jpg" {...field} />
                     </FormControl>
+                    {field.value && (
+                      <img
+                        src={field.value}
+                        alt="Preview"
+                        className="mt-2 h-24 w-24 rounded-lg border border-gray-100 object-cover"
+                      />
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}

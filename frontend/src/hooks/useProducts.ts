@@ -4,9 +4,13 @@ import { getCookie } from 'cookies-next'
 export function useProducts() {
   const tenantSlug = getCookie('tenantSlug') || 'test-tenant'
 
-  const fetchProducts = async (page = 1, pageSize = 20) => {
+  const fetchProducts = async (page = 1, pageSize = 20, search = '', categoryId: number | null = null) => {
     try {
-      const data = await apiClient(`/api/v1/store/${tenantSlug}/products?page=${page}&page_size=${pageSize}`)
+      let url = `/api/v1/store/${tenantSlug}/products?page=${page}&page_size=${pageSize}`
+      if (search) url += `&q=${encodeURIComponent(search)}`
+      if (categoryId) url += `&category_id=${categoryId}`
+      
+      const data = await apiClient(url)
       return { data: data.data || [], meta: data.meta }
     } catch (error) {
       console.error('Error fetching products:', error)
