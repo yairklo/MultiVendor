@@ -33,8 +33,7 @@ export default function StorefrontLayout({
     if (isPromise) {
       ;(params as Promise<{ tenant_slug: string }>).then((p) => setTenantSlug(p.tenant_slug))
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [params, isPromise])
 
   if (!tenantSlug) return <div className="min-h-screen bg-gray-50" />
 

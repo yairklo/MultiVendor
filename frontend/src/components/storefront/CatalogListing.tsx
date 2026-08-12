@@ -83,7 +83,6 @@ export function CatalogListing({
         setMeta(null)
       })
       .finally(() => setProductsLoading(false))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantSlug, debouncedSearch, categoryId, page, showAiPage])
 
   return (

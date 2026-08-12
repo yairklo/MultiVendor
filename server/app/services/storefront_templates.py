@@ -7,6 +7,12 @@ editable by the AI agent through its existing tools: it's just another StorePage
 
 Imagery is Lorem Picsum placeholder photography (deterministic by seed, always resolves) — sellers
 are expected to swap it for real product photography via the AI chat or admin editor.
+
+TODO: STOREFRONT_TEMPLATES is a static in-code list for this MVP/feature branch — fine while
+there are only 3 curated templates ship with the app, but it means adding/editing a template
+requires a code change + deploy. If templates need to be authored without a release (e.g. more
+templates, marketplace-style third-party templates, or per-tenant custom templates), move this
+to a DB table (or versioned JSON files loaded at startup) instead of hardcoding it here.
 """
 from typing import Any, Dict, List, TypedDict
 

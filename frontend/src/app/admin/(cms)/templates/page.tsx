@@ -15,6 +15,13 @@ interface StorefrontTemplateSummary {
   swatch: { bg: string; text: string; accent: string }
 }
 
+/** apiClient always rejects with an ApiError/Error (both carry .message), but a fetch can also
+ * reject with something else entirely (e.g. a raw string) — narrow before touching .message
+ * instead of assuming the shape with `any`. */
+function getErrorMessage(err: unknown, fallback: string): string {
+  return err instanceof Error && err.message ? err.message : fallback
+}
+
 export default function StorefrontTemplatesPage() {
   const tenantSlug = String(getCookie('tenantSlug') || 'test-tenant')
   const { showToast } = useToast()
@@ -34,10 +41,10 @@ export default function StorefrontTemplatesPage() {
         setTemplates(templateList)
         setActiveKey(config.template_key ?? null)
       })
-      .catch((err) => showToast(err.message || 'Failed to load templates', 'error'))
+      .catch((err) => showToast(getErrorMessage(err, 'Failed to load templates'), 'error'))
       .finally(() => setLoading(false))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tenantSlug])
+    // showToast is stable (useCallback in ToastProvider) — safe to depend on directly.
+  }, [tenantSlug, showToast])
 
   const handleApply = async (template: StorefrontTemplateSummary) => {
     const isSwitch = !!activeKey && activeKey !== template.key
@@ -56,8 +63,8 @@ export default function StorefrontTemplatesPage() {
       await apiClient(`/api/v1/admin/store/${tenantSlug}/ai/templates/${template.key}/apply`, { method: 'POST' })
       setActiveKey(template.key)
       showToast(`"${template.name}" is now live on your storefront.`, 'success')
-    } catch (err: any) {
-      showToast(err.message || 'Failed to apply template', 'error')
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Failed to apply template'), 'error')
     } finally {
       setApplyingKey(null)
     }
