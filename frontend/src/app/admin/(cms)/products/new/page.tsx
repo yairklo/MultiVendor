@@ -25,9 +25,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 const formSchema = z.object({
-  name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
+  name_en: z.string().min(2, { message: 'English name must be at least 2 characters.' }),
+  name_he: z.string().optional(),
   slug: z.string().min(2).regex(/^[a-z0-9-]+$/, 'Lowercase alphanumeric and hyphens only.'),
-  description: z.string().optional(),
+  description_en: z.string().optional(),
+  description_he: z.string().optional(),
+  image_url: z.string().optional(),
   base_price: z.coerce.number().min(0, 'Price must be positive'),
   category_id: z.coerce.number().optional().nullable(),
   stock_quantity: z.coerce.number().min(0, 'Quantity cannot be negative'),
@@ -51,9 +54,12 @@ export default function NewProductPage() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: '',
+      name_en: '',
+      name_he: '',
       slug: '',
-      description: '',
+      description_en: '',
+      description_he: '',
+      image_url: '',
       base_price: 0,
       category_id: null,
       stock_quantity: 10,
@@ -68,13 +74,13 @@ export default function NewProductPage() {
     try {
       // Transform flat form data to match backend ProductCreateRequest schema
       const payload = {
-        name: { en: values.name, he: values.name },
+        name: { en: values.name_en, he: values.name_he || values.name_en },
         slug: values.slug,
-        description: values.description ? { en: values.description, he: values.description } : undefined,
+        description: { en: values.description_en || '', he: values.description_he || values.description_en || '' },
         base_price: values.base_price,
         category_id: values.category_id || undefined,
         is_active: values.is_active,
-        images: [], // Can be updated later with image upload UI
+        images: values.image_url ? [values.image_url] : [],
         variants: [
           {
             sku: `${values.slug.toUpperCase()}-DEFAULT`,
@@ -124,19 +130,34 @@ export default function NewProductPage() {
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Product Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. Vintage T-Shirt" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="name_en"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Product Name (English)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. Vintage T-Shirt" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="name_he"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Product Name (Hebrew)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. חולצת וינטג'" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
             
             <FormField
               control={form.control}
@@ -152,19 +173,78 @@ export default function NewProductPage() {
               )}
             />
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="description_en"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description (English)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Description..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="description_he"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description (Hebrew)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="תיאור..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
             <FormField
               control={form.control}
-              name="description"
+              name="image_url"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>Image URL</FormLabel>
                   <FormControl>
-                    <Input placeholder="Description..." {...field} />
+                    <Input placeholder="https://example.com/image.jpg" {...field} />
                   </FormControl>
+                  {field.value && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={field.value}
+                      alt="Preview"
+                      className="mt-2 h-24 w-24 rounded-lg border border-gray-100 object-cover"
+                    />
+                  )}
                   <FormMessage />
                 </FormItem>
               )}
             />
+
+            <div>
+              <Label htmlFor="product-image-file">Upload Image File</Label>
+              <input
+                id="product-image-file"
+                type="file"
+                accept="image/*"
+                disabled
+                aria-describedby="product-image-file-help"
+                className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-gray-100 file:px-3 file:py-2 file:text-sm disabled:opacity-50"
+              />
+              {/*
+                TODO(backend): server/app/schemas/catalog_schemas.py's ProductCreateRequest.images
+                is `List[str]` (hosted URLs) and there is no multipart/file-storage endpoint in
+                tenant_admin_router.py. Wire this control up once the backend gains a real upload
+                endpoint (or object storage integration) — until then it stays disabled so we don't
+                fake an upload that silently does nothing.
+              */}
+              <p id="product-image-file-help" className="text-xs text-muted-foreground mt-1">
+                File upload requires backend storage support (not implemented yet). Use the image URL field above instead.
+              </p>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FormField
