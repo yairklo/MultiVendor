@@ -12,7 +12,7 @@ import { DispatchedAction, Section, StorePageSchema } from '@/lib/ai/types'
 import { renderSections } from '@/components/storefront/PageRenderer'
 import { resolveDesignVariantClasses } from '@/lib/design-tokens'
 
-type RenderOpts = { onAction?: (action: DispatchedAction) => void; tenantSlug?: string; showTypeLabels?: boolean }
+type RenderOpts = { onAction?: (action: DispatchedAction) => void; tenantSlug?: string; showTypeLabels?: boolean; onAskAI?: (id: string, prompt: string) => void }
 
 function SortableSectionCard({ id, children }: { id: string; children: ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
@@ -195,7 +195,7 @@ export function DraggablePageEditor({
           {saving ? 'Saving…' : 'Save Layout'}
         </button>
       </div>
-      <DraggableSectionList sections={page.sections} onChange={onChange} opts={{ onAction, tenantSlug, showTypeLabels }} />
+      <DraggableSectionList sections={page.sections} onChange={onChange} opts={{ onAction, tenantSlug, showTypeLabels, onAskAI }} />
     </div>
   )
 }

@@ -229,6 +229,7 @@ export default function AiLayoutPage() {
           style={{ backgroundColor: page?.background_color || undefined, color: page?.text_color || undefined }}
         >
           <DraggablePageEditor
+            onAskAI={(id, prompt) => handleSend("For the section with ID '" + id + "': " + prompt)}
             page={page}
             onChange={handleSectionsReorder}
             onSave={handleSaveLayout}
