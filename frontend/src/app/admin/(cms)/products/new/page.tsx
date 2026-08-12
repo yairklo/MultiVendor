@@ -73,10 +73,11 @@ export default function NewProductPage() {
     setLimitReached(false)
     try {
       // Transform flat form data to match backend ProductCreateRequest schema
-      const payload = {
+      const descriptionEn = values.description_en?.trim()
+      const descriptionHe = values.description_he?.trim()
+      const payload: any = {
         name: { en: values.name_en, he: values.name_he || values.name_en },
         slug: values.slug,
-        description: { en: values.description_en || '', he: values.description_he || values.description_en || '' },
         base_price: values.base_price,
         category_id: values.category_id || undefined,
         is_active: values.is_active,
@@ -88,6 +89,10 @@ export default function NewProductPage() {
             attributes_json: {}
           }
         ]
+      }
+
+      if (descriptionEn || descriptionHe) {
+        payload.description = { en: descriptionEn || '', he: descriptionHe || descriptionEn || '' }
       }
       
       await createProduct(payload)

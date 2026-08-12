@@ -73,24 +73,28 @@ async def confirm_pending_action_service(tenant_slug: str, confirmation_id: str,
     action = await _load_pending_action(tenant_slug, confirmation_id, db)
     args = action.tool_args
 
-    if action.tool_name == "delete_product":
-        await catalog_service.delete_product_service(tenant_slug, args["product_id"], db)
-        result = {"status": "ok", "product_id": args["product_id"], "deleted": True}
-    elif action.tool_name == "update_order_status":
-        result = await order_service.update_order_status_service(tenant_slug, args["order_id"], args["status"], db)
-    elif action.tool_name == "apply_storefront_template":
-        pages = await store_page_service.apply_storefront_template_service(tenant_slug, args["template_key"], db)
-        published_pages = []
-        for p in pages:
-            pub = await store_page_service.publish_page_service(tenant_slug, p.page_key, p.page_type, db)
-            published_pages.append(pub)
-        result = {"status": "ok", "template_key": args["template_key"], "pages": [p.model_dump(mode="json") for p in published_pages]}
-    else:
-        raise HTTPException(status_code=400, detail=f"Unknown pending action tool: {action.tool_name}")
+    try:
+        if action.tool_name == "delete_product":
+            await catalog_service.delete_product_service(tenant_slug, args["product_id"], db)
+            result = {"status": "ok", "product_id": args["product_id"], "deleted": True}
+        elif action.tool_name == "update_order_status":
+            result = await order_service.update_order_status_service(tenant_slug, args["order_id"], args["status"], db)
+        elif action.tool_name == "apply_storefront_template":
+            # Apply template to draft pages only. Publishing is explicitly left
+            # to the store owner, satisfying the docstring constraint on publish_page_service.
+            pages = await store_page_service.apply_storefront_template_service(tenant_slug, args["template_key"], db)
+            result = {"status": "ok", "template_key": args["template_key"], "pages": [p.model_dump(mode="json") for p in pages]}
+        else:
+            raise HTTPException(status_code=400, detail=f"Unknown pending action tool: {action.tool_name}")
+            
+        await db.delete(action)
+        await db.commit()
+        return result
+    except Exception as e:
+        await db.rollback()
+        raise e
 
-    await db.delete(action)
-    await db.commit()
-    return result
+
 
 
 async def cancel_pending_action_service(tenant_slug: str, confirmation_id: str, db: AsyncSession) -> None:

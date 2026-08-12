@@ -20,15 +20,20 @@ const StorefrontThemeContext = createContext<StorefrontThemeContextValue | null>
  * Tailwind class bundle (lib/storefront-themes.ts) — every storefront page under
  * app/store/[tenant_slug]/layout.tsx reads this instead of each re-fetching /config itself.
  */
+import { getActiveCart } from '@/lib/cart'
+import { getCookie } from 'cookies-next'
+
 export function StorefrontThemeProvider({
   tenantSlug,
   children,
   isAdminPreview = false,
 }: {
-  tenantSlug: string
+  tenantSlug?: string
   children: React.ReactNode
   isAdminPreview?: boolean
 }) {
+  const resolvedSlug = tenantSlug || getCookie('tenantSlug')?.toString() || getActiveCart()?.tenantSlug || 'test-tenant'
+  
   const [templateKey, setTemplateKey] = useState<string | null>(null)
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [currency, setCurrency] = useState<string>('ILS')
@@ -38,8 +43,8 @@ export function StorefrontThemeProvider({
   useEffect(() => {
     let cancelled = false
     const endpoint = isAdminPreview
-      ? `/api/v1/admin/store/${tenantSlug}/ai/config`
-      : `/api/v1/store/${tenantSlug}/config`
+      ? `/api/v1/admin/store/${resolvedSlug}/ai/config`
+      : `/api/v1/store/${resolvedSlug}/config`
       apiClient(endpoint)
       .then((data) => {
         if (cancelled) return
@@ -48,8 +53,10 @@ export function StorefrontThemeProvider({
         if (data.currency) setCurrency(data.currency)
         if (data.default_language) {
           setDefaultLanguage(data.default_language)
-          document.documentElement.lang = data.default_language
-          document.documentElement.dir = data.default_language === 'he' ? 'rtl' : 'ltr'
+          if (!isAdminPreview) {
+            document.documentElement.lang = data.default_language
+            document.documentElement.dir = data.default_language === 'he' ? 'rtl' : 'ltr'
+          }
         }
         if (data.supported_languages) setSupportedLanguages(data.supported_languages)
       })
@@ -59,7 +66,7 @@ export function StorefrontThemeProvider({
     return () => {
       cancelled = true
     }
-  }, [tenantSlug])
+  }, [resolvedSlug, isAdminPreview])
 
   const value: StorefrontThemeContextValue = {
     theme: resolveStorefrontTheme(templateKey),

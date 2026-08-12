@@ -34,6 +34,7 @@ export default function ProductsPage() {
   
   // Search and Filter
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [categoryId, setCategoryId] = useState<number | null>(null)
   
   // Bulk Actions
@@ -44,9 +45,14 @@ export default function ProductsPage() {
   }, [fetchCategories])
 
   useEffect(() => {
-    loadProducts(page, search, categoryId)
+    const handle = setTimeout(() => setDebouncedSearch(search), 300)
+    return () => clearTimeout(handle)
+  }, [search])
+
+  useEffect(() => {
+    loadProducts(page, debouncedSearch, categoryId)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, search, categoryId])
+  }, [page, debouncedSearch, categoryId])
 
   const loadProducts = async (pageToLoad = page, s = search, cid = categoryId) => {
     setLoading(true)

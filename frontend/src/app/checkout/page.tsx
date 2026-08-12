@@ -289,7 +289,7 @@ export default function CheckoutPage() {
                     className="text-blue-600" 
                   />
                   <span className="font-medium flex-1">{option.name}</span>
-                  <span className="text-gray-600">${option.price.toFixed(2)}</span>
+                  <span className="text-gray-600">{formatCurrency(option.price)}</span>
                 </label>
               ))}
             </div>

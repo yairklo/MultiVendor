@@ -102,12 +102,17 @@ export default function EditProductPage(props: { params: Promise<{ id: string }>
     setLoading(true)
     setError('')
     try {
+      const descriptionEn = values.description_en?.trim()
+      const descriptionHe = values.description_he?.trim()
       const payload: any = {
         name: { en: values.name_en, he: values.name_he || values.name_en },
-        description: { en: values.description_en || '', he: values.description_he || values.description_en || '' },
         base_price: values.base_price,
         category_id: values.category_id || undefined,
         is_active: values.is_active,
+      }
+
+      if (descriptionEn || descriptionHe) {
+        payload.description = { en: descriptionEn || '', he: descriptionHe || descriptionEn || '' }
       }
 
       // NOTE: server/app/schemas/catalog_schemas.py's ProductUpdateRequest doesn't declare an
