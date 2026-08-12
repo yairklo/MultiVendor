@@ -6,7 +6,7 @@ import {
 } from '@dnd-kit/core'
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, Pencil, X } from 'lucide-react'
+import { GripVertical, Pencil } from 'lucide-react'
 import { useState } from 'react'
 import { DispatchedAction, Section, StorePageSchema } from '@/lib/ai/types'
 import { renderSections } from '@/components/storefront/PageRenderer'
@@ -15,7 +15,7 @@ import { SectionPropertiesEditor } from './SectionPropertiesEditor'
 
 type RenderOpts = { onAction?: (action: DispatchedAction) => void; tenantSlug?: string; showTypeLabels?: boolean; onAskAI?: (id: string, prompt: string) => void; onEditSection?: (id: string) => void }
 
-function SortableSectionCard({ id, section, children, onEdit }: { id: string; section: Section; children: ReactNode; onEdit: (id: string) => void }) {
+function SortableSectionCard({ id, children, onEdit }: { id: string; children: ReactNode; onEdit: (id: string) => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
   const style: CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -96,7 +96,6 @@ function DraggableSectionList({
             <SortableSectionCard 
               key={section.id} 
               id={section.id}
-              section={section}
               onEdit={(id) => opts.onEditSection?.(id)}
             >
               {section.type === 'grid_container' ? (
@@ -180,6 +179,7 @@ export function DraggablePageEditor({
   onAction,
   tenantSlug,
   showTypeLabels = false,
+  onAskAI,
 }: {
   page: StorePageSchema | null
   /** Called with the full, reordered top-level sections array — the caller owns persistence timing. */
@@ -189,6 +189,7 @@ export function DraggablePageEditor({
   onAction?: (action: DispatchedAction) => void
   tenantSlug?: string
   showTypeLabels?: boolean
+  onAskAI?: (id: string, prompt: string) => void
 }) {
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null)
 
@@ -280,8 +281,7 @@ export function DraggablePageEditor({
             onChange={handleSectionPatch}
             onClose={() => setEditingSectionId(null)}
             onAskAI={(id, prompt) => {
-              // The AI chat integration would happen here
-              // For now, just logging or you can pass down an actual onAskAI prop if provided by layout
+              if (onAskAI) onAskAI(id, prompt)
             }}
           />
         </div>
