@@ -5,6 +5,14 @@ import { http, HttpResponse } from 'msw'
 import { ProductCard } from '../ProductCard'
 import { CartProvider } from '@/context/CartContext'
 import { server } from '@/mocks/server'
+import { vi } from 'vitest'
+
+vi.mock('@/hooks/useCurrency', () => ({
+  useCurrency: () => ({
+    formatCurrency: (amount: number) => `$${amount}`,
+    currency: 'USD',
+  }),
+}))
 
 const baseProduct = {
   id: 1,

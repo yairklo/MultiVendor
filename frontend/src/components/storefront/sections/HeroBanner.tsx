@@ -1,4 +1,5 @@
 import { CSSProperties, FocusEvent } from 'react'
+import Image from 'next/image'
 import { Section } from '@/lib/ai/types'
 
 const SIZE_HEIGHTS: Record<string, number> = { small: 160, medium: 280, large: 420 }
@@ -31,7 +32,7 @@ export function HeroBanner({
     >
       {imageUrl && (
         <>
-          <img src={imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+          <Image src={imageUrl} alt="" fill className="object-cover" />
           <div className="absolute inset-0 bg-black/35" />
         </>
       )}

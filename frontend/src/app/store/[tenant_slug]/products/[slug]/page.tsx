@@ -10,6 +10,8 @@ import { totalStock } from '@/lib/stock'
 import { StarRating } from '@/components/ui/star-rating'
 import { Star } from 'lucide-react'
 import { useStorefrontTheme } from '@/context/StorefrontThemeContext'
+import { useCurrency } from '@/hooks/useCurrency'
+import Image from 'next/image'
 
 type Params = { tenant_slug: string; slug: string }
 
@@ -35,6 +37,7 @@ export default function ProductDetailPage(props: { params: Promise<Params> | Par
   const { addItem, openDrawer } = useCart()
   const { showToast } = useToast()
   const { theme } = useStorefrontTheme()
+  const { formatCurrency } = useCurrency()
 
   const loadProduct = (tenantSlug: string, slug: string) => {
     setLoading(true)
@@ -131,7 +134,7 @@ export default function ProductDetailPage(props: { params: Promise<Params> | Par
         <div className="mt-4 bg-white rounded-xl shadow-md border border-gray-100 p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
           <div>
             {images.length > 0 ? (
-              <img src={images[0]} alt={name} className="w-full h-80 object-cover rounded-lg" />
+              <Image src={images[0]} alt={name} width={500} height={500} className="w-full h-80 object-cover rounded-lg" />
             ) : (
               <div className="w-full h-80 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
                 No image
@@ -149,7 +152,7 @@ export default function ProductDetailPage(props: { params: Promise<Params> | Par
                 </span>
               </div>
             )}
-            <p className="text-xl text-gray-700 mb-4">${product.base_price}</p>
+            <p className="text-xl text-gray-700 mb-4">{formatCurrency(product.base_price)}</p>
             {description && <p className="text-gray-600 mb-4">{description}</p>}
 
             {stockKnown && (

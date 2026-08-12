@@ -3,9 +3,11 @@
 import React from 'react'
 import { useRouter } from 'next/navigation'
 import { useCart } from '@/context/CartContext'
+import { useCurrency } from '@/hooks/useCurrency'
 
 export function CartDrawer() {
   const { cart, isOpen, closeDrawer, incrementItem, decrementItem, removeItem } = useCart()
+  const { formatCurrency } = useCurrency()
   const router = useRouter()
 
   if (!isOpen) return null
@@ -49,7 +51,7 @@ export function CartDrawer() {
               )}
               <div className="flex-1 min-w-0">
                 <div className="font-semibold text-gray-900 truncate">{item.product_name}</div>
-                <div className="text-gray-500">${Number(item.unit_price).toFixed(2)}</div>
+                <div className="text-gray-500">{formatCurrency(Number(item.unit_price))}</div>
                 <div className="flex items-center gap-2 mt-2">
                   <button
                     aria-label="Decrease quantity"
@@ -75,7 +77,7 @@ export function CartDrawer() {
                   </button>
                 </div>
               </div>
-              <div className="font-semibold text-gray-900">${Number(item.total_price).toFixed(2)}</div>
+              <div className="font-semibold text-gray-900">{formatCurrency(Number(item.total_price))}</div>
             </div>
           ))}
         </div>
@@ -84,7 +86,7 @@ export function CartDrawer() {
           <div className="p-4 border-t space-y-3">
             <div className="flex justify-between font-bold text-lg text-gray-900">
               <span>Subtotal</span>
-              <span data-testid="cart-subtotal">${Number(cart.subtotal).toFixed(2)}</span>
+              <span data-testid="cart-subtotal">{formatCurrency(Number(cart.subtotal))}</span>
             </div>
             <button
               onClick={handleCheckout}
