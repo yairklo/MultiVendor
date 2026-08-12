@@ -36,6 +36,7 @@ class TenantSettingsSchema(BaseModel):
     default_language: str = "he"
     review_moderation_enabled: bool = False
     allow_unverified_reviews: bool = True
+    template_key: Optional[str] = None
 
     @field_validator('supported_languages', mode='before')
     @classmethod

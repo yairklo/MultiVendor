@@ -9,6 +9,7 @@ from app.schemas.catalog_schemas import ProductCreateRequest, ProductUpdateReque
 from app.schemas.order_schemas import CouponCreateRequest
 from app.schemas.ai_schemas import PendingConfirmation
 from app.services import ai_pending_action_service, catalog_service, coupon_service, order_service, store_page_service, tenant_service
+from app.services.storefront_templates import get_storefront_template
 
 
 # Caps on list-shaped tool outputs — a tenant can have thousands of orders/
@@ -157,6 +158,30 @@ async def execute_tool(
                 for v in product.variants:
                     context.mark("variant", v.id)
             return ToolExecutionResult(tool_name, product.model_dump(mode="json"), False)
+
+        # --- Storefront templates -------------------------------------------
+        if tool_name == "list_storefront_templates":
+            metas = await store_page_service.list_storefront_templates_service()
+            return ToolExecutionResult(tool_name, list(metas), False)
+
+        if tool_name == "apply_storefront_template":
+            template_key = raw_input.get("template_key")
+            if not template_key:
+                raise ValueError("template_key is required")
+            template = get_storefront_template(template_key)
+            if not template:
+                raise ValueError(f"Unknown storefront template: {template_key}")
+            summary = (
+                f"Switch this store to the \"{template['name']}\" template — this replaces the current "
+                f"home, about, and contact pages (including any of your own edits) and publishes them "
+                f"immediately."
+            )
+            pending = await ai_pending_action_service.create_pending_action_service(
+                tenant_slug, "apply_storefront_template", {"template_key": template_key}, summary, db
+            )
+            return ToolExecutionResult(
+                tool_name, {"status": "confirmation_required", "summary": summary}, False, pending_confirmation=pending
+            )
 
         # --- Catalog & inventory -------------------------------------------
         if tool_name == "get_product":

@@ -42,6 +42,7 @@ CREATE TABLE tenant_settings (
     default_language VARCHAR(10) DEFAULT 'he',
     review_moderation_enabled BOOLEAN DEFAULT FALSE,
     allow_unverified_reviews BOOLEAN DEFAULT TRUE,
+    template_key VARCHAR(50) NULL,
     FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 

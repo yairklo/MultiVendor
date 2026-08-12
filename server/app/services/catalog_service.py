@@ -30,13 +30,15 @@ def validate_i18n(field_dict: Any, supported_langs: list, field_name: str):
     if missing:
         raise HTTPException(status_code=422, detail=f"Missing required translations for {field_name} in languages: {missing}")
 
-async def get_store_config_service(tenant_slug: str, db: AsyncSession) -> TenantSettingsSchema:
+async def get_store_config_service(tenant_slug: str, db: AsyncSession, admin_preview: bool = False) -> TenantSettingsSchema:
     result = await db.execute(select(Tenant).where(Tenant.slug == tenant_slug).options(selectinload(Tenant.settings)))
     tenant = result.scalar_one_or_none()
     if not tenant:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Store not found")
         
     if tenant.settings:
+        if admin_preview and getattr(tenant.settings, 'draft_template_key', None) is not None:
+            tenant.settings.template_key = tenant.settings.draft_template_key
         return TenantSettingsSchema.model_validate(tenant.settings)
     return TenantSettingsSchema()
 

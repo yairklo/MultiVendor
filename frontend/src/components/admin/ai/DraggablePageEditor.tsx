@@ -343,8 +343,8 @@ export function DraggablePageEditor({
   }
 
   return (
-    <div className="flex w-full h-[calc(100vh-100px)]">
-      <div className="flex-1 overflow-y-auto px-4">
+    <div className="flex w-full">
+      <div className="flex-1 px-4">
         <div className="flex flex-col gap-3">
           <div className="sticky top-0 z-30 flex items-center justify-between bg-gray-50/95 py-2 backdrop-blur">
             <p className="text-xs text-gray-400">Use the toolbar on each section to reorder or edit.</p>

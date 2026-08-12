@@ -5,12 +5,15 @@ from fastapi import HTTPException
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.tenant import Tenant
+from app.models.tenant import Tenant, TenantSettings
 from app.models.store_page import StorePage, StorePageVersion
 from app.schemas.ai_schemas import (
     StorePageSchema, StorePageSummary, StorePageVersionSummary, Section,
     SECTION_TYPES, BUTTON_ACTION_TYPES, BUTTON_VARIANTS, CONTAINER_SECTION_TYPES,
-    DESIGN_VARIANTS, MAX_SECTION_NESTING_DEPTH,
+    DESIGN_VARIANTS, CARD_STYLES, MAX_SECTION_NESTING_DEPTH,
+)
+from app.services.storefront_templates import (
+    StorefrontTemplateMeta, get_storefront_template, list_storefront_template_metas,
 )
 
 MAX_VERSIONS_PER_PAGE = 20
@@ -94,6 +97,18 @@ def _sanitize_design_variant_settings(settings: Dict[str, Any]) -> Dict[str, Any
     return settings
 
 
+def _sanitize_card_style_settings(settings: Dict[str, Any]) -> Dict[str, Any]:
+    """Clamp a product_grid's card_style to the fixed allow-list, same rationale/pattern as
+    _sanitize_design_variant_settings — lets the AI restyle product cards without ever letting
+    it emit a value the frontend's literal Tailwind class map (product-card-styles.ts) doesn't
+    recognize (which the frontend would just fall back to 'default' for anyway; this is the
+    real enforcement gate)."""
+    style = settings.get("card_style")
+    if style not in CARD_STYLES:
+        return {k: v for k, v in settings.items() if k != "card_style"}
+    return settings
+
+
 def _sanitize_sections(
     raw_sections: List[Dict[str, Any]], seen_ids: "set | None" = None, depth: int = 0
 ) -> List[Dict[str, Any]]:
@@ -122,6 +137,8 @@ def _sanitize_sections(
             settings = _sanitize_button_group_settings(settings)
         elif section_type in CONTAINER_SECTION_TYPES:
             settings = _sanitize_design_variant_settings(settings)
+        elif section_type == "product_grid":
+            settings = _sanitize_card_style_settings(settings)
 
         entry: Dict[str, Any] = {"id": section_id, "type": section_type, "settings": settings}
         if raw.get("media"):
@@ -320,6 +337,12 @@ async def publish_page_service(
     # server's own clock disagrees with the DB server's.
     page.published_at = func.now()
 
+    if page.page_key == "home":
+        settings_result = await db.execute(select(TenantSettings).where(TenantSettings.tenant_id == tenant_id))
+        settings = settings_result.scalar_one_or_none()
+        if settings and settings.draft_template_key is not None:
+            settings.template_key = settings.draft_template_key
+
     await db.commit()
     await db.refresh(page)
     return _to_schema(page)
@@ -376,3 +399,42 @@ async def upsert_page_sections_service(
     await db.commit()
     await db.refresh(page)
     return _to_schema(page)
+
+
+async def list_storefront_templates_service() -> List[StorefrontTemplateMeta]:
+    """Metadata only (key/name/tagline/swatch) — the full section content never leaves the
+    server except through apply_storefront_template_service, which writes it straight into the
+    tenant's own StorePage rows rather than exposing the raw template payload to the client."""
+    return list_storefront_template_metas()
+
+
+async def apply_storefront_template_service(tenant_slug: str, template_key: str, db: AsyncSession) -> List[StorePageSchema]:
+    """
+    Seeds (or overwrites) this tenant's home/about/contact draft pages from a premium template.
+    Does NOT publish automatically. It updates the draft versions so they can be previewed in the layout editor.
+    """
+    template = get_storefront_template(template_key)
+    if not template:
+        raise HTTPException(status_code=404, detail=f"Unknown storefront template: {template_key}")
+
+    tenant_id = await _get_tenant_id(tenant_slug, db)
+
+    results: List[StorePageSchema] = []
+    for page_key, page_content in template["pages"].items():
+        draft = await upsert_page_sections_service(
+            tenant_slug, page_key, "static_page", page_content["sections"], db,
+            title=page_content.get("title"),
+            background_color=page_content.get("background_color"),
+            text_color=page_content.get("text_color"),
+        )
+        results.append(draft)
+
+    settings_result = await db.execute(select(TenantSettings).where(TenantSettings.tenant_id == tenant_id))
+    settings = settings_result.scalar_one_or_none()
+    if not settings:
+        settings = TenantSettings(tenant_id=tenant_id)
+        db.add(settings)
+    settings.draft_template_key = template_key
+
+    await db.commit()
+    return results

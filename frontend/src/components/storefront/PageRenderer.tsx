@@ -10,6 +10,8 @@ import { ButtonGroupSection } from './sections/ButtonGroupSection'
 import { TableSection } from './sections/TableSection'
 import { GridContainer } from './sections/GridContainer'
 import { TwoColumnLayout } from './sections/TwoColumnLayout'
+import { FeatureHighlights } from './sections/FeatureHighlights'
+import { Testimonials } from './sections/Testimonials'
 
 export type SectionComponent = (props: {
   section: Section
@@ -39,6 +41,8 @@ const SECTION_COMPONENTS: Record<Section['type'], SectionComponent> = {
   table: TableSection,
   grid_container: GridContainer,
   two_column_layout: TwoColumnLayout,
+  feature_highlights: FeatureHighlights,
+  testimonials: Testimonials,
 }
 
 /**

@@ -45,5 +45,10 @@ class TenantSettings(Base):
     default_language = Column(String(10), default="he")
     review_moderation_enabled = Column(Boolean, default=False)
     allow_unverified_reviews = Column(Boolean, default=True)
+    # Which of the 3 premium storefront templates (see storefront_templates.py) this seller last
+    # applied — NULL until they pick one. Purely informational for the admin UI; applying a
+    # template doesn't require this to already be set, it just stamps it going forward.
+    template_key = Column(String(50), nullable=True)
+    draft_template_key = Column(String(50), nullable=True)
 
     tenant = relationship("Tenant", back_populates="settings")

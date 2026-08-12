@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { apiClient, ApiError } from '@/lib/api/apiClient'
 import { useToast } from '@/context/ToastContext'
 import { PageRenderer } from '@/components/storefront/PageRenderer'
+import { resolvePageKeyHref } from '@/lib/storefront-nav'
 import { DispatchedAction, StorePageSchema } from '@/lib/ai/types'
 
 export default function StorefrontDynamicPage(props: {
@@ -49,7 +50,7 @@ export default function StorefrontDynamicPage(props: {
       // store) — the AI is never told this store's tenant_slug/URL structure,
       // so it can only reference other pages by key, never by a guessed href.
       if (typeof action.actionPayload?.page_key === 'string') {
-        router.push(`/store/${params.tenant_slug}/pages/${action.actionPayload.page_key}`)
+        router.push(resolvePageKeyHref(params.tenant_slug, action.actionPayload.page_key))
         return
       }
       if (typeof action.actionPayload?.href === 'string') {

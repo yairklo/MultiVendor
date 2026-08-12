@@ -9,6 +9,7 @@ export function HeroBanner({
   const size = section.settings.size ?? 'medium'
   const height = SIZE_HEIGHTS[size] ?? SIZE_HEIGHTS.medium
   const alignment = section.settings.alignment === 'left' ? 'items-start text-left' : section.settings.alignment === 'right' ? 'items-end text-right' : 'items-center text-center'
+  const imageUrl = section.media?.type === 'image' ? section.media.url : undefined
   const fontSize = typeof section.settings.font_size === 'string' && section.settings.font_size ? section.settings.font_size : undefined
   const headline = section.settings.headline ?? 'Hero Banner'
 
@@ -19,20 +20,23 @@ export function HeroBanner({
 
   return (
     <div
-      className={`flex flex-col justify-center gap-3 rounded-2xl px-8 ${alignment}`}
+      className={`relative flex flex-col justify-center gap-3 overflow-hidden rounded-2xl px-8 ${alignment}`}
       style={{
         ...themeStyle,
         height,
-        background: 'var(--section-bg, linear-gradient(135deg, #eef2ff, #e0e7ff))',
-        color: 'var(--section-text, #1e293b)',
+        background: imageUrl ? undefined : 'var(--section-bg, linear-gradient(135deg, #eef2ff, #e0e7ff))',
+        color: imageUrl ? '#ffffff' : 'var(--section-text, #1e293b)',
         fontFamily: 'var(--section-font, inherit)',
       }}
     >
-      <span className="inline-block w-fit rounded-full bg-white/70 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-700">
-        {size}
-      </span>
+      {imageUrl && (
+        <>
+          <img src={imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+          <div className="absolute inset-0 bg-black/35" />
+        </>
+      )}
       <h1
-        className={`text-3xl font-bold md:text-4xl${onInlineEdit ? ' cursor-text rounded outline-none hover:bg-black/5 focus:bg-black/5 focus:ring-2 focus:ring-indigo-400' : ''}`}
+        className={`relative z-10 text-3xl font-bold md:text-4xl${onInlineEdit ? ' cursor-text rounded outline-none hover:bg-black/5 focus:bg-black/5 focus:ring-2 focus:ring-indigo-400' : ''}`}
         style={fontSize ? { fontSize } : undefined}
         contentEditable={!!onInlineEdit}
         suppressContentEditableWarning={!!onInlineEdit}
@@ -40,9 +44,6 @@ export function HeroBanner({
       >
         {headline}
       </h1>
-      {section.media && (
-        <span className="text-xs text-current/70">image: {section.media.url}</span>
-      )}
     </div>
   )
 }
