@@ -97,7 +97,7 @@ export default function MyOrdersPage() {
               <div key={order.id} data-testid="order-card" className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                 <div className="flex justify-between items-start mb-3">
                   <div>
-                    <div className="font-bold">{order.order_number}</div>
+                    <div className="font-bold">#{order.order_number}</div>
                     <div className="text-sm text-gray-500">{new Date(order.created_at).toLocaleString()}</div>
                   </div>
                   <span className={`px-2 py-1 rounded-full text-xs font-semibold ${statusClass[order.status] || 'bg-gray-100 text-gray-700'}`}>
