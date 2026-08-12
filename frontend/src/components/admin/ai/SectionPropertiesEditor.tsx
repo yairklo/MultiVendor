@@ -180,20 +180,39 @@ export function SectionPropertiesEditor({
       case 'grid_container':
       case 'two_column_layout':
         return (
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-gray-700">Design Variant</label>
-            <select
-              className="rounded-md border p-2 text-sm"
-              value={section.settings.design_variant ?? 'neutral'}
-              onChange={(e) => handleSettingChange('design_variant', e.target.value)}
-            >
-              <option value="neutral">Neutral</option>
-              <option value="primary">Primary</option>
-              <option value="secondary">Secondary</option>
-              <option value="accent">Accent</option>
-              <option value="muted">Muted</option>
-            </select>
-          </div>
+          <>
+            {section.type === 'grid_container' && (
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold text-gray-700">Columns</label>
+                <select
+                  className="rounded-md border p-2 text-sm"
+                  value={section.settings.columns ?? 3}
+                  onChange={(e) => handleSettingChange('columns', parseInt(e.target.value, 10))}
+                >
+                  <option value={2}>2</option>
+                  <option value={3}>3</option>
+                  <option value={4}>4</option>
+                </select>
+              </div>
+            )}
+            {section.type === 'two_column_layout' && (
+              <p className="text-xs text-gray-500">Drag the divider between the two columns on the canvas to resize them.</p>
+            )}
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold text-gray-700">Design Variant</label>
+              <select
+                className="rounded-md border p-2 text-sm"
+                value={section.settings.design_variant ?? 'neutral'}
+                onChange={(e) => handleSettingChange('design_variant', e.target.value)}
+              >
+                <option value="neutral">Neutral</option>
+                <option value="primary">Primary</option>
+                <option value="secondary">Secondary</option>
+                <option value="accent">Accent</option>
+                <option value="muted">Muted</option>
+              </select>
+            </div>
+          </>
         )
       case 'product_grid':
         return (
