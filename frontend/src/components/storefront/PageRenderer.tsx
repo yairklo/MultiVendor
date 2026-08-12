@@ -19,6 +19,7 @@ export type SectionComponent = (props: {
   onAction?: (action: DispatchedAction) => void
   tenantSlug?: string
   showTypeLabels?: boolean
+  onInlineEdit?: (sectionId: string, patch: Partial<Section>) => void
 }) => React.JSX.Element
 
 export type RenderSectionsOptions = {
@@ -26,6 +27,8 @@ export type RenderSectionsOptions = {
   tenantSlug?: string
   /** Overlays each section's type as a small badge — useful in the admin editor preview, not on the live storefront. */
   showTypeLabels?: boolean
+  /** Only ever supplied by the admin editor — turns the section's own text into an editable field in place. Never passed on the live storefront. */
+  onInlineEdit?: (sectionId: string, patch: Partial<Section>) => void
 }
 
 const SECTION_COMPONENTS: Record<Section['type'], SectionComponent> = {
@@ -70,6 +73,7 @@ export function renderSections(sections: Section[], opts: RenderSectionsOptions)
           onAction={opts.onAction}
           tenantSlug={opts.tenantSlug}
           showTypeLabels={opts.showTypeLabels}
+          onInlineEdit={opts.onInlineEdit}
         />
       </div>
     )

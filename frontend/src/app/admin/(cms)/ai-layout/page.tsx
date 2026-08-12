@@ -260,11 +260,12 @@ export default function AiLayoutPage() {
             <div className="pointer-events-none sticky top-0 z-10 opacity-75 grayscale-[0.2]">
               <StorefrontHeader tenantSlug={tenantSlug} storeName={tenantSlug} />
             </div>
-            <div 
+            <div
               className="flex-1 p-6 relative z-0"
               style={{ backgroundColor: page?.background_color || undefined, color: page?.text_color || undefined }}
             >
               <DraggablePageEditor
+                onAskAI={(id, prompt) => handleSend("For the section with ID '" + id + "': " + prompt)}
                 page={page}
                 onChange={handleSectionsReorder}
                 onSave={handleSaveLayout}

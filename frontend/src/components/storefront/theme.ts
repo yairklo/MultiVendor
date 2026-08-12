@@ -7,6 +7,7 @@ import { CSSProperties } from 'react'
 // silently updating JSON no component reads.
 const BACKGROUND_KEYS = ['background_color', 'background', 'theme_color', 'theme']
 const TEXT_KEYS = ['text_color', 'color']
+const FONT_KEYS = ['font_family']
 
 function firstStringValue(settings: Record<string, any>, keys: string[]): string | undefined {
   for (const key of keys) {
@@ -20,7 +21,9 @@ export function getSectionThemeStyle(settings: Record<string, any>): CSSProperti
   const style: Record<string, string> = {}
   const background = firstStringValue(settings, BACKGROUND_KEYS)
   const text = firstStringValue(settings, TEXT_KEYS)
+  const font = firstStringValue(settings, FONT_KEYS)
   if (background) style['--section-bg'] = background
   if (text) style['--section-text'] = text
+  if (font) style['--section-font'] = font
   return style as CSSProperties
 }
