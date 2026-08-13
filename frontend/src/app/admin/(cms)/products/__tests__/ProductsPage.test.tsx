@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import ProductsPage from '../page'
+import { ProductsPageClient } from '../ProductsPageClient'
 
 const fetchProductsMock = vi.fn()
 const deleteProductMock = vi.fn()
@@ -15,6 +15,13 @@ vi.mock('@/hooks/useProducts', () => ({
 
 vi.mock('@/hooks/useCategories', () => ({
   useCategories: () => ({ fetchCategories: fetchCategoriesMock }),
+}))
+
+vi.mock('@/hooks/useCurrency', () => ({
+  useCurrency: () => ({
+    formatCurrency: (amount: number) => `$${amount}`,
+    currency: 'USD',
+  }),
 }))
 
 vi.mock('@/context/ToastContext', () => ({
@@ -50,7 +57,7 @@ const baseProducts = [
   },
 ]
 
-describe('ProductsPage', () => {
+describe('ProductsPageClient', () => {
   beforeEach(() => {
     fetchProductsMock.mockReset()
     deleteProductMock.mockReset()
@@ -65,7 +72,12 @@ describe('ProductsPage', () => {
   })
 
   it('renders a thumbnail image when a product has an image, and a placeholder otherwise', async () => {
-    render(<ProductsPage />)
+    render(
+      <ProductsPageClient
+        initialProducts={baseProducts}
+        initialMeta={{ page: 1, page_size: 20, total: 2, total_pages: 1 }}
+      />
+    )
 
     const img = await screen.findByRole('img', { name: 'Vintage T-Shirt' })
     expect((img as HTMLImageElement).src).toContain('https://example.com/tshirt.jpg')

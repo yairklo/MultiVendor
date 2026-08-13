@@ -289,7 +289,7 @@ function PreviewWrapper({ tenantSlug, page, handleSend, handleSectionsReorder, h
   return (
     <div dir={defaultLanguage === 'he' ? 'rtl' : 'ltr'} className="flex-1 flex flex-col h-full w-full">
       <div className="pointer-events-none sticky top-0 z-10 opacity-75 grayscale-[0.2]">
-        <StorefrontHeader tenantSlug={tenantSlug} storeName={tenantSlug} />
+        <StorefrontHeader tenantSlug={tenantSlug} storeName={tenantSlug} isLoggedIn={false} />
       </div>
       <div
         className="flex-1 p-6 relative z-0"

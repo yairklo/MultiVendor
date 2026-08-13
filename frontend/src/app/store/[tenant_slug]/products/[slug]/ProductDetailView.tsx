@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
 import { getCookie } from 'cookies-next'
 import { apiClient, ApiError } from '@/lib/api/apiClient'
@@ -12,24 +12,20 @@ import { Star } from 'lucide-react'
 import { useStorefrontTheme } from '@/context/StorefrontThemeContext'
 import { useCurrency } from '@/hooks/useCurrency'
 
-type Params = { tenant_slug: string; slug: string }
-
-export default function ProductDetailPage(props: { params: Promise<Params> | Params }) {
-  const isPromise = props.params instanceof Promise
-  const [params, setParams] = useState<Params | null>(isPromise ? null : (props.params as Params))
-
-  useEffect(() => {
-    if (isPromise) {
-      ;(props.params as Promise<Params>).then(setParams)
-    }
-  }, [props.params, isPromise])
-
-  const [product, setProduct] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+export function ProductDetailView({
+  tenantSlug,
+  slug,
+  product,
+  initialReviews,
+}: {
+  tenantSlug: string
+  slug: string
+  product: any
+  initialReviews: any[]
+}) {
   const [quantity, setQuantity] = useState(1)
   const [adding, setAdding] = useState(false)
-  const [reviews, setReviews] = useState<any[]>([])
+  const [reviews, setReviews] = useState<any[]>(initialReviews)
   const [reviewRating, setReviewRating] = useState(5)
   const [reviewComment, setReviewComment] = useState('')
   const [submittingReview, setSubmittingReview] = useState(false)
@@ -38,44 +34,24 @@ export default function ProductDetailPage(props: { params: Promise<Params> | Par
   const { theme } = useStorefrontTheme()
   const { formatCurrency } = useCurrency()
 
-  const loadProduct = (tenantSlug: string, slug: string) => {
-    setLoading(true)
-    apiClient(`/api/v1/store/${tenantSlug}/products/${slug}`)
-      .then(data => {
-        setProduct(data)
-        setQuantity(1)
-      })
-      .catch((e: any) => setError(e.message || 'Product not found'))
-      .finally(() => setLoading(false))
-  }
-
-  const loadReviews = (tenantSlug: string, slug: string) => {
+  const loadReviews = () => {
     apiClient(`/api/v1/store/${tenantSlug}/products/${slug}/reviews`)
       .then(setReviews)
       .catch((e: any) => console.error('Failed to load reviews:', e))
   }
 
-  useEffect(() => {
-    if (!params) return
-    loadProduct(params.tenant_slug, params.slug)
-    loadReviews(params.tenant_slug, params.slug)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params])
-
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!params || !product) return
     setSubmittingReview(true)
     try {
-      await apiClient(`/api/v1/store/${params.tenant_slug}/reviews`, {
+      await apiClient(`/api/v1/store/${tenantSlug}/reviews`, {
         method: 'POST',
         body: JSON.stringify({ product_id: product.id, rating: reviewRating, comment: reviewComment || undefined }),
       })
       showToast('Thanks for your review!', 'success')
       setReviewComment('')
       setReviewRating(5)
-      loadReviews(params.tenant_slug, params.slug)
-      loadProduct(params.tenant_slug, params.slug)
+      loadReviews()
     } catch (e: any) {
       if (e instanceof ApiError && e.status === 400) {
         showToast("You've already reviewed this product.", 'error')
@@ -85,21 +61,6 @@ export default function ProductDetailPage(props: { params: Promise<Params> | Par
     } finally {
       setSubmittingReview(false)
     }
-  }
-
-  if (!params || loading) {
-    return <div className="p-6 text-gray-600">Loading...</div>
-  }
-
-  if (error || !product) {
-    return (
-      <div className="p-6 max-w-3xl mx-auto">
-        <Link href={`/store/${params.tenant_slug}`} className="text-blue-600 hover:underline">&larr; Back to store</Link>
-        <div className="mt-6 p-4 bg-red-50 text-red-700 rounded-lg border border-red-100">
-          {error || 'Product not found'}
-        </div>
-      </div>
-    )
   }
 
   const stock = totalStock(product.variants)
@@ -116,7 +77,7 @@ export default function ProductDetailPage(props: { params: Promise<Params> | Par
     if (!variantId) return
     setAdding(true)
     try {
-      await addItem(params.tenant_slug, variantId, quantity)
+      await addItem(tenantSlug, variantId, quantity)
       openDrawer()
     } catch (e) {
       console.error('Failed to add item to cart:', e)
@@ -128,7 +89,7 @@ export default function ProductDetailPage(props: { params: Promise<Params> | Par
   return (
     <div className="p-4 bg-gray-50 min-h-screen text-gray-900">
       <div className="max-w-4xl mx-auto">
-        <Link href={`/store/${params.tenant_slug}`} className="text-blue-600 hover:underline">&larr; Back to store</Link>
+        <Link href={`/store/${tenantSlug}`} className="text-blue-600 hover:underline">&larr; Back to store</Link>
 
         <div className="mt-4 bg-white rounded-xl shadow-md border border-gray-100 p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
           <div>

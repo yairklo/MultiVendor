@@ -1,31 +1,67 @@
-import { Metadata } from 'next'
-import ProductDetailClient from './ProductDetailClient'
-import { apiClient } from '@/lib/api/apiClient'
+import type { Metadata } from 'next'
+import Link from 'next/link'
+import { ApiError, getProduct, getProductReviews } from '@/lib/api/serverApiClient'
+import { ProductDetailView } from './ProductDetailView'
 
 type Params = { tenant_slug: string; slug: string }
 
-export async function generateMetadata(props: { params: Promise<Params> | Params }): Promise<Metadata> {
-  const params = await props.params
-  
+function productText(product: any) {
+  const name = typeof product.name === 'object' ? (product.name?.en || product.name?.he) : product.name
+  const description = typeof product.description === 'object' ? (product.description?.en || product.description?.he) : product.description
+  return { name, description }
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<Params>
+}): Promise<Metadata> {
+  const { tenant_slug, slug } = await params
   try {
-    // Try to fetch the product to get the real name for SEO
-    const product = await apiClient(`/api/v1/store/${params.tenant_slug}/products/${params.slug}`)
-    const productName = typeof product.name === 'object' ? (product.name.en || product.name.he) : product.name
+    const product = await getProduct(tenant_slug, slug)
+    const { name, description } = productText(product)
+    const image = product.images?.[0] || product.primary_image_url
     return {
-      title: productName || params.slug,
-      description: product.description ? String(product.description).substring(0, 160) : `Buy ${productName || params.slug} at ${params.tenant_slug}`,
+      title: name,
+      description: description?.slice(0, 160),
+      openGraph: {
+        title: name,
+        description: description?.slice(0, 160),
+        images: image ? [image] : undefined,
+      },
     }
-  } catch (e) {
-    // Fallback to slug if API fails
-    const decodedSlug = decodeURIComponent(params.slug)
-    const title = decodedSlug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-    return {
-      title: title,
-      description: `Buy ${title} at ${params.tenant_slug}`
-    }
+  } catch {
+    return { title: 'Product not found' }
   }
 }
 
-export default function ProductDetailPage(props: { params: Promise<Params> | Params }) {
-  return <ProductDetailClient params={props.params} />
+export default async function ProductDetailPage({
+  params,
+}: {
+  params: Promise<Params>
+}) {
+  const { tenant_slug: tenantSlug, slug } = await params
+
+  let product: any = null
+  let error = ''
+  try {
+    product = await getProduct(tenantSlug, slug)
+  } catch (e) {
+    error = e instanceof ApiError ? e.message : 'Product not found'
+  }
+
+  if (!product) {
+    return (
+      <div className="p-6 max-w-3xl mx-auto">
+        <Link href={`/store/${tenantSlug}`} className="text-blue-600 hover:underline">&larr; Back to store</Link>
+        <div className="mt-6 p-4 bg-red-50 text-red-700 rounded-lg border border-red-100">
+          {error || 'Product not found'}
+        </div>
+      </div>
+    )
+  }
+
+  const reviews = await getProductReviews(tenantSlug, slug)
+
+  return <ProductDetailView tenantSlug={tenantSlug} slug={slug} product={product} initialReviews={reviews} />
 }
