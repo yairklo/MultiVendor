@@ -13,7 +13,7 @@ from app.schemas.catalog_schemas import (
 )
 from app.schemas.order_schemas import OrderResponse, CouponCreateRequest, CouponResponse
 from app.schemas.auth_schemas import CustomerSummaryResponse
-from app.schemas.tenant_schemas import TenantSettingsSchema, TenantUpdateSchema, TenantResponse
+from app.schemas.tenant_schemas import TenantSettingsSchema, TenantUpdateSchema, TenantResponse, TenantSettingsUpdateSchema
 from app.services.catalog_service import (
     create_category_service, delete_category_service,
     create_product_service, get_admin_product_service, update_product_service, delete_product_service,
@@ -203,7 +203,7 @@ async def get_current_subscription(
     responses={200: {"description": "Settings successfully updated."}}
 )
 async def update_store_settings(
-    req: TenantSettingsSchema,
+    req: TenantSettingsUpdateSchema,
     tenant_slug: str = Path(...),
     admin: User = Depends(get_tenant_admin),
     db: AsyncSession = Depends(get_db)

@@ -439,3 +439,20 @@ async def test_list_customers_is_tenant_isolated(async_client: AsyncClient, seed
     headers_b = {"Authorization": seed_tokens["tenant_admin_b"]}
     response = await async_client.get("/api/v1/admin/store/tenant-a/customers", headers=headers_b)
     assert response.status_code == 403
+
+@pytest.mark.asyncio
+async def test_update_store_settings_partial(async_client: AsyncClient, seed_tokens):
+    headers = {'Authorization': seed_tokens['tenant_admin_a']}
+    # First get the settings
+    resp = await async_client.get('/api/v1/store/tenant-a/config')
+    original_color = resp.json().get('primary_color', '#000000')
+    # Update only currency and logo_url
+    payload = {'currency': 'EUR', 'logo_url': 'https://example.com/logo.png'}
+    resp = await async_client.put('/api/v1/admin/store/tenant-a/settings', json=payload, headers=headers)
+    assert resp.status_code == 200
+    # Check that primary color was not overwritten
+    resp = await async_client.get('/api/v1/store/tenant-a/config')
+    assert resp.json()['primary_color'] == original_color
+    assert resp.json()['currency'] == 'EUR'
+    assert resp.json()['logo_url'] == 'https://example.com/logo.png'
+
