@@ -5,19 +5,21 @@ import { ChatDrawer } from '@/components/admin/ai/ChatDrawer'
 import { useAiLayout } from '@/hooks/useAiLayout'
 import { useToast } from '@/context/ToastContext'
 
+// This chat is not scoped to any page — it's the tenant-wide global copilot.
+// PageContext is `null` throughout: never fake a page identity to satisfy an
+// API shaped for the per-page layout editor.
+const NO_PAGE_CONTEXT = null
+
 export default function CopilotPage() {
   const { fetchConversation, sendChatMessage, clearConversation, confirmPendingAction, cancelPendingAction } = useAiLayout()
   const { showToast } = useToast()
-  
+
   const [messages, setMessages] = useState<any[]>([])
   const [isBusy, setIsBusy] = useState(false)
   const [resolvingConfirmationId, setResolvingConfirmationId] = useState<string | null>(null)
-  
-  const GLOBAL_KEY = 'global'
-  const GLOBAL_TYPE = 'general' as any
 
   useEffect(() => {
-    fetchConversation(GLOBAL_KEY, GLOBAL_TYPE)
+    fetchConversation(NO_PAGE_CONTEXT)
       .then((res) => setMessages(res.messages.map((m: any) => ({ role: m.role, text: m.text, toolCalls: m.tool_calls ?? undefined }))))
       .catch(() => setMessages([]))
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -27,7 +29,7 @@ export default function CopilotPage() {
     setMessages((prev) => [...prev, { role: 'user', text: message }])
     setIsBusy(true)
     try {
-      const result = await sendChatMessage(message, GLOBAL_KEY, GLOBAL_TYPE)
+      const result = await sendChatMessage(message, NO_PAGE_CONTEXT)
       setMessages((prev) => [
         ...prev,
         {
@@ -82,7 +84,7 @@ export default function CopilotPage() {
 
   async function handleNewConversation() {
     try {
-      await clearConversation(GLOBAL_KEY, GLOBAL_TYPE)
+      await clearConversation(NO_PAGE_CONTEXT)
       setMessages([])
     } catch (err: any) {
       showToast(err.message || 'Failed to start a new conversation', 'error')
@@ -107,6 +109,13 @@ export default function CopilotPage() {
           onConfirmAction={handleConfirmPendingAction}
           onCancelAction={handleCancelPendingAction}
           resolvingConfirmationId={resolvingConfirmationId}
+          title={null}
+          emptyStateHint={
+            <>
+              Try: &ldquo;how many orders came in this week&rdquo; or &ldquo;add a product called Cool Mug for
+              $15&rdquo;
+            </>
+          }
         />
       </div>
     </div>

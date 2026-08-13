@@ -53,8 +53,11 @@ class AIConversation(Base):
     __tablename__ = "ai_conversations"
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
-    page_key = Column(String(100), nullable=False)
-    page_type = Column(Enum('static_page', 'template'), nullable=False)
+    # Both NULL together means the tenant-wide global copilot conversation, not
+    # tied to any real page — never a fake page_key like 'global'. A real page's
+    # conversation always has both set.
+    page_key = Column(String(100), nullable=True)
+    page_type = Column(Enum('static_page', 'template'), nullable=True)
     # Serialized google.genai Content[] for real multi-turn continuity — never
     # read by the AI itself, only round-tripped through the Gemini SDK.
     gemini_history = Column(JSON, nullable=True)

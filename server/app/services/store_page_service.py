@@ -18,6 +18,13 @@ from app.services.storefront_templates import (
 
 MAX_VERSIONS_PER_PAGE = 20
 
+# 'global' is reserved by the AI copilot as the sentinel meaning "no real page"
+# (see ai_conversation_service / ai_agent_service) — never a legitimate page_key.
+# Blocked here, not just relied on as a frontend convention, so a prompt/agent
+# regression that reintroduces it fails loudly instead of silently creating a
+# phantom StorePage row that then pollutes the real page picker.
+RESERVED_PAGE_KEYS = {"global"}
+
 
 async def _get_tenant_id(tenant_slug: str, db: AsyncSession) -> int:
     result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
@@ -381,6 +388,9 @@ async def upsert_page_sections_service(
     background_color: str | None = None,
     text_color: str | None = None,
 ) -> StorePageSchema:
+    if page_key in RESERVED_PAGE_KEYS:
+        raise HTTPException(status_code=400, detail=f"'{page_key}' is a reserved page_key and cannot be used for a real page")
+
     tenant_id = await _get_tenant_id(tenant_slug, db)
     sanitized_sections = _sanitize_sections(sections)
 

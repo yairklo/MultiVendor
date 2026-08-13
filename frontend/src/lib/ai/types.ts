@@ -17,6 +17,13 @@ export const MAX_SECTION_NESTING_DEPTH = 3
 
 export type PageType = 'static_page' | 'template'
 
+/**
+ * What an AI conversation is scoped to — a real page/template, or `null` for
+ * the tenant-wide global copilot (not tied to any page). Never fake a page
+ * identity (e.g. page_key: 'global') to satisfy PageType instead of using null.
+ */
+export type PageContext = { pageKey: string; pageType: PageType } | null
+
 export type ButtonVariant = 'primary' | 'secondary' | 'outline'
 export type ButtonActionType = 'NAVIGATE' | 'OPEN_MODAL' | 'ADD_TO_CART' | 'APPLY_COUPON'
 

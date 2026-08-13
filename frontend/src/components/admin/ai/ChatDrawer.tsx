@@ -10,6 +10,13 @@ export function ChatDrawer({
   onConfirmAction,
   onCancelAction,
   resolvingConfirmationId,
+  title = 'AI Layout & Product Assistant',
+  emptyStateHint = (
+    <>
+      Try: &ldquo;Make the hero banner larger and move the video above the products&rdquo; or &ldquo;add a
+      product called Cool Mug for $15&rdquo;
+    </>
+  ),
 }: {
   messages: ChatMessage[]
   onSend: (message: string) => void
@@ -20,6 +27,10 @@ export function ChatDrawer({
   onCancelAction?: (confirmationId: string) => void
   /** The confirmation id currently being confirmed/cancelled, so its buttons can show a busy state. */
   resolvingConfirmationId?: string | null
+  /** Header text — pass null to omit the header entirely when the page already shows its own title. */
+  title?: React.ReactNode | null
+  /** Example-prompts shown before the first message — swap for context (page editor vs. general copilot). */
+  emptyStateHint?: React.ReactNode
 }) {
   const [draft, setDraft] = useState('')
 
@@ -44,8 +55,8 @@ export function ChatDrawer({
 
   return (
     <div className="flex h-full flex-col rounded-xl border border-gray-100 bg-white shadow-sm">
-      <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-        <h3 className="font-bold text-gray-900">AI Layout & Product Assistant</h3>
+      <div className={`flex items-center border-b border-gray-100 px-4 py-3 ${title ? 'justify-between' : 'justify-end'}`}>
+        {title && <h3 className="font-bold text-gray-900">{title}</h3>}
         {onNewConversation && messages.length > 0 && (
           <button
             type="button"
@@ -60,10 +71,7 @@ export function ChatDrawer({
 
       <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
         {messages.length === 0 && (
-          <div className="rounded-lg bg-gray-50 p-3 text-sm text-gray-500">
-            Try: &ldquo;Make the hero banner larger and move the video above the products&rdquo; or &ldquo;add a
-            product called Cool Mug for $15&rdquo;
-          </div>
+          <div className="rounded-lg bg-gray-50 p-3 text-sm text-gray-500">{emptyStateHint}</div>
         )}
         {messages.map((m, i) => (
           <div key={i} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
