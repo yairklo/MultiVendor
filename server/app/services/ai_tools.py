@@ -162,7 +162,9 @@ ai_tools: List[ToolDefinition] = [
             "background' / 'the whole page' / the page's overall color (as opposed to one specific section like "
             "'the hero banner'), set the top-level background_color/text_color params below — NOT "
             "settings.background_color inside an individual section, which only colors that one section's card "
-            "and leaves the rest of the page unchanged."
+            "and leaves the rest of the page unchanged. If this call would remove most/all of an existing page's "
+            "current sections, it doesn't apply immediately — it stages the change and returns a pending "
+            "confirmation the user must click, same as delete_product; tell them plainly what you've staged."
         ),
         "parameters": {
             "type": "object",

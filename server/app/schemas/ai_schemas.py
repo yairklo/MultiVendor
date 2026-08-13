@@ -105,7 +105,9 @@ class StorePageSummary(BaseModel):
     section_count: int
 
 class AIChatRequest(BaseModel):
-    message: str = Field(..., min_length=1)
+    # max_length is a cost/abuse guard as much as a validation rule — an
+    # absurdly long paste would otherwise go straight to a paid Gemini call.
+    message: str = Field(..., min_length=1, max_length=4000)
     # None means "the tenant-wide global copilot conversation" — not tied to any
     # real page. A real page's conversation must supply both; never just one.
     page_key: Optional[str] = Field(None, min_length=1)
