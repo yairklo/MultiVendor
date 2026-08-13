@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { DollarSign, ShoppingBag, Activity, TrendingUp, Package, Star, ArrowRight } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { useCurrency } from '@/hooks/useCurrency'
 
 export function DashboardClient({
   metrics,
@@ -24,6 +25,7 @@ export function DashboardClient({
   lowStockProducts: any[]
   recentReviews: any[]
 }) {
+  const { formatCurrency } = useCurrency()
   const chartData = metrics?.data?.map((d: any) => ({
     date: new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
     Revenue: d.total_sales,
@@ -50,7 +52,7 @@ export function DashboardClient({
             <DollarSign className="h-4 w-4 text-emerald-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-gray-900">${metrics?.total_revenue?.toLocaleString() || 0}</div>
+            <div className="text-3xl font-bold text-gray-900">{formatCurrency(metrics?.total_revenue || 0)}</div>
             <p className="text-xs text-emerald-600 flex items-center mt-1 font-medium">
               <TrendingUp className="h-3 w-3 mr-1" /> +20.1% from last month
             </p>
@@ -76,7 +78,7 @@ export function DashboardClient({
             <Activity className="h-4 w-4 text-indigo-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-gray-900">${metrics?.aov?.toLocaleString() || 0}</div>
+            <div className="text-3xl font-bold text-gray-900">{formatCurrency(metrics?.aov || 0)}</div>
             <p className="text-xs text-gray-500 mt-1">
               Based on paid orders
             </p>
@@ -127,11 +129,11 @@ export function DashboardClient({
                       axisLine={false}
                       tickLine={false}
                       tick={{ fill: '#6b7280', fontSize: 12 }}
-                      tickFormatter={(value) => `$${value}`}
+                      tickFormatter={(value) => formatCurrency(value)}
                     />
                     <Tooltip
                       contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                      formatter={(value: any) => [`$${value}`, 'Revenue']}
+                      formatter={(value: any) => [formatCurrency(value), 'Revenue']}
                     />
                     <Area type="monotone" dataKey="Revenue" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorRevenue)" />
                   </AreaChart>
@@ -165,7 +167,7 @@ export function DashboardClient({
                       <p className="text-sm text-gray-500">SKU: {p.sku || 'N/A'} &middot; {p.quantity_sold} sold</p>
                     </div>
                     <div className="ml-auto font-medium text-emerald-600">
-                      ${p.revenue.toLocaleString()}
+                      {formatCurrency(p.revenue)}
                     </div>
                   </div>
                 ))}
@@ -204,7 +206,7 @@ export function DashboardClient({
                       <p className="text-xs text-gray-500">Order #{order.id} &middot; {new Date(order.created_at).toLocaleDateString()}</p>
                     </div>
                     <div className="ml-auto flex items-center space-x-3">
-                      <span className="text-sm font-medium">${order.total_amount}</span>
+                      <span className="text-sm font-medium">{formatCurrency(Number(order.total_amount))}</span>
                       <Badge variant="outline" className={`${orderStatusClass[order.status] || ''} capitalize whitespace-nowrap rounded-md font-medium px-2 py-0.5`}>
                         {orderStatusLabel[order.status] || order.status}
                       </Badge>

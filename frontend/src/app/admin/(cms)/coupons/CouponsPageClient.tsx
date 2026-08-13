@@ -26,6 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { useCurrency } from '@/hooks/useCurrency'
 
 const formSchema = z.object({
   code: z.string().min(3, 'At least 3 characters').max(20).regex(/^[A-Za-z0-9]+$/, 'Alphanumeric only'),
@@ -38,6 +39,7 @@ const formSchema = z.object({
 
 export function CouponsPageClient({ initialCoupons }: { initialCoupons: any[] }) {
   const { fetchCoupons, createCoupon, deleteCoupon } = useCoupons()
+  const { formatCurrency } = useCurrency()
   const { showToast } = useToast()
   const { confirm } = useConfirm()
   const [coupons, setCoupons] = useState<any[]>(initialCoupons)
@@ -225,7 +227,7 @@ export function CouponsPageClient({ initialCoupons }: { initialCoupons: any[] })
               <TableRow key={coupon.id}>
                 <TableCell className="font-mono font-medium">{coupon.code}</TableCell>
                 <TableCell>
-                  {coupon.discount_type === 'percentage' ? `${coupon.discount_val}%` : `$${coupon.discount_val}`}
+                  {coupon.discount_type === 'percentage' ? `${coupon.discount_val}%` : formatCurrency(coupon.discount_val)}
                 </TableCell>
                 <TableCell>{coupon.used_count}</TableCell>
                 <TableCell>{new Date(coupon.valid_until).toLocaleDateString()}</TableCell>

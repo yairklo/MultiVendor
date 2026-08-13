@@ -1,5 +1,19 @@
+import { Metadata } from 'next'
 import { getTenantHomeLayout } from '@/lib/api/serverApiClient'
 import { CatalogListing } from '@/components/storefront/CatalogListing'
+
+type Params = { tenant_slug: string }
+
+export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
+  const { tenant_slug } = await params
+  const decodedSlug = decodeURIComponent(tenant_slug)
+  const capitalizedSlug = decodedSlug.charAt(0).toUpperCase() + decodedSlug.slice(1)
+
+  return {
+    title: capitalizedSlug,
+    description: `Welcome to ${capitalizedSlug} on MultiVendor`,
+  }
+}
 
 export default async function StorefrontPage({
   params,

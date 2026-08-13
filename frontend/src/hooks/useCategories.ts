@@ -1,10 +1,11 @@
+import { useCallback } from 'react'
 import { apiClient } from '@/lib/api/apiClient'
 import { getCookie } from 'cookies-next'
 
 export function useCategories() {
   const tenantSlug = getCookie('tenantSlug') || 'test-tenant'
 
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       const data = await apiClient(`/api/v1/admin/store/${tenantSlug}/categories`)
       return Array.isArray(data) ? data : (data.data || [])
@@ -12,7 +13,7 @@ export function useCategories() {
       console.error('Error fetching categories:', error)
       return []
     }
-  }
+  }, [tenantSlug])
 
   const createCategory = async (payload: { name: string; slug: string }) => {
     return apiClient(`/api/v1/admin/store/${tenantSlug}/categories`, {

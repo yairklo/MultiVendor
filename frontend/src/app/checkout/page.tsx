@@ -6,9 +6,17 @@ import { getActiveCart } from '@/lib/cart'
 import { useCart } from '@/context/CartContext'
 import { useOrders } from '@/hooks/useOrders'
 import { useToast } from '@/context/ToastContext'
+import { useCurrency } from '@/hooks/useCurrency'
+import { useRouter } from 'next/navigation'
+
+const shippingOptions = [
+  { id: 1, name: 'Standard Shipping (3-5 days)', price: 5 },
+  { id: 2, name: 'Express Shipping (1-2 days)', price: 15 }
+]
 
 export default function CheckoutPage() {
   const { cart, loading, clear } = useCart()
+  const { formatCurrency } = useCurrency()
   const { payOrder, cancelOrder } = useOrders()
   const { showToast } = useToast()
   const [error, setError] = useState<string>('')
@@ -22,6 +30,8 @@ export default function CheckoutPage() {
   const [couponInput, setCouponInput] = useState('')
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null)
   const [applyingCoupon, setApplyingCoupon] = useState(false)
+  const [shippingMethodId, setShippingMethodId] = useState<number>(1)
+  const router = useRouter()
 
   const activeCart = getActiveCart()
 
@@ -31,7 +41,13 @@ export default function CheckoutPage() {
       ? subtotal * (Number(appliedCoupon.discount_val) / 100)
       : Math.min(Number(appliedCoupon.discount_val), subtotal)
     : 0
-  const total = Math.max(subtotal - discountAmount, 0)
+  
+  const isDigitalOnly = !!cart && cart.items.length > 0 && cart.items.every(item => item.product_type !== 'physical')
+  const requiresShippingAddress = !!cart && cart.items.length > 0 && !isDigitalOnly
+
+  const selectedShipping = shippingOptions.find(o => o.id === shippingMethodId)
+  const shippingCost = requiresShippingAddress ? (selectedShipping?.price || 0) : 0
+  const total = Math.max(subtotal - discountAmount, 0) + shippingCost
 
   const handleApplyCoupon = async () => {
     if (!activeCart || !couponInput.trim()) return
@@ -55,8 +71,6 @@ export default function CheckoutPage() {
     setCouponInput('')
   }
 
-  const isDigitalOnly = !!cart && cart.items.length > 0 && cart.items.every(item => item.product_type !== 'physical')
-  const requiresShippingAddress = !!cart && cart.items.length > 0 && !isDigitalOnly
 
   const handleCheckout = async () => {
     if (!activeCart || !cart) return
@@ -75,6 +89,7 @@ export default function CheckoutPage() {
           email,
           address_line_1: address,
         }
+        payload.shipping_method_id = shippingMethodId
       }
 
       if (appliedCoupon) {
@@ -136,7 +151,21 @@ export default function CheckoutPage() {
       <div className="max-w-4xl mx-auto p-6 bg-gray-50 min-h-screen">
         <h1 className="text-3xl font-bold mb-4 text-gray-900 border-b pb-4">Checkout</h1>
         <div className="p-4 bg-green-50 text-green-700 rounded-lg border border-green-100">
-          Payment successful! Order {payingOrder.order_number} is now being processed.
+          Payment successful! Order #{payingOrder.order_number} is now being processed.
+        </div>
+        <div className="mt-6 flex gap-4">
+          <button
+            onClick={() => router.push('/account/orders')}
+            className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700"
+          >
+            View My Orders
+          </button>
+          <button
+            onClick={() => router.push(`/store/${activeCart?.tenantSlug}`)}
+            className="bg-white border border-gray-300 text-gray-800 px-6 py-2 rounded-lg font-medium hover:bg-gray-50"
+          >
+            Continue Shopping
+          </button>
         </div>
       </div>
     )
@@ -151,9 +180,9 @@ export default function CheckoutPage() {
         )}
         <div data-testid="pending-payment" className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-4">
           <div>
-            <h2 className="text-xl font-semibold">Order {payingOrder.order_number} is awaiting payment</h2>
+            <h2 className="text-xl font-semibold">Order #{payingOrder.order_number} is awaiting payment</h2>
             <p className="text-gray-600 mt-1">
-              Total: <span className="font-bold">${Number(payingOrder.total_amount).toFixed(2)}</span>
+              Total: <span className="font-bold">{formatCurrency(Number(payingOrder.total_amount))}</span>
             </p>
             <p className="text-sm text-amber-700 mt-2">
               This is a development environment — payment is simulated. Unpaid orders are automatically
@@ -207,7 +236,7 @@ export default function CheckoutPage() {
             {cart.items.map(item => (
               <div key={item.id} className="flex justify-between items-center py-2 border-b text-gray-700">
                 <span>{item.product_name} &times; {item.quantity}</span>
-                <span className="font-medium">${Number(item.total_price).toFixed(2)}</span>
+                <span className="font-medium">{formatCurrency(Number(item.total_price))}</span>
               </div>
             ))}
           </div>
@@ -253,14 +282,20 @@ export default function CheckoutPage() {
           <div data-testid="shipping-methods" className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
             <h2 className="text-xl font-semibold mb-4">Shipping Methods</h2>
             <div className="space-y-3 text-gray-800">
-              <label className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-blue-50 cursor-pointer transition-colors">
-                <input type="radio" name="shipping" value="standard" defaultChecked className="text-blue-600" />
-                <span className="font-medium">Standard Shipping (3-5 days)</span>
-              </label>
-              <label className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-blue-50 cursor-pointer transition-colors">
-                <input type="radio" name="shipping" value="express" className="text-blue-600" />
-                <span className="font-medium">Express Shipping (1-2 days)</span>
-              </label>
+              {shippingOptions.map(option => (
+                <label key={option.id} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-blue-50 cursor-pointer transition-colors">
+                  <input 
+                    type="radio" 
+                    name="shipping" 
+                    value={option.id} 
+                    checked={shippingMethodId === option.id}
+                    onChange={() => setShippingMethodId(option.id)}
+                    className="text-blue-600" 
+                  />
+                  <span className="font-medium flex-1">{option.name}</span>
+                  <span className="text-gray-600">{formatCurrency(option.price)}</span>
+                </label>
+              ))}
             </div>
           </div>
         </div>
@@ -297,17 +332,23 @@ export default function CheckoutPage() {
             <div className="space-y-2 mb-6">
               <div className="flex justify-between text-gray-600">
                 <span>Subtotal:</span>
-                <span>${subtotal.toFixed(2)}</span>
+                <span>{formatCurrency(subtotal)}</span>
               </div>
               {appliedCoupon && (
                 <div className="flex justify-between text-green-600">
                   <span>Discount ({appliedCoupon.code}):</span>
-                  <span>-${discountAmount.toFixed(2)}</span>
+                  <span>-{formatCurrency(discountAmount)}</span>
+                </div>
+              )}
+              {requiresShippingAddress && (
+                <div className="flex justify-between text-gray-600">
+                  <span>Shipping:</span>
+                  <span>{formatCurrency(shippingCost)}</span>
                 </div>
               )}
               <div className="flex justify-between font-bold text-xl text-gray-900 pt-2 border-t">
                 <span>Total:</span>
-                <span>${total.toFixed(2)}</span>
+                <span>{formatCurrency(total)}</span>
               </div>
             </div>
             <button

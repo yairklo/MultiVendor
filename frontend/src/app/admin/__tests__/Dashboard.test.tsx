@@ -1,6 +1,13 @@
 import { render, screen } from '@testing-library/react'
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { DashboardClient } from '../(cms)/dashboard/DashboardClient'
+
+vi.mock('@/hooks/useCurrency', () => ({
+  useCurrency: () => ({
+    formatCurrency: (amount: number) => `$${Number(amount).toLocaleString()}`,
+    currency: 'USD',
+  }),
+}))
 
 // Data fetching for the dashboard now happens server-side in
 // admin/(cms)/dashboard/page.tsx (an async Server Component, not renderable

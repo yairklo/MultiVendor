@@ -46,10 +46,11 @@ export default async function EditProductPage({
       initialSlug={product.slug}
       initialVariant={firstVariant}
       initialValues={{
-        name: typeof product.name === 'object' ? (product.name?.en || product.name?.he || '') : product.name,
-        description: typeof product.description === 'object'
-          ? (product.description?.en || product.description?.he || '')
-          : (product.description || ''),
+        name_en: typeof product.name === 'object' ? (product.name?.en || '') : (product.name || ''),
+        name_he: typeof product.name === 'object' ? (product.name?.he || '') : '',
+        description_en: typeof product.description === 'object' ? (product.description?.en || '') : (product.description || ''),
+        description_he: typeof product.description === 'object' ? (product.description?.he || '') : '',
+        image_url: product.primary_image_url || product.images?.[0] || '',
         base_price: Number(product.base_price),
         category_id: product.category_id ?? null,
         stock_quantity: firstVariant?.stock_quantity ?? 0,

@@ -5,6 +5,9 @@ import { useProducts } from '@/hooks/useProducts'
 import Link from 'next/link'
 import { useToast } from '@/context/ToastContext'
 import { useConfirm } from '@/context/ConfirmContext'
+import { useCategories } from '@/hooks/useCategories'
+import { useCurrency } from '@/hooks/useCurrency'
+import { Input } from '@/components/ui/input'
 
 import { Button, buttonVariants } from '@/components/ui/button'
 import {
@@ -29,10 +32,30 @@ export function ProductsPageClient({
   const { fetchProducts, deleteProduct } = useProducts()
   const { showToast } = useToast()
   const { confirm } = useConfirm()
+  const { fetchCategories } = useCategories()
+  const { formatCurrency } = useCurrency()
   const [products, setProducts] = useState<any[]>(initialProducts)
+  const [categories, setCategories] = useState<any[]>([])
   const [meta, setMeta] = useState<PaginationMeta | null>(initialMeta)
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(false)
+
+  // Search and Filter
+  const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [categoryId, setCategoryId] = useState<number | null>(null)
+
+  // Bulk Actions
+  const [selectedIds, setSelectedIds] = useState<number[]>([])
+
+  useEffect(() => {
+    fetchCategories().then(setCategories)
+  }, [fetchCategories])
+
+  useEffect(() => {
+    const handle = setTimeout(() => setDebouncedSearch(search), 300)
+    return () => clearTimeout(handle)
+  }, [search])
 
   const skipInitialFetch = useRef(true)
   useEffect(() => {
@@ -40,16 +63,51 @@ export function ProductsPageClient({
       skipInitialFetch.current = false
       return
     }
-    loadProducts(page)
+    loadProducts(page, debouncedSearch, categoryId)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page])
+  }, [page, debouncedSearch, categoryId])
 
-  const loadProducts = async (pageToLoad = page) => {
+  const loadProducts = async (pageToLoad = page, s = search, cid = categoryId) => {
     setLoading(true)
-    const { data, meta } = await fetchProducts(pageToLoad)
+    const { data, meta } = await fetchProducts(pageToLoad, 20, s, cid)
     setProducts(data)
     setMeta(meta)
     setLoading(false)
+  }
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedIds(products.map(p => p.id))
+    } else {
+      setSelectedIds([])
+    }
+  }
+
+  const handleSelectOne = (id: number, checked: boolean) => {
+    if (checked) {
+      setSelectedIds(prev => [...prev, id])
+    } else {
+      setSelectedIds(prev => prev.filter(x => x !== id))
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return
+    const ok = await confirm({
+      title: `Delete ${selectedIds.length} products?`,
+      description: 'This cannot be undone.',
+      confirmLabel: 'Delete All',
+      variant: 'destructive',
+    })
+    if (!ok) return
+    try {
+      await Promise.all(selectedIds.map(id => deleteProduct(id)))
+      setSelectedIds([])
+      await loadProducts()
+      showToast('Products deleted', 'success')
+    } catch (e: any) {
+      showToast(e.message || 'Failed to delete some products', 'error')
+    }
   }
 
   const handleDelete = async (id: number) => {
@@ -73,15 +131,52 @@ export function ProductsPageClient({
     <div>
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Products</h1>
-        <Link href="/admin/products/new" className={buttonVariants()}>
-          + Add Product
-        </Link>
+        <div className="flex space-x-3">
+          {selectedIds.length > 0 && (
+            <Button variant="destructive" onClick={handleBulkDelete}>
+              Delete Selected ({selectedIds.length})
+            </Button>
+          )}
+          <Link href="/admin/products/new" className={buttonVariants()}>
+            + Add Product
+          </Link>
+        </div>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <Input
+          placeholder="Search products..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="max-w-xs"
+        />
+        <select
+          className="flex h-10 w-full sm:max-w-xs items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          value={categoryId || ''}
+          onChange={e => setCategoryId(e.target.value ? Number(e.target.value) : null)}
+        >
+          <option value="">All Categories</option>
+          {categories.map(cat => (
+            <option key={cat.id} value={cat.id}>
+              {typeof cat.name === 'object' ? (cat.name?.en || cat.name?.he || 'Unnamed') : cat.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12">
+                <input
+                  type="checkbox"
+                  checked={products.length > 0 && selectedIds.length === products.length}
+                  onChange={handleSelectAll}
+                  className="rounded border-gray-300"
+                />
+              </TableHead>
+              <TableHead className="w-16"></TableHead>
               <TableHead>Product Name</TableHead>
               <TableHead>Price</TableHead>
               <TableHead>Stock</TableHead>
@@ -91,10 +186,10 @@ export function ProductsPageClient({
           </TableHeader>
           <TableBody>
             {loading ? (
-              Array.from({ length: 5 }, (_, i) => <TableRowSkeleton key={i} columns={5} />)
+              Array.from({ length: 5 }, (_, i) => <TableRowSkeleton key={i} columns={6} />)
             ) : products.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-gray-500">No products found.</TableCell>
+                <TableCell colSpan={6} className="text-center py-8 text-gray-500">No products found.</TableCell>
               </TableRow>
             ) : (
               products.map(product => {
@@ -103,6 +198,28 @@ export function ProductsPageClient({
                 return (
                 <TableRow key={product.id}>
                   <TableCell>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(product.id)}
+                      onChange={(e) => handleSelectOne(product.id, e.target.checked)}
+                      className="rounded border-gray-300"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    {(product.primary_image_url || (product.images && product.images[0])) ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- arbitrary vendor URL, no host allowlist
+                      <img
+                        src={product.primary_image_url || product.images[0]}
+                        alt={typeof product.name === 'object' ? (product.name?.en || 'Product') : product.name}
+                        className="w-10 h-10 object-cover rounded"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 bg-gray-100 rounded flex items-center justify-center text-gray-400 text-[10px] text-center leading-tight">
+                        No image
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell>
                     <div className="font-bold">
                       {typeof product.name === 'object' ? (product.name?.he || product.name?.en || 'Unnamed') : product.name}
                     </div>
@@ -110,7 +227,7 @@ export function ProductsPageClient({
                       {typeof product.description === 'object' ? (product.description?.he || product.description?.en || '') : (product.description || '')}
                     </div>
                   </TableCell>
-                  <TableCell>${product.base_price}</TableCell>
+                  <TableCell>{formatCurrency(product.base_price)}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{stock}</span>

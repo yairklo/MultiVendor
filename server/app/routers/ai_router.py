@@ -262,7 +262,8 @@ async def post_apply_storefront_template(
     db: AsyncSession = Depends(get_db),
 ):
     pages = await store_page_service.apply_storefront_template_service(tenant_slug, template_key, db)
-    return ApplyStorefrontTemplateResponse(template_key=template_key, pages=pages)
+    published_pages = await store_page_service.publish_pages_service(tenant_slug, pages, db)
+    return ApplyStorefrontTemplateResponse(template_key=template_key, pages=published_pages)
 
 
 @ai_router.delete(

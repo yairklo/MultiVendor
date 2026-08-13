@@ -30,8 +30,11 @@ describe('EditProductClient', () => {
         initialSlug="existing-product"
         initialVariant={null}
         initialValues={{
-          name: 'Existing Product',
-          description: 'Old description',
+          name_en: 'Existing Product',
+          name_he: 'מוצר קיים',
+          description_en: 'Old description',
+          description_he: '',
+          image_url: '',
           base_price: 40,
           category_id: null,
           stock_quantity: 0,
@@ -40,8 +43,9 @@ describe('EditProductClient', () => {
       />
     )
 
-    const nameInput = screen.getByLabelText(/product name/i)
+    const nameInput = screen.getByLabelText(/product name \(english\)/i)
     expect(nameInput).toHaveValue('Existing Product')
+    expect(screen.getByLabelText(/product name \(hebrew\)/i)).toHaveValue('מוצר קיים')
     expect(screen.getByLabelText(/base price/i)).toHaveValue(40)
     expect(screen.getByDisplayValue('existing-product')).toBeDisabled()
 
@@ -50,8 +54,60 @@ describe('EditProductClient', () => {
     await user.click(screen.getByRole('button', { name: /save product/i }))
 
     expect(updateProductMock).toHaveBeenCalledWith('7', expect.objectContaining({
-      name: { en: 'Renamed Product', he: 'Renamed Product' },
+      name: { en: 'Renamed Product', he: 'מוצר קיים' },
     }))
     expect(pushMock).toHaveBeenCalledWith('/admin/products')
+  })
+})
+
+describe('EditProductClient image upload', () => {
+  it('pre-fills the image URL input from the product\'s primary image', async () => {
+    render(
+      <EditProductClient
+        productId="8"
+        categories={[]}
+        initialSlug="product-with-image"
+        initialVariant={null}
+        initialValues={{
+          name_en: 'Product With Image',
+          name_he: 'מוצר עם תמונה',
+          description_en: '',
+          description_he: '',
+          image_url: 'https://example.com/existing.jpg',
+          base_price: 20,
+          category_id: null,
+          stock_quantity: 0,
+          is_active: true,
+        }}
+      />
+    )
+
+    const imageInput = screen.getByLabelText(/image url/i)
+    expect(imageInput).toHaveValue('https://example.com/existing.jpg')
+  })
+
+  it('leaves the image URL input blank when the product has no image', async () => {
+    render(
+      <EditProductClient
+        productId="9"
+        categories={[]}
+        initialSlug="product-without-image"
+        initialVariant={null}
+        initialValues={{
+          name_en: 'Product Without Image',
+          name_he: 'מוצר בלי תמונה',
+          description_en: '',
+          description_he: '',
+          image_url: '',
+          base_price: 20,
+          category_id: null,
+          stock_quantity: 0,
+          is_active: true,
+        }}
+      />
+    )
+
+    const imageInput = screen.getByLabelText(/image url/i)
+    expect(imageInput).toHaveValue('')
   })
 })

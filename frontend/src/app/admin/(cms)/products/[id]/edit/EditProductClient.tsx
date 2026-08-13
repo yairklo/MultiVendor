@@ -20,8 +20,11 @@ import {
 import { Input } from '@/components/ui/input'
 
 const formSchema = z.object({
-  name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
-  description: z.string().optional(),
+  name_en: z.string().min(2, { message: 'English name must be at least 2 characters.' }),
+  name_he: z.string().optional(),
+  description_en: z.string().optional(),
+  description_he: z.string().optional(),
+  image_url: z.string().optional(),
   base_price: z.coerce.number().gt(0, 'Price must be positive'),
   category_id: z.coerce.number().optional().nullable(),
   stock_quantity: z.coerce.number().min(0, 'Quantity cannot be negative'),
@@ -57,12 +60,25 @@ export function EditProductClient({
     setLoading(true)
     setError('')
     try {
-      const payload = {
-        name: { en: values.name, he: values.name },
-        description: values.description ? { en: values.description, he: values.description } : undefined,
+      const descriptionEn = values.description_en?.trim()
+      const descriptionHe = values.description_he?.trim()
+      const payload: any = {
+        name: { en: values.name_en, he: values.name_he || values.name_en },
         base_price: values.base_price,
         category_id: values.category_id || undefined,
         is_active: values.is_active,
+      }
+
+      if (descriptionEn || descriptionHe) {
+        payload.description = { en: descriptionEn || '', he: descriptionHe || descriptionEn || '' }
+      }
+
+      // NOTE: server/app/schemas/catalog_schemas.py's ProductUpdateRequest doesn't declare an
+      // `images` field yet (only ProductCreateRequest does), so the backend currently ignores
+      // this on update. We still send it so the edit flow starts working the moment the backend
+      // adds support, without needing another frontend change.
+      if (values.image_url) {
+        payload.images = [values.image_url]
       }
 
       await updateProduct(productId, payload)
@@ -102,34 +118,86 @@ export function EditProductClient({
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Product Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. Vintage T-Shirt" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="name_en"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Product Name (English)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. Vintage T-Shirt" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="name_he"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Product Name (Hebrew)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. חולצת וינטג'" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <div>
               <label className="text-sm font-medium mb-2 block text-gray-500">Slug</label>
               <Input value={slug} disabled readOnly />
             </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="description_en"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description (English)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Description..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="description_he"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description (Hebrew)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="תיאור..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
             <FormField
               control={form.control}
-              name="description"
+              name="image_url"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>Image URL</FormLabel>
                   <FormControl>
-                    <Input placeholder="Description..." {...field} />
+                    <Input placeholder="https://example.com/image.jpg" {...field} />
                   </FormControl>
+                  {field.value && (
+                    // eslint-disable-next-line @next/next/no-img-element -- arbitrary vendor URL, no host allowlist
+                    <img
+                      src={field.value}
+                      alt="Preview"
+                      className="mt-2 h-24 w-24 rounded-lg border border-gray-100 object-cover"
+                    />
+                  )}
                   <FormMessage />
                 </FormItem>
               )}
@@ -141,7 +209,7 @@ export function EditProductClient({
                 name="base_price"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Base Price ($)</FormLabel>
+                    <FormLabel>Base Price</FormLabel>
                     <FormControl>
                       <Input type="number" step="0.01" {...field} />
                     </FormControl>

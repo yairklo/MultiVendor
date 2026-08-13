@@ -5,6 +5,7 @@ import { apiClient } from '@/lib/api/apiClient'
 import { getCookie } from 'cookies-next'
 import { orderStatusClass, orderStatusLabel } from '@/lib/orderStatus'
 import { useToast } from '@/context/ToastContext'
+import { useCurrency } from '@/hooks/useCurrency'
 
 // No real order is ever in plain 'pending' — checkout always creates
 // 'pending_payment', which becomes 'processing' once paid. 'pending' was a
@@ -13,6 +14,7 @@ const MANUAL_STATUSES = ['processing', 'completed', 'cancelled']
 
 export function OrdersPageClient({ initialOrders }: { initialOrders: any[] }) {
   const { showToast } = useToast()
+  const { formatCurrency } = useCurrency()
   const [orders, setOrders] = useState<any[]>(initialOrders)
   const [exporting, setExporting] = useState(false)
   const [updatingId, setUpdatingId] = useState<number | null>(null)
@@ -104,7 +106,7 @@ export function OrdersPageClient({ initialOrders }: { initialOrders: any[] }) {
                     <div className="text-sm text-gray-500">{order.customer_email}</div>
                   )}
                 </td>
-                <td className="p-4">${order.total_amount}</td>
+                <td className="p-4">{formatCurrency(Number(order.total_amount))}</td>
                 <td className="p-4">
                   <div className="flex items-center gap-2">
                     <span className={`px-2 py-1 rounded-full text-xs font-semibold ${

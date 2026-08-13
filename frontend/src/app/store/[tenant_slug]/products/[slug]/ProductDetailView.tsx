@@ -10,6 +10,7 @@ import { totalStock } from '@/lib/stock'
 import { StarRating } from '@/components/ui/star-rating'
 import { Star } from 'lucide-react'
 import { useStorefrontTheme } from '@/context/StorefrontThemeContext'
+import { useCurrency } from '@/hooks/useCurrency'
 
 export function ProductDetailView({
   tenantSlug,
@@ -31,6 +32,7 @@ export function ProductDetailView({
   const { addItem, openDrawer } = useCart()
   const { showToast } = useToast()
   const { theme } = useStorefrontTheme()
+  const { formatCurrency } = useCurrency()
 
   const loadReviews = () => {
     apiClient(`/api/v1/store/${tenantSlug}/products/${slug}/reviews`)
@@ -110,7 +112,7 @@ export function ProductDetailView({
                 </span>
               </div>
             )}
-            <p className="text-xl text-gray-700 mb-4">${product.base_price}</p>
+            <p className="text-xl text-gray-700 mb-4">{formatCurrency(product.base_price)}</p>
             {description && <p className="text-gray-600 mb-4">{description}</p>}
 
             {stockKnown && (

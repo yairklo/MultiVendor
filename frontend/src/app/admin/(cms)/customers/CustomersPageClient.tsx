@@ -10,8 +10,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { useCurrency } from '@/hooks/useCurrency'
 
 export function CustomersPageClient({ initialCustomers }: { initialCustomers: any[] }) {
+  const { formatCurrency } = useCurrency()
   const customers = initialCustomers
 
   return (
@@ -43,7 +45,7 @@ export function CustomersPageClient({ initialCustomers }: { initialCustomers: an
                   </TableCell>
                   <TableCell>{new Date(customer.created_at).toLocaleDateString()}</TableCell>
                   <TableCell>{customer.orders_count}</TableCell>
-                  <TableCell className="font-medium">${Number(customer.total_spent).toFixed(2)}</TableCell>
+                  <TableCell className="font-medium">{formatCurrency(Number(customer.total_spent))}</TableCell>
                   <TableCell className="text-gray-500">
                     {customer.last_order_at ? new Date(customer.last_order_at).toLocaleDateString() : '—'}
                   </TableCell>

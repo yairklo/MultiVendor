@@ -31,6 +31,8 @@ export function HeroBanner({
     >
       {imageUrl && (
         <>
+          {/* eslint-disable-next-line @next/next/no-img-element -- arbitrary AI/admin-authored
+              URL with no host allowlist; see ProductCard.tsx for why next/image isn't used here. */}
           <img src={imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
           <div className="absolute inset-0 bg-black/35" />
         </>
