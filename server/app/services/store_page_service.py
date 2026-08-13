@@ -67,13 +67,45 @@ def _to_published_schema(page: StorePage) -> StorePageSchema:
     )
 
 
+_SAFE_URL_SCHEMES = {"http", "https", "mailto"}
+
+
+def _sanitize_url(url: Any) -> "str | None":
+    """
+    Clamps a free-text URL (a button's actionPayload.href, a section's
+    media.url) to a safe allow-list — http(s), mailto, or a relative/anchor
+    link — the same "strip it, don't guess" enforcement pattern as
+    _sanitize_design_variant_settings/_sanitize_card_style_settings below. An
+    AI-authored or hallucinated 'javascript:'/'data:'/'vbscript:' URL is
+    dropped entirely rather than ever reaching the storefront.
+    """
+    if not isinstance(url, str) or not url.strip():
+        return None
+    url = url.strip()
+    if url.startswith("/") or url.startswith("#"):
+        return url
+    scheme = url.split(":", 1)[0].lower() if ":" in url else ""
+    return url if scheme in _SAFE_URL_SCHEMES else None
+
+
+def _sanitize_action_payload_href(payload: Dict[str, Any]) -> Dict[str, Any]:
+    if "href" not in payload:
+        return payload
+    safe_href = _sanitize_url(payload.get("href"))
+    if safe_href is None:
+        return {k: v for k, v in payload.items() if k != "href"}
+    return {**payload, "href": safe_href}
+
+
 def _sanitize_button_group_settings(settings: Dict[str, Any]) -> Dict[str, Any]:
     """
     button_group is the one section type that drives runtime behavior (a click
     dispatches actionType/actionPayload), so unlike other settings we don't just
     pass it through — any button with an actionType outside the fixed allow-list
     is dropped before it's ever persisted, so the AI can never smuggle an
-    unrecognized action through to the frontend.
+    unrecognized action through to the frontend. actionPayload.href specifically
+    also gets scheme-checked via _sanitize_url, since it's the one free-text URL
+    a click can actually navigate to.
     """
     buttons = settings.get("buttons")
     buttons = buttons if isinstance(buttons, list) else []
@@ -89,7 +121,7 @@ def _sanitize_button_group_settings(settings: Dict[str, Any]) -> Dict[str, Any]:
             "actionType": b["actionType"],
         }
         if isinstance(b.get("actionPayload"), dict):
-            entry["actionPayload"] = b["actionPayload"]
+            entry["actionPayload"] = _sanitize_action_payload_href(b["actionPayload"])
         sanitized.append(entry)
     return {**settings, "buttons": sanitized}
 
@@ -148,8 +180,14 @@ def _sanitize_sections(
             settings = _sanitize_card_style_settings(settings)
 
         entry: Dict[str, Any] = {"id": section_id, "type": section_type, "settings": settings}
-        if raw.get("media"):
-            entry["media"] = raw["media"]
+        media = raw.get("media")
+        if isinstance(media, dict):
+            # A media block with no safe url is dropped whole, not persisted
+            # with a broken/dangerous url — no section should ever end up
+            # pointing at a partial or unsafe media reference.
+            safe_url = _sanitize_url(media.get("url"))
+            if safe_url is not None:
+                entry["media"] = {**media, "url": safe_url}
 
         if section_type == "grid_container":
             children = raw.get("children") if isinstance(raw.get("children"), list) else []

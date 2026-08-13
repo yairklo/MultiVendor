@@ -106,11 +106,13 @@ async def execute_tool(
     structured tool result instead of propagating, so a single bad tool call
     surfaces to the agent loop (and the user) instead of crashing the chat turn.
 
-    `delete_product` and `update_order_status` (when cancelling) never perform
-    the real action here — they stage an AIPendingAction and return a
-    pending_confirmation instead; only a human clicking Confirm in the UI
-    (ai_pending_action_service.confirm_pending_action_service, reached through
-    the same tenant-admin-gated endpoint as everything else) actually runs them.
+    `delete_product`, `update_order_status` (when cancelling), and
+    `update_page_sections` (when it would wipe most/all of an existing page's
+    content) never perform the real action here — they stage an
+    AIPendingAction and return a pending_confirmation instead; only a human
+    clicking Confirm in the UI (ai_pending_action_service.confirm_pending_action_service,
+    reached through the same tenant-admin-gated endpoint as everything else)
+    actually runs them.
     """
     try:
         if tool_name == "list_page_targets":
@@ -135,6 +137,31 @@ async def execute_tool(
             sections = raw_input.get("sections")
             if not page_key or page_type not in ("static_page", "template") or not isinstance(sections, list):
                 raise ValueError("page_key, page_type, and a sections array are required")
+
+            # A brand-new page (404) is never gated — there's nothing to wipe.
+            # An existing page with real content that this edit would reduce to
+            # <=20% of its current sections (covers the "sections: []" wipe and
+            # near-wipes) is staged instead of applied, same as delete_product.
+            existing_section_count = None
+            try:
+                existing = await store_page_service.get_page_schema_service(tenant_slug, page_key, page_type, db)
+                existing_section_count = len(existing.sections)
+            except HTTPException:
+                pass
+
+            if existing_section_count is not None and existing_section_count >= 3 and \
+                    len(sections) <= existing_section_count * 0.2:
+                summary = (
+                    f"Replace \"{page_key}\"'s {existing_section_count} sections with {len(sections)} — this "
+                    f"removes most of the page's current content."
+                )
+                pending = await ai_pending_action_service.create_pending_action_service(
+                    tenant_slug, "update_page_sections", dict(raw_input), summary, db
+                )
+                return ToolExecutionResult(
+                    tool_name, {"status": "confirmation_required", "summary": summary}, False, pending_confirmation=pending
+                )
+
             schema = await store_page_service.upsert_page_sections_service(
                 tenant_slug, page_key, page_type, sections, db,
                 background_color=raw_input.get("background_color"),

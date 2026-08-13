@@ -16,7 +16,11 @@ PENDING_ACTION_TTL_MINUTES = 15
 # Tools that never execute directly — create_pending_action_service stages them
 # instead, and only confirm_pending_action_service (triggered by a real button
 # click, never the AI itself) actually runs the underlying service call.
-GATED_TOOLS = ("delete_product", "update_order_status", "apply_storefront_template")
+# delete_product/apply_storefront_template are always gated; update_order_status
+# only when cancelling; update_page_sections only when it would wipe most/all
+# of an existing page's content (see ai_tool_executor.py's update_page_sections
+# handler for the exact condition) — a small edit still applies immediately.
+GATED_TOOLS = ("delete_product", "update_order_status", "apply_storefront_template", "update_page_sections")
 
 
 async def _get_tenant_id(tenant_slug: str, db: AsyncSession) -> int:
@@ -79,6 +83,12 @@ async def confirm_pending_action_service(tenant_slug: str, confirmation_id: str,
             result = {"status": "ok", "product_id": args["product_id"], "deleted": True}
         elif action.tool_name == "update_order_status":
             result = await order_service.update_order_status_service(tenant_slug, args["order_id"], args["status"], db)
+        elif action.tool_name == "update_page_sections":
+            schema = await store_page_service.upsert_page_sections_service(
+                tenant_slug, args["page_key"], args["page_type"], args["sections"], db,
+                background_color=args.get("background_color"), text_color=args.get("text_color"),
+            )
+            result = schema.model_dump(mode="json")
         elif action.tool_name == "apply_storefront_template":
             # Seeds the draft pages then publishes them all in one transaction
             # (publish_pages_service), so a failure partway through can't leave

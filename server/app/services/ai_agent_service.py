@@ -43,8 +43,16 @@ _NO_PAGE_CONTEXT_INSTRUCTION = (
     "returned. "
 )
 
+_AMBIGUITY_INSTRUCTION = (
+    "If a request doesn't clearly identify which page, product, order, or other entity it's about — or is "
+    "otherwise too vague or confusing to act on with confidence — reply asking a short clarifying question "
+    "instead of guessing which one was meant. This is about WHICH target, not whether to act: once the target "
+    "is clear, the 'just do it' rule below for reversible changes still applies unchanged. "
+)
+
 _SYSTEM_INSTRUCTION_TEMPLATE = (
     "{context_instruction}"
+    "{ambiguity_instruction}"
     "Call exactly ONE tool per turn and wait for its result before calling another — never call multiple tools "
     "in parallel in the same turn. Prefer a read tool (get_product, get_order_details, list_orders, ...) before "
     "an update when you don't already know the current state. "
@@ -102,13 +110,52 @@ def is_gemini_configured() -> bool:
     return bool(settings.GEMINI_API_KEY)
 
 
+_DEGENERATE_INPUT_REPLY = (
+    "I couldn't understand that message — could you rephrase what you'd like me to do?"
+)
+
+
+def _is_degenerate_input(message: str) -> bool:
+    """
+    True for input carrying no real signal: empty/whitespace-only, or
+    character-level spam (a single character, or a short repeating pattern of
+    2-5 characters) making up the overwhelming majority of the message.
+    Deliberately language-agnostic — no word lists — so it never
+    false-positives on short legitimate Hebrew/English text; it only trips on
+    degenerate patterns like "aaaaaaaa..." or "asdasdasd...". Checked before
+    any Gemini call so junk input never costs a real API call.
+    """
+    stripped = message.strip()
+    if not stripped:
+        return True
+    if len(stripped) < 8:
+        return False  # too short for a repetition signal to mean anything
+
+    most_common_count = max(stripped.count(c) for c in set(stripped))
+    if most_common_count / len(stripped) > 0.9:
+        return True
+
+    for period in range(2, 6):
+        if len(stripped) < period * 3:
+            continue
+        pattern = stripped[:period]
+        repeated = (pattern * (len(stripped) // period + 1))[: len(stripped)]
+        matches = sum(1 for a, b in zip(stripped, repeated) if a == b)
+        if matches / len(stripped) > 0.9:
+            return True
+
+    return False
+
+
 def _build_system_instruction(page_key: Optional[str], page_type: Optional[str]) -> str:
     context_instruction = (
         _PAGE_CONTEXT_INSTRUCTION.format(page_key=page_key, page_type=page_type)
         if page_key is not None
         else _NO_PAGE_CONTEXT_INSTRUCTION
     )
-    return _SYSTEM_INSTRUCTION_HEADER + _SYSTEM_INSTRUCTION_TEMPLATE.format(context_instruction=context_instruction)
+    return _SYSTEM_INSTRUCTION_HEADER + _SYSTEM_INSTRUCTION_TEMPLATE.format(
+        context_instruction=context_instruction, ambiguity_instruction=_AMBIGUITY_INSTRUCTION
+    )
 
 
 def _build_gemini_tools():
@@ -181,6 +228,13 @@ def _trim_history_for_persistence(history: List[Any], round_results: List[Dict[s
 async def run_agent_turn(
     db: AsyncSession, tenant_slug: str, user_message: str, page_key: Optional[str], page_type: Optional[str]
 ) -> Dict[str, Any]:
+    if _is_degenerate_input(user_message):
+        # Checked before is_gemini_configured()/client construction on purpose —
+        # junk input never reaches (and never costs) a real Gemini call, mock or not.
+        result = {"reply": _DEGENERATE_INPUT_REPLY, "tool_calls": [], "used_provider": "mock"}
+        await _persist_turn(tenant_slug, page_key, page_type, user_message, result, db)
+        return result
+
     if not is_gemini_configured():
         result = await run_mock_agent(user_message, tenant_slug, page_key, page_type, db)
         result = {**result, "used_provider": "mock"}
