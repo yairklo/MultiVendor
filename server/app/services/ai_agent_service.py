@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,15 +18,33 @@ MAX_TOOL_TURNS = 6
 # bounce off the model.
 MAX_VALIDATION_RETRIES = 3
 
-_SYSTEM_INSTRUCTION_TEMPLATE = (
+_SYSTEM_INSTRUCTION_HEADER = (
     "You are a proactive store-management co-pilot for a multi-vendor e-commerce admin panel — a full "
     "assistant to the store owner, not just a layout editor. You can edit a page's JSON section tree; create, "
     "update, archive, or (with confirmation) delete products; adjust inventory; create and toggle coupons; "
     "look up and update orders; and pull sales/customer/inventory analytics — all via the provided tools, every "
     "one of which is automatically scoped to this vendor's own store. You never need to (and cannot) specify "
     "which vendor. "
+)
+
+# Used when this chat IS scoped to a real page (the per-page layout editor).
+_PAGE_CONTEXT_INSTRUCTION = (
     "The user is currently editing page_key=\"{page_key}\" page_type=\"{page_type}\" (only relevant to the page-"
     "layout tools — most of your tools aren't about any particular page at all). "
+)
+
+# Used when this chat is the tenant-wide global copilot — there is no current page at all.
+_NO_PAGE_CONTEXT_INSTRUCTION = (
+    "This conversation is NOT scoped to any specific page — you're the general store copilot, with no page "
+    "currently open. If the user wants to view or edit a page's layout, call list_page_targets first to see "
+    "what pages/templates exist, or ask them which page (or what new page_key) they mean, before calling "
+    "get_page_schema or update_page_sections. Never invent, reuse, or guess a placeholder page_key such as "
+    "'global' — every page-layout tool call must use a real page_key the user named or list_page_targets "
+    "returned. "
+)
+
+_SYSTEM_INSTRUCTION_TEMPLATE = (
+    "{context_instruction}"
     "Call exactly ONE tool per turn and wait for its result before calling another — never call multiple tools "
     "in parallel in the same turn. Prefer a read tool (get_product, get_order_details, list_orders, ...) before "
     "an update when you don't already know the current state. "
@@ -67,7 +85,7 @@ _SYSTEM_INSTRUCTION_TEMPLATE = (
     "than 2 levels deep. A container's own free-text background_color is ignored; the only way to theme a "
     "grid_container/two_column_layout is settings.design_variant ('primary'|'accent'|'secondary'|'muted'|"
     "'neutral'), unlike the 7 original section types which use background_color/text_color. "
-    "You can create additional static pages beyond the one currently open — call update_page_sections with a "
+    "You can create additional static pages at any time — call update_page_sections with a "
     "new, descriptive page_key (page_type='static_page') and it is created automatically. If the user asks for "
     "a button that leads to a page that doesn't exist yet, create that page first (or in the same reply), then "
     "add the button with actionType=NAVIGATE and actionPayload={{page_key: '<the new page's page_key>'}} — never "
@@ -82,6 +100,15 @@ _SYSTEM_INSTRUCTION_TEMPLATE = (
 
 def is_gemini_configured() -> bool:
     return bool(settings.GEMINI_API_KEY)
+
+
+def _build_system_instruction(page_key: Optional[str], page_type: Optional[str]) -> str:
+    context_instruction = (
+        _PAGE_CONTEXT_INSTRUCTION.format(page_key=page_key, page_type=page_type)
+        if page_key is not None
+        else _NO_PAGE_CONTEXT_INSTRUCTION
+    )
+    return _SYSTEM_INSTRUCTION_HEADER + _SYSTEM_INSTRUCTION_TEMPLATE.format(context_instruction=context_instruction)
 
 
 def _build_gemini_tools():
@@ -101,7 +128,8 @@ def _build_gemini_tools():
 
 
 async def _persist_turn(
-    tenant_slug: str, page_key: str, page_type: str, user_message: str, result: Dict[str, Any], db: AsyncSession,
+    tenant_slug: str, page_key: Optional[str], page_type: Optional[str], user_message: str,
+    result: Dict[str, Any], db: AsyncSession,
     gemini_history_json: List[Dict[str, Any]] | None = None,
 ) -> None:
     new_messages = [
@@ -151,7 +179,7 @@ def _trim_history_for_persistence(history: List[Any], round_results: List[Dict[s
 
 
 async def run_agent_turn(
-    db: AsyncSession, tenant_slug: str, user_message: str, page_key: str, page_type: str
+    db: AsyncSession, tenant_slug: str, user_message: str, page_key: Optional[str], page_type: Optional[str]
 ) -> Dict[str, Any]:
     if not is_gemini_configured():
         result = await run_mock_agent(user_message, tenant_slug, page_key, page_type, db)
@@ -165,7 +193,7 @@ async def run_agent_turn(
 
     client = Client(api_key=settings.GEMINI_API_KEY)
     tools = _build_gemini_tools()
-    system_instruction = _SYSTEM_INSTRUCTION_TEMPLATE.format(page_key=page_key, page_type=page_type)
+    system_instruction = _build_system_instruction(page_key, page_type)
 
     stored_history_json = await ai_conversation_service.load_gemini_history_json(
         tenant_slug, page_key, page_type, db

@@ -1,8 +1,14 @@
 import { apiClient } from '@/lib/api/apiClient'
 import { getCookie } from 'cookies-next'
 import {
-  AIChatResponse, ConversationResponse, PageType, StorePageSchema, StorePageSummary, StorePageVersionSummary,
+  AIChatResponse, ConversationResponse, PageContext, PageType, StorePageSchema, StorePageSummary,
+  StorePageVersionSummary,
 } from '@/lib/ai/types'
+
+/** page_key/page_type query params for a page-scoped request, or nothing for the global copilot. */
+function pageContextParams(pageContext: PageContext): Record<string, string> {
+  return pageContext ? { page_key: pageContext.pageKey, page_type: pageContext.pageType } : {}
+}
 
 export function useAiLayout() {
   const tenantSlug = String(getCookie('tenantSlug') || 'test-tenant')
@@ -20,10 +26,14 @@ export function useAiLayout() {
     return apiClient(`/api/v1/admin/store/${tenantSlug}/ai/page-schema?${params.toString()}`)
   }
 
-  const sendChatMessage = async (message: string, pageKey: string, pageType: PageType): Promise<AIChatResponse> => {
+  const sendChatMessage = async (message: string, pageContext: PageContext): Promise<AIChatResponse> => {
     return apiClient(`/api/v1/admin/store/${tenantSlug}/ai/chat`, {
       method: 'POST',
-      body: JSON.stringify({ message, page_key: pageKey, page_type: pageType }),
+      body: JSON.stringify({
+        message,
+        page_key: pageContext?.pageKey ?? null,
+        page_type: pageContext?.pageType ?? null,
+      }),
     })
   }
 
@@ -39,14 +49,16 @@ export function useAiLayout() {
     })
   }
 
-  const fetchConversation = async (pageKey: string, pageType: PageType): Promise<ConversationResponse> => {
-    const params = new URLSearchParams({ page_key: pageKey, page_type: pageType })
-    return apiClient(`/api/v1/admin/store/${tenantSlug}/ai/conversation?${params.toString()}`)
+  const fetchConversation = async (pageContext: PageContext): Promise<ConversationResponse> => {
+    const params = new URLSearchParams(pageContextParams(pageContext))
+    const query = params.toString()
+    return apiClient(`/api/v1/admin/store/${tenantSlug}/ai/conversation${query ? `?${query}` : ''}`)
   }
 
-  const clearConversation = async (pageKey: string, pageType: PageType): Promise<void> => {
-    const params = new URLSearchParams({ page_key: pageKey, page_type: pageType })
-    await apiClient(`/api/v1/admin/store/${tenantSlug}/ai/conversation?${params.toString()}`, {
+  const clearConversation = async (pageContext: PageContext): Promise<void> => {
+    const params = new URLSearchParams(pageContextParams(pageContext))
+    const query = params.toString()
+    await apiClient(`/api/v1/admin/store/${tenantSlug}/ai/conversation${query ? `?${query}` : ''}`, {
       method: 'DELETE',
     })
   }

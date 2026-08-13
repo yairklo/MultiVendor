@@ -297,13 +297,24 @@ CREATE TABLE store_page_versions (
 CREATE TABLE ai_conversations (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     tenant_id INT NOT NULL,
-    page_key VARCHAR(100) NOT NULL,
-    page_type ENUM('static_page', 'template') NOT NULL,
+    -- Both NULL together = the tenant-wide global copilot conversation, not tied
+    -- to any real page (never a fake page_key like 'global'). A real page's
+    -- conversation always has both columns set.
+    page_key VARCHAR(100) NULL,
+    page_type ENUM('static_page', 'template') NULL,
     gemini_history JSON NULL,
     messages JSON NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    -- MySQL's unique index treats every NULL as distinct, so a plain UNIQUE
+    -- (tenant_id, page_key, page_type) would NOT stop two concurrent first
+    -- messages to the global copilot from each inserting their own
+    -- (tenant_id, NULL, NULL) row. These generated columns COALESCE NULL to ''
+    -- purely so the unique index below actually enforces "one global thread per
+    -- tenant" too — application code never reads or writes them directly.
+    page_key_uq VARCHAR(100) AS (COALESCE(page_key, '')) STORED,
+    page_type_uq VARCHAR(20) AS (COALESCE(page_type, '')) STORED,
     FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
-    CONSTRAINT uq_ai_conversations_tenant_key_type UNIQUE (tenant_id, page_key, page_type)
+    CONSTRAINT uq_ai_conversations_tenant_key_type UNIQUE (tenant_id, page_key_uq, page_type_uq)
 ) ENGINE=InnoDB;
 
 CREATE INDEX idx_store_page_versions_page ON store_page_versions(tenant_id, store_page_id, created_at);

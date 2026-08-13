@@ -9,7 +9,7 @@ exercised identically either way.
 """
 import re
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -100,8 +100,16 @@ def _format_markdown_table(headers: List[str], rows: List[List[str]]) -> str:
     return "\n".join(lines)
 
 
+_NO_PAGE_FALLBACK_REPLY = (
+    "I'm running in offline mock mode (no GEMINI_API_KEY set). From the general store copilot I understand "
+    "\"show low stock\", \"sales report\", \"list orders\", \"add a product called X for $Y\", or \"create a "
+    "coupon CODE for X% off\" — page-layout edits (resize/move/add/remove a section) need a specific page open, "
+    "so try that from the page editor instead. Or set GEMINI_API_KEY to use the real Gemini agent."
+)
+
+
 async def run_mock_agent(
-    user_message: str, tenant_slug: str, page_key: str, page_type: str, db: AsyncSession
+    user_message: str, tenant_slug: str, page_key: Optional[str], page_type: Optional[str], db: AsyncSession
 ) -> Dict[str, Any]:
     tool_calls: List[Dict[str, Any]] = []
 
@@ -175,6 +183,12 @@ async def run_mock_agent(
         if result.is_error:
             return {"reply": f"I tried to create that product but it failed (mock mode): {result.output.get('error')}", "tool_calls": tool_calls}
         return {"reply": f"Done (mock mode) — created product '{name}' at ${price:.2f}.", "tool_calls": tool_calls}
+
+    if page_key is None:
+        # No page open (the global copilot) — none of the section-editing commands
+        # below apply without a real page_key, and unlike the real Gemini agent
+        # there's no list_page_targets reasoning step in mock mode to fall back on.
+        return {"reply": _NO_PAGE_FALLBACK_REPLY, "tool_calls": tool_calls}
 
     get_result = await execute_tool("get_page_schema", {"page_key": page_key, "page_type": page_type}, tenant_slug, db)
     tool_calls.append({"name": "get_page_schema", "input": {"page_key": page_key, "page_type": page_type}, "output": get_result.output, "is_error": get_result.is_error})

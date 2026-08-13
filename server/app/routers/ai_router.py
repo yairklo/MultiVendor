@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +17,11 @@ from app.services.catalog_service import get_store_config_service
 from app.schemas.tenant_schemas import TenantSettingsSchema
 
 ai_router = APIRouter(prefix="/api/v1/admin/store/{tenant_slug}/ai", tags=["AI Layout & Product Assistant"])
+
+
+def _require_both_or_neither(page_key: Optional[str], page_type: Optional[str]) -> None:
+    if (page_key is None) != (page_type is None):
+        raise HTTPException(status_code=400, detail="page_key and page_type must both be provided or both omitted")
 
 
 @ai_router.get(
@@ -113,10 +120,11 @@ async def post_ai_chat(
     result = await run_agent_turn(db, tenant_slug, req.message, req.page_key, req.page_type)
 
     page = None
-    try:
-        page = await store_page_service.get_page_schema_service(tenant_slug, req.page_key, req.page_type, db)
-    except HTTPException:
-        pass
+    if req.page_key is not None:
+        try:
+            page = await store_page_service.get_page_schema_service(tenant_slug, req.page_key, req.page_type, db)
+        except HTTPException:
+            pass
 
     pending = result.get("pending_confirmation")
     return AIChatResponse(
@@ -218,16 +226,21 @@ async def post_revert_page_version(
 @ai_router.get(
     "/conversation",
     response_model=ConversationResponse,
-    summary="Get the AI Chat History for a Page",
-    description="Restores the visible chat transcript for this page — empty if nothing has been asked yet.",
+    summary="Get the AI Chat History for a Page (or the Global Copilot)",
+    description=(
+        "Restores the visible chat transcript — for a specific page's conversation if page_key/page_type are "
+        "given, or the tenant-wide global copilot conversation if both are omitted. Empty if nothing's been "
+        "asked yet."
+    ),
 )
 async def get_conversation(
-    page_key: str = Query(...),
-    page_type: PageType = Query(...),
+    page_key: Optional[str] = Query(default=None),
+    page_type: Optional[PageType] = Query(default=None),
     tenant_slug: str = Path(...),
     admin: User = Depends(get_tenant_admin),
     db: AsyncSession = Depends(get_db),
 ):
+    _require_both_or_neither(page_key, page_type)
     messages = await ai_conversation_service.get_conversation_messages_service(tenant_slug, page_key, page_type, db)
     return ConversationResponse(messages=messages)
 
@@ -270,14 +283,19 @@ async def post_apply_storefront_template(
     "/conversation",
     status_code=204,
     summary="Start a New Conversation",
-    description="Clears this page's chat memory, both the visible transcript and the AI's own recollection of it.",
+    description=(
+        "Clears the chat memory — for a specific page if page_key/page_type are given, or the tenant-wide "
+        "global copilot conversation if both are omitted — both the visible transcript and the AI's own "
+        "recollection of it."
+    ),
 )
 async def delete_conversation(
-    page_key: str = Query(...),
-    page_type: PageType = Query(...),
+    page_key: Optional[str] = Query(default=None),
+    page_type: Optional[PageType] = Query(default=None),
     tenant_slug: str = Path(...),
     admin: User = Depends(get_tenant_admin),
     db: AsyncSession = Depends(get_db),
 ):
+    _require_both_or_neither(page_key, page_type)
     await ai_conversation_service.clear_conversation_service(tenant_slug, page_key, page_type, db)
     return None

@@ -55,7 +55,7 @@ export default function AiLayoutPage() {
 
     // Restore the real persisted conversation for this page, rather than
     // just showing an empty drawer — the AI genuinely remembers this history too.
-    fetchConversation(pageKey, pageType)
+    fetchConversation({ pageKey, pageType })
       .then((res) => setMessages(res.messages.map((m) => ({ role: m.role, text: m.text, toolCalls: m.tool_calls ?? undefined }))))
       .catch(() => setMessages([]))
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -69,7 +69,7 @@ export default function AiLayoutPage() {
     setMessages((prev) => [...prev, { role: 'user', text: message }])
     setIsBusy(true)
     try {
-      const result = await sendChatMessage(message, pageKey, pageType)
+      const result = await sendChatMessage(message, { pageKey, pageType })
       setProvider(result.used_provider)
       if (result.page) setPage(result.page)
       setMessages((prev) => [
@@ -129,7 +129,7 @@ export default function AiLayoutPage() {
 
   async function handleNewConversation() {
     try {
-      await clearConversation(pageKey, pageType)
+      await clearConversation({ pageKey, pageType })
       setMessages([])
     } catch (err: any) {
       showToast(err.message || 'Failed to start a new conversation', 'error')

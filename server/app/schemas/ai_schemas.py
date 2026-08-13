@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any, Literal
-from pydantic import BaseModel, ConfigDict, Field, field_serializer
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
 
 SectionType = Literal[
     "hero_banner", "product_grid", "video_embed", "text_block", "gallery", "button_group", "table",
@@ -106,8 +106,16 @@ class StorePageSummary(BaseModel):
 
 class AIChatRequest(BaseModel):
     message: str = Field(..., min_length=1)
-    page_key: str = Field(..., min_length=1)
-    page_type: PageType
+    # None means "the tenant-wide global copilot conversation" — not tied to any
+    # real page. A real page's conversation must supply both; never just one.
+    page_key: Optional[str] = Field(None, min_length=1)
+    page_type: Optional[PageType] = None
+
+    @model_validator(mode="after")
+    def _page_key_and_type_together(self) -> "AIChatRequest":
+        if (self.page_key is None) != (self.page_type is None):
+            raise ValueError("page_key and page_type must both be provided or both omitted")
+        return self
 
 class ToolCallRecord(BaseModel):
     name: str
