@@ -1,3 +1,5 @@
+"use client"
+
 import { AlertTriangle } from 'lucide-react'
 import { FormEvent, KeyboardEvent, useState } from 'react'
 import { ChatMessage } from '@/lib/ai/types'
