@@ -1,3 +1,5 @@
+"use client"
+
 import { useState } from 'react'
 import { History, RotateCcw } from 'lucide-react'
 import { StorePageVersionSummary } from '@/lib/ai/types'
