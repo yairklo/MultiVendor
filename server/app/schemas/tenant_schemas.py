@@ -96,3 +96,19 @@ class SubscriptionPlanResponse(BaseModel):
     max_products: int
     max_storage_mb: int
     features_json: Dict[str, Any]
+
+class SubscriptionPlanInfo(BaseModel):
+    plan_code: PlanCode
+    max_products: int
+    max_storage_mb: int
+
+class DailySalesPoint(BaseModel):
+    date: Optional[str] = None
+    total_sales: float
+    order_count: int
+
+class TenantAnalyticsResponse(BaseModel):
+    data: List[DailySalesPoint]
+    total_revenue: float
+    orders_count: int
+    aov: float

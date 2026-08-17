@@ -125,3 +125,10 @@ class CouponResponse(BaseModel):
     used_count: int
     valid_until: datetime
     is_active: bool = True
+
+class StatusResponse(BaseModel):
+    status: str = "ok"
+
+class OrderStatusUpdateResponse(BaseModel):
+    status: str
+    order_status: OrderStatus

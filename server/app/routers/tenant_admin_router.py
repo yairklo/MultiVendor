@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, status, Query, Path
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Optional
+from typing import Optional, Literal
 from fastapi.responses import StreamingResponse
 from app.db.session import get_db
 from app.deps import get_tenant_admin
@@ -11,9 +11,17 @@ from app.schemas.catalog_schemas import (
     ProductVariantSchema, CategoryCreateRequest, CategoryResponse,
     ProductReviewResponse
 )
-from app.schemas.order_schemas import OrderResponse, CouponCreateRequest, CouponResponse
+from app.schemas.order_schemas import (
+    OrderResponse, CouponCreateRequest, CouponResponse,
+    OrderStatusUpdateResponse
+)
 from app.schemas.auth_schemas import CustomerSummaryResponse
-from app.schemas.tenant_schemas import TenantSettingsSchema, TenantUpdateSchema, TenantResponse, TenantSettingsUpdateSchema
+from app.schemas.tenant_schemas import (
+    TenantSettingsSchema, TenantUpdateSchema, TenantResponse, TenantSettingsUpdateSchema,
+    SubscriptionPlanInfo, TenantAnalyticsResponse
+)
+from app.schemas.ai_schemas import TopSellingProduct
+from app.schemas.common_schemas import PlanCode
 from app.services.catalog_service import (
     create_category_service, delete_category_service,
     create_product_service, get_admin_product_service, update_product_service, delete_product_service,
@@ -51,7 +59,7 @@ async def create_category(
 ):
     return await create_category_service(tenant_slug, req, db)
 
-@tenant_admin_router.get("/categories")
+@tenant_admin_router.get("/categories", response_model=list[CategoryResponse])
 async def get_categories(
     tenant_slug: str = Path(...),
     admin: User = Depends(get_tenant_admin),
@@ -173,18 +181,20 @@ async def update_tenant_domain(
 # SUBSCRIPTION
 @tenant_admin_router.post(
     "/subscription/upgrade",
+    response_model=SubscriptionPlanInfo,
     summary="Upgrade Subscription Plan"
 )
 async def upgrade_subscription(
-    target_plan_code: str = Query(...),
+    target_plan_code: PlanCode = Query(...),
     tenant_slug: str = Path(...),
     admin: User = Depends(get_tenant_admin),
     db: AsyncSession = Depends(get_db)
 ):
-    return await upgrade_subscription_service(tenant_slug, target_plan_code, db)
+    return await upgrade_subscription_service(tenant_slug, target_plan_code.value, db)
 
 @tenant_admin_router.get(
     "/subscription/current",
+    response_model=SubscriptionPlanInfo,
     summary="Get Current Subscription Plan"
 )
 async def get_current_subscription(
@@ -222,7 +232,7 @@ async def get_tenant_reviews(
 @tenant_admin_router.patch("/reviews/{review_id}/status", response_model=ProductReviewResponse)
 async def update_review_status(
     review_id: int = Path(...),
-    status: str = Query(...),
+    status: Literal["approved", "rejected", "pending"] = Query(...),
     tenant_slug: str = Path(...),
     admin: User = Depends(get_tenant_admin),
     db: AsyncSession = Depends(get_db)
@@ -230,10 +240,10 @@ async def update_review_status(
     return await update_review_status_service(tenant_slug, review_id, status, db)
 
 # ORDERS STATUS
-@tenant_admin_router.patch("/orders/{order_id}/status")
+@tenant_admin_router.patch("/orders/{order_id}/status", response_model=OrderStatusUpdateResponse)
 async def update_order_status(
     order_id: int = Path(...),
-    status: str = Query(...),
+    status: Literal["processing", "completed", "cancelled"] = Query(...),
     tenant_slug: str = Path(...),
     admin: User = Depends(get_tenant_admin),
     db: AsyncSession = Depends(get_db)
@@ -244,25 +254,26 @@ async def update_order_status(
 @tenant_admin_router.get(
     "/reports/export",
     summary="Export Reports (CSV)",
-    description="Generates a downloadable CSV report for the specified report type (e.g. 'orders').",
+    description="Generates a downloadable CSV report for the specified report type (currently only 'orders').",
     responses={
-        200: {"description": "CSV stream starting."}
+        200: {
+            "description": "CSV stream starting.",
+            "content": {"text/csv": {"schema": {"type": "string", "format": "binary"}}}
+        }
     }
 )
 async def export_reports(
-    report_type: str = Query(..., description="Type of report to export (e.g., 'orders')"),
+    report_type: Literal["orders"] = Query(..., description="Type of report to export."),
     tenant_slug: str = Path(...),
     admin: User = Depends(get_tenant_admin),
     db: AsyncSession = Depends(get_db)
 ):
-    if report_type == "orders":
-        return await export_orders_csv_service(tenant_slug, db)
-    # can add more later
-    pass
+    return await export_orders_csv_service(tenant_slug, db)
 
 # ANALYTICS
 @tenant_admin_router.get(
     "/analytics",
+    response_model=TenantAnalyticsResponse,
     summary="Get Store Analytics"
 )
 async def get_analytics(
@@ -276,6 +287,7 @@ async def get_analytics(
 
 @tenant_admin_router.get(
     "/analytics/top-products",
+    response_model=list[TopSellingProduct],
     summary="Get Top Selling Products"
 )
 async def get_top_selling_products(
