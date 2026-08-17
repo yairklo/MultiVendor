@@ -267,3 +267,75 @@ async def test_marketplace_visibility_toggle_is_tenant_isolated(async_client: As
         json={"show_all_products_in_marketplace": True},
     )
     assert response.status_code == 403
+
+async def _checkout_two_vendor_cart(async_client: AsyncClient, headers: dict) -> dict:
+    cart_id = str(uuid.uuid4())
+    await async_client.post(f"/api/v1/marketplace/cart/{cart_id}/items", json={"variant_id": 1, "quantity": 1}, headers=headers)
+    await async_client.post(f"/api/v1/marketplace/cart/{cart_id}/items", json={"variant_id": 2, "quantity": 1}, headers=headers)
+    checkout = await async_client.post(
+        "/api/v1/marketplace/checkout",
+        json={"cart_id": cart_id, "shipping_address": {"city": "Tel Aviv"}, "payment_token": str(uuid.uuid4())},
+        headers=headers,
+    )
+    assert checkout.status_code == 201
+    return checkout.json()
+
+@pytest.mark.asyncio
+async def test_get_master_order_returns_all_sub_orders(async_client: AsyncClient, seed_tokens):
+    headers = {"Authorization": seed_tokens["customer_a"]}
+    master = await _checkout_two_vendor_cart(async_client, headers)
+
+    response = await async_client.get(f"/api/v1/marketplace/orders/{master['id']}", headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["master_order_number"] == master["master_order_number"]
+    assert float(data["total_amount"]) == float(master["total_amount"])
+    assert {so["id"] for so in data["sub_orders"]} == {so["id"] for so in master["sub_orders"]}
+    assert all(so["status"] == "pending_payment" for so in data["sub_orders"])
+
+@pytest.mark.asyncio
+async def test_get_master_order_is_owner_scoped(async_client: AsyncClient, seed_tokens):
+    # customer_a and customer_b are the same global user in this seed (see
+    # conftest.py), so ownership here is instead verified against a party
+    # with no claim at all on the order: a tenant_admin who never checked out.
+    headers = {"Authorization": seed_tokens["customer_a"]}
+    master = await _checkout_two_vendor_cart(async_client, headers)
+
+    other_headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+    response = await async_client.get(f"/api/v1/marketplace/orders/{master['id']}", headers=other_headers)
+    assert response.status_code == 404
+
+@pytest.mark.asyncio
+async def test_pay_master_order_marks_every_sub_order_processing(async_client: AsyncClient, seed_tokens):
+    headers = {"Authorization": seed_tokens["customer_a"]}
+    master = await _checkout_two_vendor_cart(async_client, headers)
+
+    pay = await async_client.post(f"/api/v1/marketplace/orders/{master['id']}/pay", headers=headers)
+    assert pay.status_code == 200
+    data = pay.json()
+    assert len(data["sub_orders"]) == 2
+    assert all(so["status"] == "processing" for so in data["sub_orders"])
+
+    # Reflected via the same read path too, not just the pay response.
+    fetched = await async_client.get(f"/api/v1/marketplace/orders/{master['id']}", headers=headers)
+    assert all(so["status"] == "processing" for so in fetched.json()["sub_orders"])
+
+@pytest.mark.asyncio
+async def test_pay_master_order_twice_fails(async_client: AsyncClient, seed_tokens):
+    headers = {"Authorization": seed_tokens["customer_a"]}
+    master = await _checkout_two_vendor_cart(async_client, headers)
+
+    first = await async_client.post(f"/api/v1/marketplace/orders/{master['id']}/pay", headers=headers)
+    assert first.status_code == 200
+
+    second = await async_client.post(f"/api/v1/marketplace/orders/{master['id']}/pay", headers=headers)
+    assert second.status_code == 400
+
+@pytest.mark.asyncio
+async def test_pay_master_order_requires_ownership(async_client: AsyncClient, seed_tokens):
+    headers = {"Authorization": seed_tokens["customer_a"]}
+    master = await _checkout_two_vendor_cart(async_client, headers)
+
+    other_headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+    response = await async_client.post(f"/api/v1/marketplace/orders/{master['id']}/pay", headers=other_headers)
+    assert response.status_code == 404

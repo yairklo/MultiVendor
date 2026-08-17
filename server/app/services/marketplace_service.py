@@ -172,6 +172,64 @@ def _order_to_response(order: Order, items: list[OrderItem]) -> OrderResponse:
     )
 
 
+async def get_master_order_service(master_order_id: int, user_id: int, db: AsyncSession) -> MasterOrderResponse:
+    master_result = await db.execute(
+        select(MasterOrder).where(MasterOrder.id == master_order_id, MasterOrder.user_id == user_id)
+    )
+    master_order = master_result.scalar_one_or_none()
+    if not master_order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    orders_result = await db.execute(
+        select(Order).where(Order.master_order_id == master_order_id).options(selectinload(Order.items))
+    )
+    sub_orders = orders_result.scalars().all()
+
+    return MasterOrderResponse(
+        id=master_order.id,
+        master_order_number=master_order.master_order_number,
+        total_amount=master_order.total_amount,
+        created_at=master_order.created_at,
+        sub_orders=[_order_to_response(order, order.items) for order in sub_orders],
+    )
+
+
+async def pay_master_order_service(master_order_id: int, user_id: int, db: AsyncSession) -> MasterOrderResponse:
+    # Mock payment gateway, same as the single-store pay_order_service -- but
+    # pays every vendor's sub-order under this master order in one call/one
+    # commit, rather than making the frontend loop N separate pay requests
+    # (which could fail partway through and leave some vendors paid and
+    # others not, for what the shopper experienced as a single purchase).
+    master_result = await db.execute(
+        select(MasterOrder).where(MasterOrder.id == master_order_id, MasterOrder.user_id == user_id)
+    )
+    master_order = master_result.scalar_one_or_none()
+    if not master_order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    orders_result = await db.execute(
+        select(Order).where(Order.master_order_id == master_order_id).options(selectinload(Order.items))
+    )
+    sub_orders = orders_result.scalars().all()
+    if not sub_orders:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if not any(o.status == 'pending_payment' for o in sub_orders):
+        raise HTTPException(status_code=400, detail="Order is not awaiting payment")
+
+    for order in sub_orders:
+        if order.status == 'pending_payment':
+            order.status = 'processing'
+    await db.commit()
+
+    return MasterOrderResponse(
+        id=master_order.id,
+        master_order_number=master_order.master_order_number,
+        total_amount=master_order.total_amount,
+        created_at=master_order.created_at,
+        sub_orders=[_order_to_response(order, order.items) for order in sub_orders],
+    )
+
+
 async def marketplace_checkout_service(req: MarketplaceCheckoutRequest, user_id: int, db: AsyncSession) -> MasterOrderResponse:
     cart_id = str(req.cart_id)
     result = await db.execute(

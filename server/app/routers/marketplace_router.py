@@ -13,7 +13,8 @@ from app.schemas.order_schemas import StatusResponse, UpdateCartItemRequest
 from app.services.catalog_service import list_marketplace_products_service
 from app.services.marketplace_service import (
     add_to_marketplace_cart_service, get_marketplace_cart_service, remove_from_marketplace_cart_service,
-    update_marketplace_cart_item_service, marketplace_checkout_service,
+    update_marketplace_cart_item_service, marketplace_checkout_service, get_master_order_service,
+    pay_master_order_service,
 )
 from app.core.limiter import limiter
 
@@ -110,3 +111,35 @@ async def marketplace_checkout(
     db: AsyncSession = Depends(get_db),
 ):
     return await marketplace_checkout_service(req, user.id, db)
+
+@marketplace_router.get(
+    "/orders/{master_order_id}",
+    response_model=MasterOrderResponse,
+    summary="Get Master Order Details",
+    description="Retrieves a master order and its per-vendor sub-orders. Access is restricted to the order's owner.",
+    responses={404: {"description": "Order not found or does not belong to the user."}},
+)
+async def get_master_order(
+    master_order_id: int = Path(...),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await get_master_order_service(master_order_id, user.id, db)
+
+@marketplace_router.post(
+    "/orders/{master_order_id}/pay",
+    response_model=MasterOrderResponse,
+    summary="Pay for a Master Order (Mock)",
+    description="Development-only mock payment gateway: marks every vendor sub-order awaiting payment under this master order as paid ('processing') in one call.",
+    responses={
+        200: {"description": "Payment successful, all sub-orders now processing."},
+        400: {"description": "No sub-order is awaiting payment."},
+        404: {"description": "Order not found or does not belong to the user."},
+    },
+)
+async def pay_master_order(
+    master_order_id: int = Path(...),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await pay_master_order_service(master_order_id, user.id, db)
