@@ -17,7 +17,7 @@ from app.schemas.order_schemas import (
 )
 from app.schemas.auth_schemas import CustomerSummaryResponse
 from app.schemas.tenant_schemas import (
-    TenantSettingsSchema, TenantUpdateSchema, TenantResponse,
+    TenantSettingsSchema, TenantUpdateSchema, TenantResponse, TenantSettingsUpdateSchema,
     SubscriptionPlanInfo, TenantAnalyticsResponse
 )
 from app.schemas.ai_schemas import TopSellingProduct
@@ -213,7 +213,7 @@ async def get_current_subscription(
     responses={200: {"description": "Settings successfully updated."}}
 )
 async def update_store_settings(
-    req: TenantSettingsSchema,
+    req: TenantSettingsUpdateSchema,
     tenant_slug: str = Path(...),
     admin: User = Depends(get_tenant_admin),
     db: AsyncSession = Depends(get_db)
