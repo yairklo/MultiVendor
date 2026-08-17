@@ -6,7 +6,8 @@ from app.db.session import get_db
 from app.deps import get_optional_user, get_tenant_customer
 from app.models.user import User
 from app.schemas.order_schemas import (
-    AddToCartRequest, CartResponse, CheckoutRequest, OrderResponse, CartItemResponse, UpdateCartItemRequest
+    AddToCartRequest, CartResponse, CheckoutRequest, OrderResponse, CartItemResponse, UpdateCartItemRequest,
+    StatusResponse, CouponResponse
 )
 from app.services.checkout_service import (
     add_to_cart_service, get_cart_service, remove_from_cart_service,
@@ -18,7 +19,8 @@ from app.core.limiter import limiter
 cart_router = APIRouter(prefix="/api/v1/store/{tenant_slug}", tags=["Cart & Checkout"])
 
 @cart_router.post(
-    "/cart/{cart_id}/items", 
+    "/cart/{cart_id}/items",
+    response_model=StatusResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Add Item to Cart",
     description="Adds a product variant to the specified shopping cart. Creates the cart if it doesn't exist. Validates that the variant is active and has sufficient stock available.",
@@ -57,6 +59,7 @@ async def get_cart(
 
 @cart_router.delete(
     "/cart/{cart_id}/items/{item_id}",
+    response_model=StatusResponse,
     summary="Remove Item from Cart",
     description="Removes a specific line item from the shopping cart.",
     responses={
@@ -75,6 +78,7 @@ async def remove_from_cart(
 
 @cart_router.patch(
     "/cart/{cart_id}/items/{item_id}",
+    response_model=StatusResponse,
     summary="Update Cart Item Quantity",
     description="Sets the exact quantity for a cart line item. Validates the new quantity against available stock.",
     responses={
@@ -95,6 +99,7 @@ async def update_cart_item(
 
 @cart_router.post(
     "/coupons/validate",
+    response_model=CouponResponse,
     summary="Validate a Coupon Code",
     description="Validates a promotional code against the store's settings. Checks expiration dates, usage limits, and minimum order values.",
     responses={
