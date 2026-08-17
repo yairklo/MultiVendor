@@ -21,6 +21,9 @@ class Product(Base):
     description = Column(JSON, nullable=True)
     base_price = Column(Numeric(10, 2), nullable=False)
     is_active = Column(Boolean, default=True)
+    # Per-product marketplace opt-in, independent of Tenant.show_all_products_in_marketplace
+    # (a store-wide opt-out can still be overridden product-by-product).
+    show_in_marketplace = Column(Boolean, nullable=False, default=False)
     product_type = Column(Enum('physical', 'digital', 'service'), default='physical')
     digital_file_url = Column(String(512), nullable=True)
     download_limit = Column(Integer, nullable=True)

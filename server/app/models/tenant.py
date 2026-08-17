@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Enum, DateTime, ForeignKey, Numeric, Text, JSON, Boolean
+from sqlalchemy import Column, Integer, BigInteger, String, Enum, DateTime, ForeignKey, Numeric, Text, JSON, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.base_class import Base
@@ -24,11 +24,15 @@ class Tenant(Base):
     plan_id = Column(Integer, ForeignKey("subscription_plans.id"), nullable=False)
     status = Column(Enum('active', 'suspended', 'cancelled'), nullable=False, default='active')
     custom_domain = Column(String(255), nullable=True, unique=True)
+    # Coarse marketplace opt-in: when true, every active product of this tenant is
+    # eligible for the cross-store marketplace listing unless overridden per-product
+    # (see Product.show_in_marketplace in models/catalog.py).
+    show_all_products_in_marketplace = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
-    
+
     plan = relationship("SubscriptionPlan", back_populates="tenants")
-    users = relationship("User", back_populates="tenant", cascade="all, delete-orphan")
+    memberships = relationship("UserStoreMembership", back_populates="tenant", cascade="all, delete-orphan")
     products = relationship("Product", back_populates="tenant", cascade="all, delete-orphan")
     settings = relationship("TenantSettings", back_populates="tenant", uselist=False, cascade="all, delete-orphan")
 

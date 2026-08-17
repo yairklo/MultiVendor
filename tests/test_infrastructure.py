@@ -68,11 +68,11 @@ async def test_cleanup_abandoned_checkouts(db_session):
 async def test_rate_limiting_and_error_handling(async_client: AsyncClient):
     # Test Rate Limiting on /auth/login
     for _ in range(10):
-        res = await async_client.post("/api/v1/auth/login", json={"email": "customer@tenanta.com", "password": "password"})
+        res = await async_client.post("/api/v1/auth/login", json={"email": "customer@gmail.com", "password": "password"})
         # might be 400 or 401, but not 429 yet
         assert res.status_code != 429
     
-    res = await async_client.post("/api/v1/auth/login", json={"email": "customer@tenanta.com", "password": "password"})
+    res = await async_client.post("/api/v1/auth/login", json={"email": "customer@gmail.com", "password": "password"})
     assert res.status_code == 429
     
     # Test Global Error Handling

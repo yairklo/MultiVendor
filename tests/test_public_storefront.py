@@ -86,7 +86,7 @@ async def test_list_product_reviews_only_returns_approved(async_client: AsyncCli
     reviews = response.json()
     assert len(reviews) == 1
     assert reviews[0]["comment"] == "Approved review"
-    assert reviews[0]["customer_name"] == "Customer A"
+    assert reviews[0]["customer_name"] == "Global Customer"
 
 async def _delete_seeded_review(db_session):
     # Seed data already includes review #1 (user 4 on product 1) — clear it
@@ -229,7 +229,7 @@ async def test_product_list_and_detail_include_average_rating(async_client: Asyn
 
     db_session.add_all([
         ProductReview(tenant_id=1, product_id=1, user_id=4, rating=5, is_approved=True),
-        ProductReview(tenant_id=1, product_id=1, user_id=5, rating=3, is_approved=True),
+        ProductReview(tenant_id=1, product_id=1, user_id=2, rating=3, is_approved=True),
         # Unapproved reviews must not skew the average.
         ProductReview(tenant_id=1, product_id=1, user_id=4, rating=1, is_approved=False),
     ])
@@ -252,10 +252,32 @@ async def test_product_with_no_reviews_has_null_average_rating(async_client: Asy
     assert response.json()["review_count"] == 0
 
 @pytest.mark.asyncio
-async def test_create_product_review_is_tenant_isolated(async_client: AsyncClient, seed_tokens):
-    # customer_b belongs to tenant-b and must not be able to review a
-    # tenant-a product through tenant-a's store path.
-    headers_b = {"Authorization": seed_tokens["customer_b"]}
-    payload = {"product_id": 1, "rating": 5, "comment": "Shouldn't work"}
-    response = await async_client.post("/api/v1/store/tenant-a/reviews", json=payload, headers=headers_b)
-    assert response.status_code == 403
+async def test_global_customer_can_review_product_at_any_store(async_client: AsyncClient, seed_tokens):
+    # Under global identity this is legitimate, not an isolation violation:
+    # a 'customer' membership is auto-provisioned the first time a global
+    # user acts as a customer at a given store (deps.get_tenant_customer),
+    # so reviewing a tenant-a product never 403s just because this account's
+    # membership there didn't already exist.
+    # (A fresh product is created here rather than reusing seeded product 1,
+    # which the global customer already has a seeded review on -- reviewing
+    # it again would 400 as a duplicate review, not prove anything about
+    # store authorization.)
+    admin_headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+    create_resp = await async_client.post(
+        "/api/v1/admin/store/tenant-a/products",
+        headers=admin_headers,
+        json={
+            "name": {"en": "Second Product", "he": "מוצר שני"},
+            "slug": "second-product",
+            "base_price": 12.00,
+            "variants": [{"sku": "SECOND-1", "stock_quantity": 5}],
+            "images": [],
+        },
+    )
+    assert create_resp.status_code == 201
+    product_id = create_resp.json()["id"]
+
+    headers = {"Authorization": seed_tokens["customer_b"]}
+    payload = {"product_id": product_id, "rating": 5, "comment": "Bought it while browsing the marketplace"}
+    response = await async_client.post("/api/v1/store/tenant-a/reviews", json=payload, headers=headers)
+    assert response.status_code == 201

@@ -6,7 +6,7 @@ from sqlalchemy import select
 from jose import JWTError, jwt
 from app.core.config import settings
 from app.db.session import get_db, get_redis
-from app.models.user import User
+from app.models.user import User, UserStoreMembership
 from app.models.tenant import Tenant
 from app.schemas.common_schemas import UserRole
 
@@ -25,7 +25,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-        
+
     result = await db.execute(select(User).where(User.id == int(user_id)))
     user = result.scalar_one_or_none()
     if user is None or not user.is_active:
@@ -42,7 +42,7 @@ async def get_optional_user(token: str = Depends(OAuth2PasswordBearer(tokenUrl="
             return None
     except JWTError:
         return None
-        
+
     result = await db.execute(select(User).where(User.id == int(user_id)))
     return result.scalar_one_or_none()
 
@@ -62,17 +62,47 @@ def require_role(allowed_roles: list[UserRole]):
         return current_user
     return role_checker
 
-def get_tenant_admin(current_user: User = Depends(require_role([UserRole.TENANT_ADMIN])), tenant: Tenant = Depends(get_current_tenant)) -> User:
-    if current_user.tenant_id != tenant.id:
+async def _get_membership(user_id: int, tenant_id: int, db: AsyncSession) -> Optional[UserStoreMembership]:
+    result = await db.execute(
+        select(UserStoreMembership).where(
+            UserStoreMembership.user_id == user_id,
+            UserStoreMembership.tenant_id == tenant_id,
+        )
+    )
+    return result.scalar_one_or_none()
+
+async def get_tenant_admin(
+    current_user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    # Deliberately NOT auto-provisioned: unlike get_tenant_customer below, a
+    # tenant_admin membership must already exist. Auto-granting admin on any
+    # store a user happens to hit would be a privilege-escalation hole.
+    membership = await _get_membership(current_user.id, tenant.id, db)
+    if not membership or membership.role != 'tenant_admin' or not membership.is_active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
     return current_user
 
-def get_tenant_customer(current_user: User = Depends(require_role([UserRole.CUSTOMER, UserRole.TENANT_ADMIN])), tenant: Tenant = Depends(get_current_tenant)) -> User:
-    if current_user.tenant_id != tenant.id:
+async def get_tenant_customer(
+    current_user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    # A global user can shop at any active store without pre-registering
+    # there first -- the first time they touch a tenant as a shopper (review,
+    # checkout, ...) their 'customer' membership is created on demand. This is
+    # what makes "one login, every store" actually work end to end; it does
+    # NOT apply to tenant_admin (see get_tenant_admin) which is never
+    # auto-granted.
+    membership = await _get_membership(current_user.id, tenant.id, db)
+    if not membership:
+        membership = UserStoreMembership(user_id=current_user.id, tenant_id=tenant.id, role='customer')
+        db.add(membership)
+        await db.commit()
+    elif not membership.is_active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
     return current_user
-
-get_current_customer = require_role([UserRole.CUSTOMER])
 
 def get_super_admin(current_user: User = Depends(require_role([UserRole.SUPER_ADMIN]))) -> User:
     return current_user

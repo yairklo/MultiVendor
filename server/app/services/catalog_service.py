@@ -14,6 +14,7 @@ from app.schemas.catalog_schemas import (
     ProductBundleItemSchema, ProductReviewCreateRequest
 )
 from app.schemas.ai_schemas import InventoryHealthItem, InventoryHealthResponse
+from app.schemas.marketplace_schemas import MarketplaceProductResponse, PaginatedMarketplaceProductResponse
 
 # Matches frontend/src/lib/stock.ts's LOW_STOCK_THRESHOLD — per-product configurable
 # thresholds don't exist in the schema, so this is a fixed, shared definition of "low".
@@ -77,6 +78,7 @@ def _build_product_response(p: "Product", review_stats: dict[int, tuple[float, i
         description=p.description,
         base_price=p.base_price,
         is_active=p.is_active,
+        show_in_marketplace=p.show_in_marketplace,
         product_type=p.product_type,
         digital_file_url=p.digital_file_url,
         download_limit=p.download_limit,
@@ -224,6 +226,7 @@ async def create_product_service(tenant_slug: str, req: ProductCreateRequest, db
         description=req.description,
         base_price=req.base_price,
         is_active=req.is_active,
+        show_in_marketplace=req.show_in_marketplace,
         product_type=req.product_type,
         digital_file_url=req.digital_file_url,
         download_limit=req.download_limit,
@@ -280,6 +283,7 @@ async def create_product_service(tenant_slug: str, req: ProductCreateRequest, db
         description=product.description,
         base_price=product.base_price,
         is_active=product.is_active,
+        show_in_marketplace=product.show_in_marketplace,
         product_type=product.product_type,
         digital_file_url=product.digital_file_url,
         download_limit=product.download_limit,
@@ -316,6 +320,7 @@ async def get_admin_product_service(tenant_slug: str, product_id: int, db: Async
         description=product.description,
         base_price=product.base_price,
         is_active=product.is_active,
+        show_in_marketplace=product.show_in_marketplace,
         product_type=product.product_type,
         digital_file_url=product.digital_file_url,
         download_limit=product.download_limit,
@@ -361,6 +366,7 @@ async def update_product_service(tenant_slug: str, product_id: int, req: Product
         description=product.description,
         base_price=product.base_price,
         is_active=product.is_active,
+        show_in_marketplace=product.show_in_marketplace,
         product_type=product.product_type,
         digital_file_url=product.digital_file_url,
         download_limit=product.download_limit,
@@ -674,4 +680,72 @@ async def get_inventory_health_service(tenant_slug: str, db: AsyncSession) -> In
 
     return InventoryHealthResponse(
         low_stock_threshold=LOW_STOCK_THRESHOLD, out_of_stock=out_of_stock, low_stock=low_stock
+    )
+
+def _build_marketplace_product_response(p: "Product", tenant: Tenant, review_stats: dict[int, tuple[float, int]]) -> MarketplaceProductResponse:
+    primary_image = next((img.image_url for img in p.images if img.is_primary), None)
+    if not primary_image and p.images:
+        primary_image = p.images[0].image_url
+
+    avg_rating, review_count = review_stats.get(p.id, (None, 0))
+
+    return MarketplaceProductResponse(
+        id=p.id,
+        tenant_id=p.tenant_id,
+        tenant_slug=tenant.slug,
+        tenant_name=tenant.name,
+        category_id=p.category_id,
+        name=p.name,
+        slug=p.slug,
+        description=p.description,
+        base_price=p.base_price,
+        product_type=p.product_type,
+        primary_image_url=primary_image,
+        images=[img.image_url for img in p.images],
+        average_rating=round(avg_rating, 1) if avg_rating is not None else None,
+        review_count=review_count,
+        created_at=p.created_at
+    )
+
+async def list_marketplace_products_service(page: int, page_size: int, q: str | None, db: AsyncSession) -> PaginatedMarketplaceProductResponse:
+    # A product is marketplace-visible if it opted in individually, or its
+    # store opted in wholesale (Tenant.show_all_products_in_marketplace) --
+    # see models/tenant.py and models/catalog.py. A suspended/cancelled store
+    # or an inactive product is never shown here regardless of either flag.
+    conditions = [
+        Product.is_active == True,
+        Tenant.status == 'active',
+        or_(Product.show_in_marketplace == True, Tenant.show_all_products_in_marketplace == True),
+    ]
+    if q:
+        pattern = f"%{_escape_like(q.strip().lower())}%"
+        conditions.append(or_(
+            func.lower(cast(Product.name, String)).like(pattern, escape="\\"),
+            func.lower(cast(Product.description, String)).like(pattern, escape="\\"),
+        ))
+
+    count_result = await db.execute(
+        select(func.count()).select_from(Product).join(Tenant, Tenant.id == Product.tenant_id).where(*conditions)
+    )
+    total = count_result.scalar_one()
+
+    query = (
+        select(Product, Tenant)
+        .join(Tenant, Tenant.id == Product.tenant_id)
+        .where(*conditions)
+        .options(selectinload(Product.images))
+        .order_by(Product.created_at.desc())
+        .limit(page_size)
+        .offset((page - 1) * page_size)
+    )
+    result = await db.execute(query)
+    rows = result.all()
+
+    review_stats = await _fetch_review_stats([p.id for p, _ in rows], db)
+    data = [_build_marketplace_product_response(p, tenant, review_stats) for p, tenant in rows]
+
+    total_pages = math.ceil(total / page_size) if total > 0 else 1
+    return PaginatedMarketplaceProductResponse(
+        meta={"page": page, "page_size": page_size, "total": total, "total_pages": total_pages},
+        data=data
     )

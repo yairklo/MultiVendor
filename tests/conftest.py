@@ -75,64 +75,92 @@ def seed_subscription_plans():
 @pytest.fixture
 def seed_tenants():
     return [
-        {"id": 1, "slug": "tenant-a", "name": "Store A", "plan_id": 1, "status": "active"},
-        {"id": 2, "slug": "tenant-b", "name": "Store B", "plan_id": 2, "status": "active"}
+        {"id": 1, "slug": "tenant-a", "name": "Store A", "plan_id": 1, "status": "active", "show_all_products_in_marketplace": True},
+        {"id": 2, "slug": "tenant-b", "name": "Store B", "plan_id": 2, "status": "active", "show_all_products_in_marketplace": False}
     ]
 
 @pytest.fixture
 def seed_users():
+    # Identity is global now (see db/seed.sql): id 4 is a single account with a
+    # 'customer' membership at BOTH tenants -- there is no separate per-tenant
+    # customer row anymore. seed_tokens below still exposes "customer_a" /
+    # "customer_b" as distinct fixture *keys* for call-site readability, but
+    # both resolve to this same global user id.
     return [
-        {"id": 1, "tenant_id": None, "email": "super@admin.com", "role": "super_admin"},
-        {"id": 2, "tenant_id": 1, "email": "admin@tenanta.com", "role": "tenant_admin"},
-        {"id": 3, "tenant_id": 2, "email": "admin@tenantb.com", "role": "tenant_admin"},
-        {"id": 4, "tenant_id": 1, "email": "customer@tenanta.com", "role": "customer"},
-        {"id": 5, "tenant_id": 2, "email": "customer@tenantb.com", "role": "customer"}
+        {"id": 1, "email": "superadmin@platform.com", "role": "super_admin"},
+        {"id": 2, "email": "admin.store1@platform.com", "role": "user"},
+        {"id": 3, "email": "admin.store2@platform.com", "role": "user"},
+        {"id": 4, "email": "customer@gmail.com", "role": "user"},
+    ]
+
+@pytest.fixture
+def seed_memberships():
+    return [
+        {"user_id": 2, "tenant_id": 1, "role": "tenant_admin"},
+        {"user_id": 3, "tenant_id": 2, "role": "tenant_admin"},
+        {"user_id": 4, "tenant_id": 1, "role": "customer"},
+        {"user_id": 4, "tenant_id": 2, "role": "customer"},
     ]
 
 @pytest.fixture
 def seed_tokens():
     return {
-        "super_admin": f"Bearer {create_access_token('1', 'super_admin')}",
-        "tenant_admin_a": f"Bearer {create_access_token('2', 'tenant_admin')}",
-        "tenant_admin_b": f"Bearer {create_access_token('3', 'tenant_admin')}",
-        "customer_a": f"Bearer {create_access_token('4', 'customer')}",
-        "customer_b": f"Bearer {create_access_token('5', 'customer')}"
+        "super_admin": f"Bearer {create_access_token('1', is_super_admin=True)}",
+        "tenant_admin_a": f"Bearer {create_access_token('2')}",
+        "tenant_admin_b": f"Bearer {create_access_token('3')}",
+        # Same global user (id 4) on purpose -- see seed_users above.
+        "customer_a": f"Bearer {create_access_token('4')}",
+        "customer_b": f"Bearer {create_access_token('4')}",
+        "customer": f"Bearer {create_access_token('4')}",
     }
 
 @pytest.fixture
 def seed_products():
     return [
-        {"id": 1, "tenant_id": 1, "name": "Product A1", "slug": "product-a1", "base_price": 10.00, "is_active": True},
-        {"id": 2, "tenant_id": 2, "name": "Product B1", "slug": "product-b1", "base_price": 20.00, "is_active": True}
+        {"id": 1, "tenant_id": 1, "name": "Product A1", "slug": "product-a1", "base_price": 10.00, "is_active": True, "show_in_marketplace": True},
+        {"id": 2, "tenant_id": 2, "name": "Product B1", "slug": "product-b1", "base_price": 20.00, "is_active": True, "show_in_marketplace": True},
+        {"id": 3, "tenant_id": 2, "name": "Product B2 (store-only)", "slug": "product-b2", "base_price": 15.00, "is_active": True, "show_in_marketplace": False},
     ]
+
+_seed_statements_cache = None
+_clear_db_tables_cache = None
+
+def _load_seed_statements():
+    global _seed_statements_cache
+    if _seed_statements_cache is None:
+        seed_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'db', 'seed.sql')
+        with open(seed_path, 'r', encoding='utf-8') as f:
+            sql = f.read()
+        _seed_statements_cache = [s.strip() for s in sql.split(';') if s.strip()]
+    return _seed_statements_cache
 
 @pytest.fixture(autouse=True, scope='function')
 async def auto_clear_db():
-    from sqlalchemy.ext.asyncio import create_async_engine
+    # Reuses the module-level `engine` (already open for the whole session,
+    # same one db_session runs on) instead of opening/closing a brand new
+    # engine per test, and parses db/seed.sql once instead of on every test --
+    # this fixture runs before EVERY test, so that overhead was multiplying
+    # by the full test count. Also DELETE instead of TRUNCATE: seed.sql always
+    # inserts explicit primary keys, so nothing here depends on resetting
+    # AUTO_INCREMENT counters, and DELETE skips TRUNCATE's per-table file
+    # recreation, which is the dominant cost of this fixture in practice.
     from sqlalchemy import text
-    import asyncio
-    engine = create_async_engine(DATABASE_URL, echo=False)
-    async with engine.begin() as conn:
-        await conn.execute(text('SET FOREIGN_KEY_CHECKS=0;'))
-        
-        result = await conn.execute(text('SHOW TABLES'))
-        tables = [row[0] for row in result.all()]
-        for table in tables:
-            await conn.execute(text(f'TRUNCATE TABLE {table}'))
-            
-        await conn.execute(text('SET FOREIGN_KEY_CHECKS=1;'))
+    global _clear_db_tables_cache
 
-    seed_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'db', 'seed.sql')
-    with open(seed_path, 'r', encoding='utf-8') as f:
-        sql = f.read()
-    
-    statements = [s.strip() for s in sql.split(';') if s.strip()]
     async with engine.begin() as conn:
-        await conn.execute(text('SET FOREIGN_KEY_CHECKS=0;'))
-        for stmt in statements:
+        await conn.execute(text('SET FOREIGN_KEY_CHECKS=0'))
+        if _clear_db_tables_cache is None:
+            result = await conn.execute(text('SHOW TABLES'))
+            _clear_db_tables_cache = [row[0] for row in result.all()]
+        for table in _clear_db_tables_cache:
+            await conn.execute(text(f'DELETE FROM {table}'))
+        await conn.execute(text('SET FOREIGN_KEY_CHECKS=1'))
+
+    async with engine.begin() as conn:
+        await conn.execute(text('SET FOREIGN_KEY_CHECKS=0'))
+        for stmt in _load_seed_statements():
             try:
                 await conn.execute(text(stmt))
             except Exception as e:
                 print(f"[auto_clear_db] seed statement failed: {stmt[:80]}... -> {e}")
-        await conn.execute(text('SET FOREIGN_KEY_CHECKS=1;'))
-    await engine.dispose()
+        await conn.execute(text('SET FOREIGN_KEY_CHECKS=1'))

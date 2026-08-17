@@ -6,7 +6,7 @@ from sqlalchemy.orm import selectinload
 from fastapi import HTTPException
 from app.models.tenant import Tenant
 from app.models.order import Order, OrderItem
-from app.models.user import User
+from app.models.user import User, UserStoreMembership
 from app.models.catalog import ProductVariant, Product, ProductBundleItem
 from app.schemas.order_schemas import PaginatedOrderResponse, OrderResponse, OrderItemResponse
 from app.schemas.auth_schemas import CustomerSummaryResponse
@@ -106,8 +106,9 @@ async def list_tenant_customers_service(tenant_slug: str, db: AsyncSession) -> l
             func.coalesce(func.sum(paid_amount), 0).label('total_spent'),
             func.max(Order.created_at).label('last_order_at'),
         )
+        .join(UserStoreMembership, (UserStoreMembership.user_id == User.id) & (UserStoreMembership.tenant_id == tenant_id))
         .outerjoin(Order, (Order.user_id == User.id) & (Order.tenant_id == tenant_id))
-        .where(User.tenant_id == tenant_id, User.role == 'customer')
+        .where(UserStoreMembership.role == 'customer', UserStoreMembership.is_active == True)
         .group_by(User.id)
         .order_by(User.created_at.desc())
     )

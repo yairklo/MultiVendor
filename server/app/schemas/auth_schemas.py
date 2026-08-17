@@ -21,15 +21,13 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     user_id: int
     role: UserRole
-    tenant_id: Optional[int] = None
     model_config = ConfigDict(json_schema_extra={
         "example": {
             "access_token": "eyJhbGciOiJIUzI1NiIsInR...",
             "refresh_token": "eyJhbGciOiJIUzI1NiIsInR...",
             "token_type": "bearer",
             "user_id": 12,
-            "role": "tenant_admin",
-            "tenant_id": 1
+            "role": "user"
         }
     })
 
@@ -45,7 +43,6 @@ class UserProfileUpdateRequest(BaseModel):
 
 class UserResponse(BaseModel):
     id: int
-    tenant_id: Optional[int]
     email: EmailStr
     full_name: str
     role: UserRole
@@ -54,10 +51,9 @@ class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True, json_schema_extra={
         "example": {
             "id": 12,
-            "tenant_id": 1,
             "email": "customer@shop.com",
             "full_name": "John Doe",
-            "role": "customer",
+            "role": "user",
             "is_active": True,
             "created_at": "2026-08-09T10:00:00Z"
         }

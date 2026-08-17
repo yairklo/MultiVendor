@@ -29,9 +29,36 @@ class CartItem(Base):
     cart_id = Column(String(36), ForeignKey("carts.id", ondelete="CASCADE"), nullable=False)
     variant_id = Column(BigInteger, ForeignKey("product_variants.id", ondelete="CASCADE"), nullable=False)
     quantity = Column(Integer, nullable=False, default=1)
-    
+
     cart = relationship("Cart", back_populates="items")
     variant = relationship("ProductVariant")
+
+class MarketplaceCartItem(Base):
+    # A cross-tenant cart is intentionally *not* a single tenant-scoped Cart row
+    # (Cart.tenant_id is NOT NULL) -- cart_id here is just a client-generated UUID
+    # grouping key, same lazy-create-on-first-add convention as the per-store cart.
+    __tablename__ = "marketplace_cart_items"
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    cart_id = Column(String(36), nullable=False)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
+    variant_id = Column(BigInteger, ForeignKey("product_variants.id", ondelete="CASCADE"), nullable=False)
+    quantity = Column(Integer, nullable=False, default=1)
+    created_at = Column(DateTime, default=func.now())
+
+    variant = relationship("ProductVariant")
+
+class MasterOrder(Base):
+    # Groups the per-tenant sub-orders produced by a single marketplace checkout.
+    # Deliberately its own table (not a self-referencing row on `orders`) because
+    # a master order has no single tenant_id -- `orders.tenant_id` stays NOT NULL.
+    __tablename__ = "master_orders"
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    user_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    master_order_number = Column(String(50), nullable=False, unique=True)
+    total_amount = Column(Numeric(10, 2), nullable=False)
+    created_at = Column(DateTime, default=func.now())
+
+    sub_orders = relationship("Order", back_populates="master_order")
 
 class Order(Base):
     __tablename__ = "orders"
@@ -39,18 +66,26 @@ class Order(Base):
     tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
     user_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     coupon_id = Column(BigInteger, ForeignKey("coupons.id", ondelete="SET NULL"), nullable=True)
+    # Set only for sub-orders spawned by a marketplace checkout; NULL for a normal
+    # single-store checkout via /api/v1/store/{tenant_slug}/cart/checkout.
+    master_order_id = Column(BigInteger, ForeignKey("master_orders.id", ondelete="SET NULL"), nullable=True)
     order_number = Column(String(50), nullable=False)
     subtotal = Column(Numeric(10, 2), nullable=False)
     discount_amt = Column(Numeric(10, 2), default=0.00)
     shipping_method_id = Column(BigInteger, ForeignKey("shipping_methods.id", ondelete="SET NULL"), nullable=True)
     shipping_fee = Column(Numeric(10, 2), default=0.00)
     total_amount = Column(Numeric(10, 2), nullable=False)
+    # Vendor-facing split of total_amount for marketplace sub-orders (0.00 for
+    # normal single-store orders): what the platform keeps vs. what the vendor is owed.
+    platform_commission = Column(Numeric(10, 2), nullable=False, default=0.00)
+    vendor_net_payout = Column(Numeric(10, 2), nullable=False, default=0.00)
     status = Column(Enum('pending', 'pending_payment', 'processing', 'completed', 'cancelled', 'expired'), default='pending')
     order_type = Column(Enum('physical', 'digital'), default='physical')
     shipping_json = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=func.now())
-    
+
     items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
+    master_order = relationship("MasterOrder", back_populates="sub_orders")
 
 class OrderItem(Base):
     __tablename__ = "order_items"

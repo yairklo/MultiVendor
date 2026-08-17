@@ -15,7 +15,25 @@ async def test_register_tenant_success(async_client: AsyncClient, db_session):
     assert response.status_code == 201
     data = response.json()
     assert "access_token" in data
-    assert data["role"] == "tenant_admin"
+    # Global role is only ever 'super_admin' or 'user' now -- being this new
+    # store's tenant_admin is recorded on UserStoreMembership, not here.
+    assert data["role"] == "user"
+
+@pytest.mark.asyncio
+async def test_register_tenant_duplicate_admin_email_is_global_conflict(async_client: AsyncClient, db_session):
+    # customer@gmail.com already exists globally (seeded). Registering a
+    # brand-new store with that email as the admin must conflict just like a
+    # duplicate slug would, even though it was never tenant_admin anywhere before.
+    payload = {
+        "store_name": "Yet Another Store",
+        "store_slug": "yet-another-store",
+        "admin_email": "customer@gmail.com",
+        "admin_password": "securepassword123",
+        "admin_full_name": "Someone",
+        "plan_code": "free"
+    }
+    response = await async_client.post("/api/v1/auth/register-tenant", json=payload)
+    assert response.status_code == 409
 
 @pytest.mark.asyncio
 async def test_register_tenant_duplicate_slug_conflict(async_client: AsyncClient, db_session):
@@ -44,9 +62,8 @@ async def test_register_tenant_validation_failures(async_client: AsyncClient, db
 @pytest.mark.asyncio
 async def test_login_super_admin_success(async_client: AsyncClient, db_session):
     payload = {
-        "email": "super@admin.com",
+        "email": "superadmin@platform.com",
         "password": "password",
-        "tenant_slug": None
     }
     response = await async_client.post("/api/v1/auth/login", json=payload)
     assert response.status_code == 200
@@ -54,19 +71,22 @@ async def test_login_super_admin_success(async_client: AsyncClient, db_session):
 
 @pytest.mark.asyncio
 async def test_login_tenant_admin_success(async_client: AsyncClient, db_session):
+    # tenant_slug is accepted but no longer required or checked at login time
+    # -- identity is global, store-level authorization is re-checked per
+    # request (see deps.get_tenant_admin), not decided here.
     payload = {
-        "email": "admin@tenanta.com",
+        "email": "admin.store1@platform.com",
         "password": "password",
         "tenant_slug": "tenant-a"
     }
     response = await async_client.post("/api/v1/auth/login", json=payload)
     assert response.status_code == 200
-    assert response.json()["role"] == "tenant_admin"
+    assert response.json()["role"] == "user"
 
 @pytest.mark.asyncio
 async def test_login_invalid_credentials(async_client: AsyncClient, db_session):
     payload = {
-        "email": "admin@tenanta.com",
+        "email": "admin.store1@platform.com",
         "password": "wrongpassword",
         "tenant_slug": "tenant-a"
     }
@@ -74,20 +94,22 @@ async def test_login_invalid_credentials(async_client: AsyncClient, db_session):
     assert response.status_code == 401
 
 @pytest.mark.asyncio
-async def test_login_missing_tenant_slug_for_tenant_admin(async_client: AsyncClient, db_session):
+async def test_login_without_tenant_slug_still_succeeds(async_client: AsyncClient, db_session):
+    # A global account logs in exactly once, regardless of how many stores it
+    # administers or shops at -- tenant_slug is not required to disambiguate
+    # anymore (contrast with the old per-tenant-row identity model).
     payload = {
-        "email": "admin@tenanta.com",
-        "password": "password"
-        # Missing tenant_slug should be 401/403 or logic error if they aren't super admin
+        "email": "admin.store1@platform.com",
+        "password": "password",
     }
     response = await async_client.post("/api/v1/auth/login", json=payload)
-    # Could be 401 or 422 depending on business logic handling of 'tenant_slug'
-    assert response.status_code in (401, 403, 404)
+    assert response.status_code == 200
+    assert response.json()["role"] == "user"
 
 @pytest.mark.asyncio
 async def test_register_customer_under_tenant(async_client: AsyncClient, db_session):
     payload = {
-        "email": "newcustomer@tenanta.com",
+        "email": "newcustomer@example.com",
         "password": "securepassword",
         "full_name": "New Customer"
     }
@@ -95,9 +117,12 @@ async def test_register_customer_under_tenant(async_client: AsyncClient, db_sess
     assert response.status_code == 201
 
 @pytest.mark.asyncio
-async def test_customer_email_uniqueness_per_tenant(async_client: AsyncClient, db_session):
+async def test_customer_email_uniqueness_is_global(async_client: AsyncClient, db_session):
+    # customer@gmail.com already exists globally (seeded as a member of both
+    # tenant-a and tenant-b) -- registering it "fresh" against a third store
+    # must still conflict, since identity is global now, not per-tenant.
     payload = {
-        "email": "customer@tenanta.com",
+        "email": "customer@gmail.com",
         "password": "securepassword",
         "full_name": "Duplicate Customer"
     }
@@ -112,4 +137,5 @@ async def test_get_me_profile_authenticated_vs_unauthenticated(async_client: Asy
     headers = {"Authorization": seed_tokens["customer_a"]}
     response = await async_client.get("/api/v1/customer/me", headers=headers)
     assert response.status_code == 200
-    assert response.json()["role"] == "customer"
+    assert response.json()["role"] == "user"
+    assert response.json()["email"] == "customer@gmail.com"

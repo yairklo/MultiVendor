@@ -165,7 +165,7 @@ async def test_export_orders_csv_contains_real_order_data(async_client: AsyncCli
     headers = {"Authorization": seed_tokens["tenant_admin_a"]}
     db_session.add_all([
         Order(tenant_id=1, user_id=4, order_number="ORD-CSV-TEST", subtotal=77, total_amount=77.50, status="completed"),
-        Order(tenant_id=2, user_id=5, order_number="ORD-TENANT-B", subtotal=10, total_amount=10.00, status="completed"),
+        Order(tenant_id=2, user_id=4, order_number="ORD-TENANT-B", subtotal=10, total_amount=10.00, status="completed"),
     ])
     await db_session.commit()
 
@@ -187,7 +187,7 @@ async def test_product_review_moderation(async_client: AsyncClient, seed_tokens)
 
 @pytest.mark.asyncio
 async def test_list_tenant_reviews_includes_product_and_customer_names(async_client: AsyncClient, seed_tokens):
-    # Review 1 is seeded on product 1 ("Product A1") by user 4 ("Customer A").
+    # Review 1 is seeded on product 1 ("Product A1") by user 4 ("Global Customer").
     # Only PATCH .../status existed before — there was no way to list reviews
     # for moderation at all.
     headers = {"Authorization": seed_tokens["tenant_admin_a"]}
@@ -198,7 +198,7 @@ async def test_list_tenant_reviews_includes_product_and_customer_names(async_cli
     review = next(r for r in reviews if r["id"] == 1)
 
     assert review["product_name"] == "Product A1"
-    assert review["customer_name"] == "Customer A"
+    assert review["customer_name"] == "Global Customer"
     assert review["rating"] == 5
 
 @pytest.mark.asyncio
@@ -357,8 +357,8 @@ async def test_update_product_variant_is_tenant_isolated(async_client: AsyncClie
 
 @pytest.mark.asyncio
 async def test_list_tenant_orders_includes_customer_identity(async_client: AsyncClient, seed_tokens):
-    # Order 1 is seeded for user_id=4 ("Customer A", customer@tenanta.com). The
-    # admin orders list used to return the bare Order row (no customer_name/
+    # Order 1 is seeded for user_id=4 (the global customer, customer@gmail.com).
+    # The admin orders list used to return the bare Order row (no customer_name/
     # customer_email field exists on it), so the frontend always showed "Guest".
     headers = {"Authorization": seed_tokens["tenant_admin_a"]}
     response = await async_client.get("/api/v1/admin/store/tenant-a/orders", headers=headers)
@@ -366,8 +366,8 @@ async def test_list_tenant_orders_includes_customer_identity(async_client: Async
     body = response.json()
     orders = body["data"] if isinstance(body, dict) else body
     order = next(o for o in orders if o["id"] == 1)
-    assert order["customer_name"] == "Customer A"
-    assert order["customer_email"] == "customer@tenanta.com"
+    assert order["customer_name"] == "Global Customer"
+    assert order["customer_email"] == "customer@gmail.com"
 
 @pytest.mark.asyncio
 async def test_get_tenant_order_includes_customer_identity(async_client: AsyncClient, seed_tokens):
@@ -375,8 +375,8 @@ async def test_get_tenant_order_includes_customer_identity(async_client: AsyncCl
     response = await async_client.get("/api/v1/admin/store/tenant-a/orders/1", headers=headers)
     assert response.status_code == 200
     body = response.json()
-    assert body["customer_name"] == "Customer A"
-    assert body["customer_email"] == "customer@tenanta.com"
+    assert body["customer_name"] == "Global Customer"
+    assert body["customer_email"] == "customer@gmail.com"
     assert body["items"] == [] or isinstance(body["items"], list)
 
 @pytest.mark.asyncio
@@ -407,21 +407,21 @@ async def test_list_customers_aggregates_orders_and_spend(async_client: AsyncCli
     assert response.status_code == 200
     body = response.json()
     customers = body["data"] if isinstance(body, dict) else body
-    customer = next(c for c in customers if c["email"] == "customer@tenanta.com")
+    customer = next(c for c in customers if c["email"] == "customer@gmail.com")
 
-    assert customer["full_name"] == "Customer A"
+    assert customer["full_name"] == "Global Customer"
     assert customer["orders_count"] == 3
     assert float(customer["total_spent"]) == 50.0
 
 @pytest.mark.asyncio
 async def test_list_customers_includes_customers_with_no_orders(async_client: AsyncClient, seed_tokens, db_session):
-    from app.models.user import User
+    from app.models.user import User, UserStoreMembership
 
     headers = {"Authorization": seed_tokens["tenant_admin_a"]}
-    db_session.add(User(
-        tenant_id=1, email="no-orders@tenanta.com", password_hash="x",
-        full_name="No Orders Yet", role="customer"
-    ))
+    no_orders_user = User(email="no-orders@tenanta.com", password_hash="x", full_name="No Orders Yet", role="user")
+    db_session.add(no_orders_user)
+    await db_session.flush()
+    db_session.add(UserStoreMembership(user_id=no_orders_user.id, tenant_id=1, role="customer"))
     await db_session.commit()
 
     response = await async_client.get("/api/v1/admin/store/tenant-a/customers", headers=headers)

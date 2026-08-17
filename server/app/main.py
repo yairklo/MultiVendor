@@ -41,6 +41,10 @@ openapi_tags = [
     {
         "name": "Super Admin",
         "description": "Global administration endpoints to manage system-wide settings and monitor all tenants.",
+    },
+    {
+        "name": "Marketplace",
+        "description": "Cross-store marketplace: browse products from any opted-in vendor, and check out a multi-vendor cart in one call via order splitting.",
     }
 ]
 
@@ -90,6 +94,7 @@ async def global_exception_middleware(request: Request, call_next):
     try:
         return await call_next(request)
     except Exception:
+        logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
         return JSONResponse(
             status_code=500,
             content={"detail": "An internal server error occurred.", "code": "INTERNAL_ERROR"}
@@ -129,6 +134,7 @@ from app.routers.storefront_router import storefront_router
 from app.routers.cart_router import cart_router
 from app.routers.tenant_admin_router import tenant_admin_router
 from app.routers.ai_router import ai_router
+from app.routers.marketplace_router import marketplace_router
 
 app.include_router(auth_router)
 app.include_router(customer_router)
@@ -137,3 +143,4 @@ app.include_router(storefront_router)
 app.include_router(cart_router)
 app.include_router(tenant_admin_router)
 app.include_router(ai_router)
+app.include_router(marketplace_router)

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status, Query, Path
+from fastapi import APIRouter, Depends, status, Query, Path, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional, Literal
 from fastapi.responses import StreamingResponse
@@ -18,7 +18,7 @@ from app.schemas.order_schemas import (
 from app.schemas.auth_schemas import CustomerSummaryResponse
 from app.schemas.tenant_schemas import (
     TenantSettingsSchema, TenantUpdateSchema, TenantResponse, TenantSettingsUpdateSchema,
-    SubscriptionPlanInfo, TenantAnalyticsResponse
+    SubscriptionPlanInfo, TenantAnalyticsResponse, TenantMarketplaceVisibilityUpdateSchema
 )
 from app.schemas.ai_schemas import TopSellingProduct
 from app.schemas.common_schemas import PlanCode
@@ -30,7 +30,8 @@ from app.services.catalog_service import (
 )
 from app.services.tenant_service import (
     update_store_settings_service, update_tenant_service, get_tenant_analytics_service,
-    upgrade_subscription_service, get_current_subscription_service, get_top_selling_products_service
+    upgrade_subscription_service, get_current_subscription_service, get_top_selling_products_service,
+    update_marketplace_visibility_service
 )
 from app.services.order_service import (
     update_order_status_service, list_tenant_orders_service, get_tenant_order_service,
@@ -177,6 +178,21 @@ async def update_tenant_domain(
     db: AsyncSession = Depends(get_db)
 ):
     return await update_tenant_service(tenant_slug, req, db)
+
+# MARKETPLACE
+@tenant_admin_router.put(
+    "/marketplace-visibility",
+    response_model=TenantResponse,
+    summary="Set Store-Wide Marketplace Visibility",
+    description="Toggles whether every active product of this store is eligible for the cross-store marketplace listing. A product can still opt in individually (see PUT .../products/{id} `show_in_marketplace`) even if this is off.",
+)
+async def update_marketplace_visibility(
+    req: TenantMarketplaceVisibilityUpdateSchema,
+    tenant_slug: str = Path(...),
+    admin: User = Depends(get_tenant_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    return await update_marketplace_visibility_service(tenant_slug, req, db)
 
 # SUBSCRIPTION
 @tenant_admin_router.post(
