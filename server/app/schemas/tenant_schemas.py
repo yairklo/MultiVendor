@@ -25,6 +25,19 @@ class TenantRegisterRequest(BaseModel):
 class TenantUpdateSchema(BaseModel):
     custom_domain: Optional[str] = None
 
+class TenantSettingsUpdateSchema(BaseModel):
+    logo_url: Optional[str] = None
+    primary_color: Optional[str] = None
+    banner_url: Optional[str] = None
+    currency: Optional[str] = None
+    custom_css: Optional[str] = None
+    support_email: Optional[EmailStr] = None
+    supported_languages: Optional[List[str]] = None
+    default_language: Optional[str] = None
+    review_moderation_enabled: Optional[bool] = None
+    allow_unverified_reviews: Optional[bool] = None
+    template_key: Optional[str] = None
+
 class TenantSettingsSchema(BaseModel):
     logo_url: Optional[str] = None
     primary_color: str = "#000000"

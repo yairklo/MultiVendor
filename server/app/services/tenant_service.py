@@ -4,7 +4,7 @@ from sqlalchemy.orm import joinedload
 from fastapi import HTTPException, status
 from app.models.tenant import Tenant, TenantSettings, SubscriptionPlan
 from app.models.order import Order, OrderItem
-from app.schemas.tenant_schemas import TenantSettingsSchema, TenantUpdateSchema, TenantResponse
+from app.schemas.tenant_schemas import TenantSettingsSchema, TenantUpdateSchema, TenantResponse, TenantSettingsUpdateSchema
 from app.schemas.ai_schemas import TopSellingProduct
 from app.services.order_service import PAID_ORDER_STATUSES
 from datetime import datetime, timezone
@@ -45,7 +45,7 @@ async def update_tenant_service(tenant_slug: str, req: TenantUpdateSchema, db: A
     return TenantResponse(**tenant_data)
 
 
-async def update_store_settings_service(tenant_slug: str, req: TenantSettingsSchema, db: AsyncSession) -> TenantSettingsSchema:
+async def update_store_settings_service(tenant_slug: str, req: TenantSettingsUpdateSchema, db: AsyncSession) -> TenantSettingsSchema:
     tenant_result = await db.execute(select(Tenant).where(Tenant.slug == tenant_slug))
     tenant = tenant_result.scalar_one_or_none()
     if not tenant:
@@ -57,16 +57,9 @@ async def update_store_settings_service(tenant_slug: str, req: TenantSettingsSch
         settings = TenantSettings(tenant_id=tenant.id)
         db.add(settings)
 
-    settings.primary_color = req.primary_color
-    settings.currency = req.currency
-    settings.logo_url = req.logo_url
-    settings.banner_url = req.banner_url
-    settings.custom_css = req.custom_css
-    settings.support_email = req.support_email
-    settings.supported_languages = req.supported_languages
-    settings.default_language = req.default_language
-    settings.review_moderation_enabled = req.review_moderation_enabled
-    settings.allow_unverified_reviews = req.allow_unverified_reviews
+    update_data = req.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(settings, key, value)
 
     await db.commit()
     await db.refresh(settings)
