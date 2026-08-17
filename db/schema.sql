@@ -25,6 +25,10 @@ CREATE TABLE tenants (
     plan_id INT NOT NULL,
     status ENUM('active', 'suspended', 'cancelled') NOT NULL DEFAULT 'active',
     custom_domain VARCHAR(255) UNIQUE NULL,
+    -- Coarse marketplace opt-in: TRUE exposes every active product of this
+    -- tenant on the cross-store marketplace, unless a product overrides it
+    -- (see products.show_in_marketplace below).
+    show_all_products_in_marketplace BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (plan_id) REFERENCES subscription_plans(id)
@@ -43,6 +47,7 @@ CREATE TABLE tenant_settings (
     review_moderation_enabled BOOLEAN DEFAULT FALSE,
     allow_unverified_reviews BOOLEAN DEFAULT TRUE,
     template_key VARCHAR(50) NULL,
+    draft_template_key VARCHAR(50) NULL,
     FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
@@ -60,17 +65,36 @@ CREATE TABLE tenant_billing_logs (
 -- ================================================================================
 -- 2. USERS & SECURITY LAYER
 -- ================================================================================
+-- Identity is global: one row per person/email across the entire platform, not
+-- per store. `role` only distinguishes the platform super_admin from every
+-- regular account -- store-level roles (tenant_admin / customer) live on
+-- user_store_memberships below, since the same person can be a tenant_admin
+-- of one store and a customer of another.
 CREATE TABLE users (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    tenant_id INT NULL, -- NULL indicates Super Admin
-    email VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     full_name VARCHAR(255) NOT NULL,
-    role ENUM('super_admin', 'tenant_admin', 'customer') NOT NULL DEFAULT 'customer',
+    role ENUM('super_admin', 'user') NOT NULL DEFAULT 'user',
     is_active BOOLEAN DEFAULT TRUE,
     last_login_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- A user's role and standing at one specific store. Rows are created either
+-- explicitly (POST .../auth/register-customer/{tenant_slug}, tenant creation)
+-- or lazily the first time a global user acts as a customer at a store they
+-- haven't shopped at before (see deps.get_tenant_customer) -- never lazily for
+-- tenant_admin, which would be a privilege-escalation hole.
+CREATE TABLE user_store_memberships (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    tenant_id INT NOT NULL,
+    role ENUM('tenant_admin', 'customer') NOT NULL DEFAULT 'customer',
+    is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT uq_users_tenant_email UNIQUE (tenant_id, email),
+    CONSTRAINT uq_user_tenant UNIQUE (user_id, tenant_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
@@ -110,6 +134,9 @@ CREATE TABLE products (
     description JSON NULL,
     base_price DECIMAL(10, 2) NOT NULL,
     is_active BOOLEAN DEFAULT TRUE,
+    -- Per-product marketplace opt-in, independent of (and able to override)
+    -- tenants.show_all_products_in_marketplace.
+    show_in_marketplace BOOLEAN NOT NULL DEFAULT FALSE,
     product_type ENUM('physical', 'digital', 'service') DEFAULT 'physical',
     digital_file_url VARCHAR(512) NULL,
     download_limit INT NULL,
@@ -217,17 +244,53 @@ CREATE TABLE cart_items (
     FOREIGN KEY (variant_id) REFERENCES product_variants(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+-- A cross-tenant marketplace cart is NOT a `carts` row (carts.tenant_id is
+-- NOT NULL, by design, for the single-store cart). cart_id is just a
+-- client-generated UUID grouping key, same lazy-create-on-first-add
+-- convention as cart_items, spanning multiple tenant_ids at once.
+CREATE TABLE marketplace_cart_items (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    cart_id VARCHAR(36) NOT NULL,
+    tenant_id INT NOT NULL,
+    variant_id BIGINT NOT NULL,
+    quantity INT NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+    FOREIGN KEY (variant_id) REFERENCES product_variants(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE INDEX idx_marketplace_cart_items_cart ON marketplace_cart_items(cart_id);
+
+-- Groups the per-tenant sub-orders produced by one marketplace checkout. Its
+-- own table (not a self-referencing row on `orders`) because a master order
+-- has no single tenant_id -- orders.tenant_id stays NOT NULL.
+CREATE TABLE master_orders (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    master_order_number VARCHAR(50) NOT NULL UNIQUE,
+    total_amount DECIMAL(10, 2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
 CREATE TABLE orders (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     tenant_id INT NOT NULL,
     user_id BIGINT NOT NULL,
     coupon_id BIGINT NULL,
+    -- Set only for sub-orders spawned by a marketplace checkout; NULL for a
+    -- normal single-store checkout.
+    master_order_id BIGINT NULL,
     order_number VARCHAR(50) NOT NULL,
     subtotal DECIMAL(10, 2) NOT NULL,
     discount_amt DECIMAL(10, 2) DEFAULT 0.00,
     shipping_method_id BIGINT NULL,
     shipping_fee DECIMAL(10, 2) DEFAULT 0.00,
     total_amount DECIMAL(10, 2) NOT NULL,
+    -- Vendor-facing split of total_amount for marketplace sub-orders (both
+    -- 0.00 for a normal single-store order).
+    platform_commission DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+    vendor_net_payout DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
     status ENUM('pending', 'pending_payment', 'processing', 'completed', 'cancelled', 'expired') DEFAULT 'pending',
     order_type ENUM('physical', 'digital') DEFAULT 'physical',
     shipping_json JSON NULL,
@@ -235,6 +298,7 @@ CREATE TABLE orders (
     FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (coupon_id) REFERENCES coupons(id) ON DELETE SET NULL,
+    FOREIGN KEY (master_order_id) REFERENCES master_orders(id) ON DELETE SET NULL,
     FOREIGN KEY (shipping_method_id) REFERENCES shipping_methods(id) ON DELETE SET NULL,
     CONSTRAINT uq_orders_tenant_number UNIQUE (tenant_id, order_number)
 ) ENGINE=InnoDB;
@@ -338,6 +402,9 @@ CREATE TABLE ai_pending_actions (
 -- 7. PERFORMANCE COMPOSITE INDEXES
 -- ================================================================================
 CREATE INDEX idx_products_tenant_active ON products(tenant_id, is_active);
+CREATE INDEX idx_products_marketplace ON products(show_in_marketplace, is_active);
+CREATE INDEX idx_orders_master ON orders(master_order_id);
+CREATE INDEX idx_memberships_user ON user_store_memberships(user_id);
 CREATE INDEX idx_variants_tenant_product ON product_variants(tenant_id, product_id);
 CREATE INDEX idx_orders_tenant_user ON orders(tenant_id, user_id);
 CREATE INDEX idx_orders_tenant_status ON orders(tenant_id, status);

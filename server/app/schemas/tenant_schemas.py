@@ -25,6 +25,9 @@ class TenantRegisterRequest(BaseModel):
 class TenantUpdateSchema(BaseModel):
     custom_domain: Optional[str] = None
 
+class TenantMarketplaceVisibilityUpdateSchema(BaseModel):
+    show_all_products_in_marketplace: bool
+
 class TenantSettingsUpdateSchema(BaseModel):
     logo_url: Optional[str] = None
     primary_color: Optional[str] = None
@@ -82,6 +85,7 @@ class TenantResponse(BaseModel):
     status: str
     created_at: datetime
     custom_domain: Optional[str] = None
+    show_all_products_in_marketplace: bool = False
     settings: Optional[TenantSettingsSchema] = None
     model_config = ConfigDict(from_attributes=True)
 

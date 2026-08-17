@@ -4,7 +4,7 @@ from sqlalchemy.orm import joinedload
 from fastapi import HTTPException, status
 from app.models.tenant import Tenant, TenantSettings, SubscriptionPlan
 from app.models.order import Order, OrderItem
-from app.schemas.tenant_schemas import TenantSettingsSchema, TenantUpdateSchema, TenantResponse, TenantSettingsUpdateSchema
+from app.schemas.tenant_schemas import TenantSettingsSchema, TenantUpdateSchema, TenantResponse, TenantSettingsUpdateSchema, TenantMarketplaceVisibilityUpdateSchema
 from app.schemas.ai_schemas import TopSellingProduct
 from app.services.order_service import PAID_ORDER_STATUSES
 from datetime import datetime, timezone
@@ -40,9 +40,44 @@ async def update_tenant_service(tenant_slug: str, req: TenantUpdateSchema, db: A
         "status": tenant.status,
         "created_at": tenant.created_at,
         "custom_domain": tenant.custom_domain,
+        "show_all_products_in_marketplace": tenant.show_all_products_in_marketplace,
         "settings": TenantSettingsSchema.model_validate(tenant.settings) if tenant.settings else None
     }
     return TenantResponse(**tenant_data)
+
+
+async def update_marketplace_visibility_service(tenant_slug: str, req: TenantMarketplaceVisibilityUpdateSchema, db: AsyncSession) -> TenantResponse:
+    tenant_result = await db.execute(
+        select(Tenant).options(joinedload(Tenant.plan), joinedload(Tenant.settings)).where(Tenant.slug == tenant_slug)
+    )
+    tenant = tenant_result.scalar_one_or_none()
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    tenant.show_all_products_in_marketplace = req.show_all_products_in_marketplace
+    await db.commit()
+
+    # Not db.refresh(tenant): that only reloads column attributes, leaving
+    # `plan`/`settings` expired -- accessing them below would then trigger an
+    # implicit lazy-load, which isn't safe outside an awaited context under
+    # the async ORM (MissingGreenlet). Re-select with the same joinedload
+    # instead, same pattern as update_tenant_service above.
+    tenant_result = await db.execute(
+        select(Tenant).options(joinedload(Tenant.plan), joinedload(Tenant.settings)).where(Tenant.id == tenant.id)
+    )
+    tenant = tenant_result.scalar_one()
+
+    return TenantResponse(
+        id=tenant.id,
+        slug=tenant.slug,
+        name=tenant.name,
+        plan_code=tenant.plan.code if tenant.plan else "free",
+        status=tenant.status,
+        created_at=tenant.created_at,
+        custom_domain=tenant.custom_domain,
+        show_all_products_in_marketplace=tenant.show_all_products_in_marketplace,
+        settings=TenantSettingsSchema.model_validate(tenant.settings) if tenant.settings else None
+    )
 
 
 async def update_store_settings_service(tenant_slug: str, req: TenantSettingsUpdateSchema, db: AsyncSession) -> TenantSettingsSchema:

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Path, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.deps import get_current_user, get_current_customer
+from app.deps import get_current_user
 from app.db.session import get_db
 from app.schemas.auth_schemas import UserResponse
 from app.schemas.order_schemas import PaginatedOrderResponse, OrderResponse
@@ -37,7 +37,7 @@ async def get_customer_profile(current_user: User = Depends(get_current_user)):
 async def list_orders(
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=100),
-    current_user: User = Depends(get_current_customer),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     return await list_customer_orders_service(current_user.id, page, page_size, db)
@@ -54,7 +54,7 @@ async def list_orders(
 )
 async def get_order(
     order_id: int = Path(...),
-    current_user: User = Depends(get_current_customer),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     return await get_customer_order_service(current_user.id, order_id, db)
@@ -71,7 +71,7 @@ async def get_order(
 )
 async def cancel_order(
     order_id: int = Path(...),
-    current_user: User = Depends(get_current_customer),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     return await cancel_customer_order_service(current_user.id, order_id, db)
@@ -89,7 +89,7 @@ async def cancel_order(
 )
 async def pay_order(
     order_id: int = Path(...),
-    current_user: User = Depends(get_current_customer),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     return await pay_order_service(current_user.id, order_id, db)

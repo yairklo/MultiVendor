@@ -223,6 +223,8 @@ async def checkout_service(tenant_slug: str, req: CheckoutRequest, user_id: int,
         sm = sm_res.scalar_one_or_none()
         if sm:
             shipping_fee = sm.price # basic logic
+        else:
+            req.shipping_method_id = None
 
     # Sort variants to prevent deadlocks
     variants_to_lock.sort(key=lambda x: x[0])
@@ -346,7 +348,7 @@ async def checkout_service(tenant_slug: str, req: CheckoutRequest, user_id: int,
                 sku=i.sku,
                 unit_price=i.unit_price,
                 quantity=i.quantity
-            ) for i in await db.scalars(select(OrderItem).where(OrderItem.order_id == order.id))]
+            ) for i in (await db.scalars(select(OrderItem).where(OrderItem.order_id == order.id))).all()]
         )
         
     finally:

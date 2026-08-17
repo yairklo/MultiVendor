@@ -31,6 +31,7 @@ class ProductCreateRequest(BaseModel):
     description: Optional[Dict[str, str]] = None
     base_price: Decimal = Field(..., gt=0)
     is_active: bool = True
+    show_in_marketplace: bool = False
     product_type: Literal['physical', 'digital', 'service'] = 'physical'
     digital_file_url: Optional[str] = None
     download_limit: Optional[int] = None
@@ -63,6 +64,7 @@ class ProductUpdateRequest(BaseModel):
     description: Optional[Dict[str, str]] = None
     base_price: Optional[Decimal] = Field(None, gt=0)
     is_active: Optional[bool] = None
+    show_in_marketplace: Optional[bool] = None
     product_type: Optional[Literal['physical', 'digital', 'service']] = None
     digital_file_url: Optional[str] = None
     download_limit: Optional[int] = None
@@ -78,6 +80,7 @@ class ProductResponse(BaseModel):
     description: Any
     base_price: Decimal
     is_active: bool
+    show_in_marketplace: bool = False
     product_type: str
     digital_file_url: Optional[str]
     download_limit: Optional[int]

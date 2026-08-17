@@ -179,8 +179,12 @@ async def test_pay_order_requires_ownership(async_client: AsyncClient, seed_toke
     headers_a = {"Authorization": seed_tokens["customer_a"]}
     order = await _checkout_one_item(async_client, headers_a)
 
-    headers_b = {"Authorization": seed_tokens["customer_b"]}
-    response = await async_client.post(f"/api/v1/customer/orders/{order['id']}/pay", headers=headers_b)
+    # seed_tokens["customer_a"] and ["customer_b"] are now the same global
+    # user (see conftest.py), so genuine cross-account ownership needs a
+    # second, actually-different global user -- tenant_admin_b fits (id 3,
+    # no orders of its own) without needing a bespoke fixture just for this.
+    other_user_headers = {"Authorization": seed_tokens["tenant_admin_b"]}
+    response = await async_client.post(f"/api/v1/customer/orders/{order['id']}/pay", headers=other_user_headers)
     assert response.status_code == 404
 
 
