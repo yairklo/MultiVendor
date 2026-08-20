@@ -75,11 +75,25 @@ async def login_service(req: LoginRequest, db: AsyncSession) -> TokenResponse:
 
     token = create_access_token(subject=user.id, is_super_admin=(user.role == UserRole.SUPER_ADMIN))
 
+    store_role = None
+    if req.tenant_slug:
+        tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == req.tenant_slug))
+        tenant_id = tenant_result.scalar_one_or_none()
+        if tenant_id:
+            membership_result = await db.execute(
+                select(UserStoreMembership.role).where(
+                    UserStoreMembership.user_id == user.id,
+                    UserStoreMembership.tenant_id == tenant_id,
+                )
+            )
+            store_role = membership_result.scalar_one_or_none()
+
     return TokenResponse(
         access_token=token,
         refresh_token=token,
         user_id=user.id,
         role=user.role,
+        store_role=store_role,
     )
 
 async def register_customer_service(tenant_slug: str, req: CustomerRegisterRequest, db: AsyncSession) -> User:

@@ -203,7 +203,7 @@ export function DashboardClient({
                     </Avatar>
                     <div className="ml-4 space-y-1">
                       <p className="text-sm font-medium leading-none">{order.customer_name || 'Guest'}</p>
-                      <p className="text-xs text-gray-500">Order #{order.id} &middot; {new Date(order.created_at).toLocaleDateString()}</p>
+                      <p className="text-xs text-gray-500">Order #{order.id} &middot; {new Date(order.created_at).toLocaleDateString('en-US')}</p>
                     </div>
                     <div className="ml-auto flex items-center space-x-3">
                       <span className="text-sm font-medium">{formatCurrency(Number(order.total_amount))}</span>
