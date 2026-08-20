@@ -70,6 +70,7 @@ class ProductUpdateRequest(BaseModel):
     download_limit: Optional[int] = None
     is_bundle: Optional[bool] = None
     bundle_items: Optional[List[ProductBundleItemSchema]] = None
+    images: Optional[List[str]] = None
 
 class ProductResponse(BaseModel):
     id: int
