@@ -21,13 +21,19 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     user_id: int
     role: UserRole
+    # Per-store role (e.g. 'tenant_admin', 'customer') for the tenant_slug
+    # given at login -- distinct from `role` above, which is the user's
+    # global account role and is 'user' even for someone who administers a
+    # store, since that permission lives in UserStoreMembership, not on User.
+    store_role: Optional[str] = None
     model_config = ConfigDict(json_schema_extra={
         "example": {
             "access_token": "eyJhbGciOiJIUzI1NiIsInR...",
             "refresh_token": "eyJhbGciOiJIUzI1NiIsInR...",
             "token_type": "bearer",
             "user_id": 12,
-            "role": "user"
+            "role": "user",
+            "store_role": "tenant_admin"
         }
     })
 

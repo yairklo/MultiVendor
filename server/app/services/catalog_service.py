@@ -704,6 +704,7 @@ def _build_marketplace_product_response(p: "Product", tenant: Tenant, review_sta
         images=[img.image_url for img in p.images],
         average_rating=round(avg_rating, 1) if avg_rating is not None else None,
         review_count=review_count,
+        variants=[ProductVariantSchema.model_validate(v) for v in p.variants],
         created_at=p.created_at
     )
 
@@ -733,7 +734,7 @@ async def list_marketplace_products_service(page: int, page_size: int, q: str | 
         select(Product, Tenant)
         .join(Tenant, Tenant.id == Product.tenant_id)
         .where(*conditions)
-        .options(selectinload(Product.images))
+        .options(selectinload(Product.images), selectinload(Product.variants))
         .order_by(Product.created_at.desc())
         .limit(page_size)
         .offset((page - 1) * page_size)

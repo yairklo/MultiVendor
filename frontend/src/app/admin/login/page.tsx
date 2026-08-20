@@ -39,9 +39,11 @@ export default function AdminLoginPage() {
         // Route based on the role the backend actually returned, not a guess
         // from the email — a customer account has no admin permissions and
         // would otherwise land on /admin/dashboard and 403 on every request.
+        // Tenant-admin status is per-store (UserStoreMembership), not on the
+        // account itself, so it comes back as `store_role`, not `role`.
         if (data.role === 'super_admin') {
           router.push('/super-admin')
-        } else if (data.role === 'tenant_admin') {
+        } else if (data.store_role === 'tenant_admin') {
           router.push('/admin/dashboard')
         } else {
           router.push(`/store/${tenantSlug || 'test-tenant'}`)

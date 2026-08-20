@@ -5,6 +5,7 @@ from decimal import Decimal
 from uuid import UUID
 from app.schemas.common_schemas import PaginatedResponse
 from app.schemas.order_schemas import OrderResponse
+from app.schemas.catalog_schemas import ProductVariantSchema
 
 class MarketplaceProductResponse(BaseModel):
     """A product surfaced on the cross-store marketplace. Carries its origin
@@ -25,6 +26,10 @@ class MarketplaceProductResponse(BaseModel):
     images: List[str]
     average_rating: Optional[float] = None
     review_count: int = 0
+    # Included so a listing card can add-to-cart directly (same one-click,
+    # first-variant convention as storefront/ProductCard) without a second
+    # round trip to the product detail endpoint.
+    variants: List[ProductVariantSchema] = []
     created_at: datetime
 
 class PaginatedMarketplaceProductResponse(PaginatedResponse):

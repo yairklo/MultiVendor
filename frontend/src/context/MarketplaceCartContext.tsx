@@ -1,0 +1,122 @@
+'use client'
+
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import {
+  MarketplaceCart,
+  addItemToMarketplaceCart,
+  clearMarketplaceCart as clearStoredMarketplaceCart,
+  fetchMarketplaceCart,
+  getActiveMarketplaceCart,
+  removeMarketplaceCartItem,
+  updateMarketplaceCartItemQuantity,
+} from '@/lib/marketplace-cart'
+
+interface MarketplaceCartContextValue {
+  cart: MarketplaceCart | null
+  loading: boolean
+  isOpen: boolean
+  openDrawer: () => void
+  closeDrawer: () => void
+  addItem: (variantId: number, quantity?: number) => Promise<void>
+  incrementItem: (itemId: number) => Promise<void>
+  decrementItem: (itemId: number) => Promise<void>
+  removeItem: (itemId: number) => Promise<void>
+  refresh: () => Promise<void>
+  clear: () => void
+}
+
+const MarketplaceCartContext = createContext<MarketplaceCartContextValue | null>(null)
+
+/** Cross-vendor equivalent of CartContext -- same shape and refresh-after-every-mutation
+ * convention, just not tenant-scoped (see lib/marketplace-cart.ts). Kept as a separate
+ * provider/context rather than extending CartContext since the two carts are genuinely
+ * different resources on the backend (marketplace_cart_items vs. carts/cart_items), with
+ * different checkout endpoints and different order-splitting behavior. */
+export function MarketplaceCartProvider({ children }: { children: React.ReactNode }) {
+  const [cart, setCart] = useState<MarketplaceCart | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [isOpen, setIsOpen] = useState(false)
+
+  const refresh = useCallback(async () => {
+    const active = getActiveMarketplaceCart()
+    if (!active) {
+      setCart(null)
+      setLoading(false)
+      return
+    }
+    setLoading(true)
+    try {
+      const data = await fetchMarketplaceCart(active.cartId)
+      setCart(data)
+    } catch (e) {
+      console.error('Failed to load marketplace cart, clearing stale cart state:', e)
+      clearStoredMarketplaceCart()
+      setCart(null)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    refresh()
+  }, [refresh])
+
+  const addItem = useCallback(async (variantId: number, quantity = 1) => {
+    await addItemToMarketplaceCart(variantId, quantity)
+    await refresh()
+  }, [refresh])
+
+  const incrementItem = useCallback(async (itemId: number) => {
+    const active = getActiveMarketplaceCart()
+    const item = cart?.items.find(i => i.id === itemId)
+    if (!active || !item) return
+    await updateMarketplaceCartItemQuantity(active.cartId, itemId, item.quantity + 1)
+    await refresh()
+  }, [cart, refresh])
+
+  const decrementItem = useCallback(async (itemId: number) => {
+    const active = getActiveMarketplaceCart()
+    const item = cart?.items.find(i => i.id === itemId)
+    if (!active || !item) return
+    if (item.quantity <= 1) {
+      await removeMarketplaceCartItem(active.cartId, itemId)
+    } else {
+      await updateMarketplaceCartItemQuantity(active.cartId, itemId, item.quantity - 1)
+    }
+    await refresh()
+  }, [cart, refresh])
+
+  const removeItem = useCallback(async (itemId: number) => {
+    const active = getActiveMarketplaceCart()
+    if (!active) return
+    await removeMarketplaceCartItem(active.cartId, itemId)
+    await refresh()
+  }, [refresh])
+
+  const clear = useCallback(() => {
+    clearStoredMarketplaceCart()
+    setCart(null)
+  }, [])
+
+  const value: MarketplaceCartContextValue = {
+    cart,
+    loading,
+    isOpen,
+    openDrawer: () => setIsOpen(true),
+    closeDrawer: () => setIsOpen(false),
+    addItem,
+    incrementItem,
+    decrementItem,
+    removeItem,
+    refresh,
+    clear,
+  }
+
+  return <MarketplaceCartContext.Provider value={value}>{children}</MarketplaceCartContext.Provider>
+}
+
+export function useMarketplaceCart(): MarketplaceCartContextValue {
+  const ctx = useContext(MarketplaceCartContext)
+  if (!ctx) throw new Error('useMarketplaceCart must be used within a MarketplaceCartProvider')
+  return ctx
+}

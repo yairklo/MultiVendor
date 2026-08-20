@@ -28,6 +28,7 @@ export function StorefrontHeader({
   const navItems = [
     { label: 'Home', href: `/store/${tenantSlug}` },
     { label: 'Shop', href: `/store/${tenantSlug}/shop` },
+    { label: 'Marketplace', href: `/marketplace` },
     { label: 'About', href: `/store/${tenantSlug}/pages/about` },
     { label: 'Contact', href: `/store/${tenantSlug}/pages/contact` },
   ]

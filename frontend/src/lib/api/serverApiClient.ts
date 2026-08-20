@@ -89,6 +89,13 @@ export const getProducts = cache(
   }
 )
 
+export const getMarketplaceProducts = cache(async (page = 1, pageSize = 12, q?: string) => {
+  const qs = new URLSearchParams({ page: String(page), page_size: String(pageSize) })
+  if (q) qs.set('q', q)
+  const data = await serverApiClient(`/api/v1/marketplace/products?${qs.toString()}`)
+  return { data: data.data || [], meta: data.meta }
+})
+
 export const getCategories = cache(async (tenantSlug: string) => {
   const data = await serverApiClient(`/api/v1/store/${tenantSlug}/categories`)
   return data.data || data

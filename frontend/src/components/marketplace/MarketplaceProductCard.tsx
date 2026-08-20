@@ -1,0 +1,93 @@
+'use client'
+
+import { useState } from 'react'
+import Link from 'next/link'
+import { Store } from 'lucide-react'
+import { StarRating } from '@/components/ui/star-rating'
+import { resolveI18nText } from '@/lib/i18n-text'
+import { useMarketplaceCart } from '@/context/MarketplaceCartContext'
+
+const STRINGS = {
+  en: { addToCart: 'Add to Cart', outOfStock: 'Out of stock', adding: 'Adding…' },
+  he: { addToCart: 'הוסף לעגלה', outOfStock: 'אזל מהמלאי', adding: 'מוסיף…' },
+}
+
+/**
+ * Cross-store equivalent of storefront/ProductCard: same one-click-first-variant
+ * Add to Cart convention, but adds to the marketplace cart (MarketplaceCartContext)
+ * instead of a single store's cart, since a purchase from here can span vendors.
+ * Image/title still link through to the vendor's own product page for anyone who
+ * wants full details (variant options, reviews, description) before buying.
+ */
+export function MarketplaceProductCard({
+  product,
+  lang = 'en',
+  formatCurrency,
+}: {
+  product: any
+  lang?: 'en' | 'he'
+  formatCurrency: (amount: number) => string
+}) {
+  const { addItem } = useMarketplaceCart()
+  const [adding, setAdding] = useState(false)
+  const t = STRINGS[lang]
+  const name = resolveI18nText(product.name, lang)
+  const image = product.primary_image_url || product.images?.[0]
+  const href = `/store/${product.tenant_slug}/products/${product.slug}`
+
+  const variant = product.variants?.[0]
+  const stockKnown = Number.isFinite(variant?.stock_quantity)
+  const outOfStock = stockKnown && variant.stock_quantity <= 0
+
+  const handleAddToCart = async () => {
+    if (!variant?.id) return
+    setAdding(true)
+    try {
+      await addItem(variant.id, 1)
+    } catch {
+      // MarketplaceCartContext surfaces its own errors; nothing further to do here.
+    } finally {
+      setAdding(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col rounded-xl border border-gray-100 bg-white p-3 shadow-sm transition-shadow duration-300 hover:shadow-lg">
+      <Link href={href} className="mb-2 block overflow-hidden rounded-lg">
+        {image ? (
+          // eslint-disable-next-line @next/next/no-img-element -- arbitrary vendor-supplied
+          // URLs with no host allowlist, same reasoning as storefront/ProductCard.
+          <img src={image} alt={name} className="aspect-square w-full object-cover" />
+        ) : (
+          <div className="aspect-square w-full bg-gray-100" />
+        )}
+      </Link>
+      <span className="mb-1 inline-flex w-fit items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+        <Store className="h-3 w-3" />
+        {product.tenant_name}
+      </span>
+      <Link
+        href={href}
+        className="line-clamp-2 text-sm font-semibold text-gray-900 transition-colors hover:text-blue-600"
+      >
+        {name}
+      </Link>
+      {product.review_count > 0 && (
+        <div className="mt-1 flex items-center gap-1">
+          <StarRating rating={product.average_rating} size={12} />
+          <span className="text-xs text-gray-400">({product.review_count})</span>
+        </div>
+      )}
+      <span className="mt-1 text-sm font-medium text-gray-700">{formatCurrency(product.base_price)}</span>
+
+      <button
+        type="button"
+        disabled={!variant?.id || outOfStock || adding}
+        onClick={handleAddToCart}
+        className="mt-3 w-full rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {outOfStock ? t.outOfStock : adding ? t.adding : t.addToCart}
+      </button>
+    </div>
+  )
+}
