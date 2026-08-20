@@ -30,7 +30,7 @@ const formSchema = z.object({
   base_price: z.coerce.number().gt(0, 'Price must be positive'),
   category_id: z.coerce.number().optional().nullable(),
   stock_quantity: z.coerce.number().min(0, 'Quantity cannot be negative'),
-  is_active: z.boolean().default(true)
+  is_active: z.boolean()
 })
 
 export function EditProductClient({
@@ -83,7 +83,7 @@ export function EditProductClient({
         payload.images = [values.image_url]
       }
 
-      await updateProduct(productId, payload)
+      await updateProduct(Number(productId), payload)
 
       if (variant) {
         await updateVariant(variant.id, {

@@ -15,7 +15,7 @@ export function useCategories() {
     }
   }, [tenantSlug])
 
-  const createCategory = async (payload: { name: string; slug: string }) => {
+  const createCategory = async (payload: { name: Record<string, string>; slug: string }) => {
     return apiClient(`/api/v1/admin/store/${tenantSlug}/categories`, {
       method: 'POST',
       body: JSON.stringify(payload)
