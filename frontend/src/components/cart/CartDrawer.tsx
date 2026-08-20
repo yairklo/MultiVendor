@@ -4,6 +4,7 @@ import React from 'react'
 import { useRouter } from 'next/navigation'
 import { useCart } from '@/context/CartContext'
 import { useCurrency } from '@/hooks/useCurrency'
+import { resolveImageUrl } from '@/lib/media'
 
 export function CartDrawer() {
   const { cart, isOpen, closeDrawer, incrementItem, decrementItem, removeItem } = useCart()
@@ -39,7 +40,7 @@ export function CartDrawer() {
           {cart?.items.map(item => (
             <div key={item.id} data-testid="cart-item" className="flex gap-3 border-b pb-4">
               {item.image_url ? (
-                <img src={item.image_url} alt={item.product_name} className="w-16 h-16 object-cover rounded-lg flex-shrink-0" />
+                <img src={resolveImageUrl(item.image_url)} alt={item.product_name} className="w-16 h-16 object-cover rounded-lg flex-shrink-0" />
               ) : (
                 <div
                   role="img"

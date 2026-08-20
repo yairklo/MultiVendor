@@ -25,11 +25,14 @@ export default function CopilotPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  async function handleSend(message: string) {
-    setMessages((prev) => [...prev, { role: 'user', text: message }])
+  async function handleSend(message: string, file?: File | null) {
+    setMessages((prev) => [
+      ...prev,
+      { role: 'user', text: file ? `${message}\n\n[Attached file: ${file.name}]` : message },
+    ])
     setIsBusy(true)
     try {
-      const result = await sendChatMessage(message, NO_PAGE_CONTEXT)
+      const result = await sendChatMessage(message, NO_PAGE_CONTEXT, file)
       setMessages((prev) => [
         ...prev,
         {

@@ -65,11 +65,14 @@ export default function AiLayoutPage() {
     showToast(`${action.label} → ${action.actionType}`, 'info')
   }
 
-  async function handleSend(message: string) {
-    setMessages((prev) => [...prev, { role: 'user', text: message }])
+  async function handleSend(message: string, file?: File | null) {
+    setMessages((prev) => [
+      ...prev,
+      { role: 'user', text: file ? `${message}\n\n[Attached file: ${file.name}]` : message },
+    ])
     setIsBusy(true)
     try {
-      const result = await sendChatMessage(message, { pageKey, pageType })
+      const result = await sendChatMessage(message, { pageKey, pageType }, file)
       setProvider(result.used_provider)
       if (result.page) setPage(result.page)
       setMessages((prev) => [

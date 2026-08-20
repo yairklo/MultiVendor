@@ -1,0 +1,21 @@
+fastapi==0.141.1
+uvicorn==0.52.1
+sqlalchemy==2.0.51
+aiomysql==0.3.2
+pymysql==1.2.0
+redis==8.1.0
+slowapi==0.1.10
+google-genai==2.16.0
+pydantic==2.13.4
+pydantic-settings==2.15.0
+python-jose==3.5.0
+passlib==1.7.4
+bcrypt==3.2.2
+python-dotenv==1.1.1
+email-validator==2.3.0
+httpx==0.28.1
+
+# File uploads: product images + Excel import
+python-multipart==0.0.32
+openpyxl==3.1.5
+pillow==11.3.0

@@ -234,6 +234,41 @@ ai_tools: List[ToolDefinition] = [
             "required": ["name", "slug", "base_price", "variants"],
         },
     },
+    {
+        "name": "bulk_import_products",
+        "description": (
+            "Create or update many products/inventory levels in one call from spreadsheet-style rows -- the "
+            "standard way to act on an attached .xlsx. Upserts by sku: a sku that already exists in this "
+            "store just gets its stock_quantity/base_price updated; a new sku creates a new product with one "
+            "variant. Use this instead of calling create_product repeatedly when the user attached a "
+            "spreadsheet or otherwise gave you more than a couple of products at once."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "rows": {
+                    "type": "array",
+                    "description": "One entry per product/SKU.",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name_en": {"type": "string", "description": "Required for a new sku; ignored when updating an existing one."},
+                            "name_he": {"type": "string"},
+                            "slug": {"type": "string", "description": "Required for a new sku; lowercase letters/numbers/hyphens."},
+                            "description_en": {"type": "string"},
+                            "base_price": {"type": "number"},
+                            "sku": {"type": "string", "description": "Required -- the upsert key."},
+                            "stock_quantity": {"type": "integer"},
+                            "category_id": {"type": "number"},
+                            "image_url": {"type": "string"},
+                        },
+                        "required": ["sku", "base_price", "stock_quantity"],
+                    },
+                },
+            },
+            "required": ["rows"],
+        },
+    },
     # --- Storefront templates ---------------------------------------------
     {
         "name": "list_storefront_templates",

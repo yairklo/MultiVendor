@@ -23,6 +23,8 @@ import { Input } from '@/components/ui/input'
 // Temporarily using standard select if shadcn select is complex, or checkbox for active
 // Actually, shadcn select is installed. But let's keep it simple for boolean
 import { Label } from '@/components/ui/label'
+import { ImageUploadField } from '@/components/upload/ImageUploadField'
+import { resolveImageUrl } from '@/lib/media'
 
 const formSchema = z.object({
   name_en: z.string().min(2, { message: 'English name must be at least 2 characters.' }),
@@ -219,7 +221,7 @@ export default function NewProductPage() {
                   {field.value && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={field.value}
+                      src={resolveImageUrl(field.value)}
                       alt="Preview"
                       className="mt-2 h-24 w-24 rounded-lg border border-gray-100 object-cover"
                     />
@@ -229,27 +231,11 @@ export default function NewProductPage() {
               )}
             />
 
-            <div>
-              <Label htmlFor="product-image-file">Upload Image File</Label>
-              <input
-                id="product-image-file"
-                type="file"
-                accept="image/*"
-                disabled
-                aria-describedby="product-image-file-help"
-                className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-gray-100 file:px-3 file:py-2 file:text-sm disabled:opacity-50"
-              />
-              {/*
-                TODO(backend): server/app/schemas/catalog_schemas.py's ProductCreateRequest.images
-                is `List[str]` (hosted URLs) and there is no multipart/file-storage endpoint in
-                tenant_admin_router.py. Wire this control up once the backend gains a real upload
-                endpoint (or object storage integration) — until then it stays disabled so we don't
-                fake an upload that silently does nothing.
-              */}
-              <p id="product-image-file-help" className="text-xs text-muted-foreground mt-1">
-                File upload requires backend storage support (not implemented yet). Use the image URL field above instead.
-              </p>
-            </div>
+            <ImageUploadField
+              label="Upload Image File"
+              value={form.watch('image_url') || ''}
+              onChange={(url) => form.setValue('image_url', url, { shouldDirty: true })}
+            />
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FormField

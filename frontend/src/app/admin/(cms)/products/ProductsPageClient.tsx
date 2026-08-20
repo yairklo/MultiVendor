@@ -21,6 +21,9 @@ import {
 import { totalStock, stockLevel, stockLevelLabel, stockLevelClass } from '@/lib/stock'
 import { PaginationControls, PaginationMeta } from '@/components/ui/pagination-controls'
 import { TableRowSkeleton } from '@/components/ui/skeleton'
+import { ExcelImportDialog } from '@/components/upload/ExcelImportDialog'
+import { useUploads } from '@/hooks/useUploads'
+import { resolveImageUrl } from '@/lib/media'
 
 export function ProductsPageClient({
   initialProducts,
@@ -34,11 +37,13 @@ export function ProductsPageClient({
   const { confirm } = useConfirm()
   const { fetchCategories } = useCategories()
   const { formatCurrency } = useCurrency()
+  const { previewProductsImport, commitProductsImport, downloadImportTemplate } = useUploads()
   const [products, setProducts] = useState<any[]>(initialProducts)
   const [categories, setCategories] = useState<any[]>([])
   const [meta, setMeta] = useState<PaginationMeta | null>(initialMeta)
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(false)
+  const [isImportOpen, setIsImportOpen] = useState(false)
 
   // Search and Filter
   const [search, setSearch] = useState('')
@@ -137,11 +142,24 @@ export function ProductsPageClient({
               Delete Selected ({selectedIds.length})
             </Button>
           )}
+          <Button variant="outline" onClick={() => setIsImportOpen(true)}>
+            Import from Excel
+          </Button>
           <Link href="/admin/products/new" className={buttonVariants()}>
             + Add Product
           </Link>
         </div>
       </div>
+
+      <ExcelImportDialog
+        open={isImportOpen}
+        onOpenChange={setIsImportOpen}
+        title="Import Products / Inventory"
+        preview={previewProductsImport}
+        commit={commitProductsImport}
+        onDownloadTemplate={downloadImportTemplate}
+        onImported={() => loadProducts()}
+      />
 
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <Input
@@ -209,7 +227,7 @@ export function ProductsPageClient({
                     {(product.primary_image_url || (product.images && product.images[0])) ? (
                       // eslint-disable-next-line @next/next/no-img-element -- arbitrary vendor URL, no host allowlist
                       <img
-                        src={product.primary_image_url || product.images[0]}
+                        src={resolveImageUrl(product.primary_image_url || product.images[0])}
                         alt={typeof product.name === 'object' ? (product.name?.en || 'Product') : product.name}
                         className="w-10 h-10 object-cover rounded"
                       />

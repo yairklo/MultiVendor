@@ -226,21 +226,56 @@ def _trim_history_for_persistence(history: List[Any], round_results: List[Dict[s
 
 
 async def run_agent_turn(
-    db: AsyncSession, tenant_slug: str, user_message: str, page_key: Optional[str], page_type: Optional[str]
+    db: AsyncSession, tenant_slug: str, user_message: str, page_key: Optional[str], page_type: Optional[str],
+    attachment: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    if _is_degenerate_input(user_message):
+    # A dropped file carries its own signal even with no/blank message text —
+    # skip the degenerate-input short-circuit in that case, and give the
+    # model something to act on instead of an empty string.
+    if attachment and not (user_message or "").strip():
+        user_message = "Please look at the attached file and take the appropriate action."
+
+    # What gets persisted to the visible chat transcript -- short and
+    # readable, regardless of how much attachment content gets appended to
+    # what actually gets sent to the model below.
+    display_message = user_message
+    if attachment:
+        display_message = f"{user_message}\n\n[Attached file: {attachment['filename']}]"
+
+    if not attachment and _is_degenerate_input(user_message):
         # Checked before is_gemini_configured()/client construction on purpose —
         # junk input never reaches (and never costs) a real Gemini call, mock or not.
         result = {"reply": _DEGENERATE_INPUT_REPLY, "tool_calls": [], "used_provider": "mock"}
-        await _persist_turn(tenant_slug, page_key, page_type, user_message, result, db)
+        await _persist_turn(tenant_slug, page_key, page_type, display_message, result, db)
         return result
 
+    # Text sent to the model this turn -- augmented with parsed spreadsheet
+    # rows (Gemini can't read .xlsx bytes) or, for an image, just the saved
+    # URL (the raw bytes go in as a separate multimodal part below instead).
+    augmented_message = user_message
+    image_part_kwargs: Optional[Dict[str, Any]] = None
+    if attachment and attachment["kind"] == "spreadsheet":
+        augmented_message = (
+            f"{user_message}\n\nThe user attached a spreadsheet (\"{attachment['filename']}\"), already parsed "
+            f"into {attachment['parsed']['total_count']} row(s) ({attachment['parsed']['valid_count']} valid). "
+            f"Use the bulk_import_products tool with this exact data if the user wants to import/update "
+            f"products or inventory from it -- do not ask them to re-describe the rows. Parsed rows as JSON: "
+            f"{attachment['parsed']['rows']}"
+        )
+    elif attachment and attachment["kind"] == "image":
+        augmented_message = (
+            f"{user_message}\n\nThe user attached an image, saved at URL \"{attachment['url']}\" -- it's also "
+            f"included below so you can see it directly. If they want a product created from it, use that URL "
+            f"in create_product's images argument."
+        )
+        image_part_kwargs = {"data": attachment["bytes"], "mime_type": attachment["mime_type"]}
+
     if not is_gemini_configured():
-        result = await run_mock_agent(user_message, tenant_slug, page_key, page_type, db)
+        result = await run_mock_agent(augmented_message, tenant_slug, page_key, page_type, db)
         result = {**result, "used_provider": "mock"}
         # Mock mode has no real multi-turn reasoning to preserve, but the visible
         # transcript is still persisted so reopening this page shows it.
-        await _persist_turn(tenant_slug, page_key, page_type, user_message, result, db)
+        await _persist_turn(tenant_slug, page_key, page_type, display_message, result, db)
         return result
 
     from google.genai import Client, types
@@ -270,7 +305,11 @@ async def run_agent_turn(
     grounding_context = ToolGroundingContext()
     consecutive_failures = 0
     last_error_detail: Any = None
-    response = await chat.send_message(user_message)
+    message_parts = (
+        [types.Part.from_text(text=augmented_message), types.Part.from_bytes(**image_part_kwargs)]
+        if image_part_kwargs else augmented_message
+    )
+    response = await chat.send_message(message_parts)
 
     for _ in range(MAX_TOOL_TURNS):
         function_calls = response.function_calls or []
@@ -327,5 +366,5 @@ async def run_agent_turn(
 
     trimmed_history = _trim_history_for_persistence(chat.get_history(), round_results)
     history_json = [c.model_dump(mode="json", exclude_none=True) for c in trimmed_history]
-    await _persist_turn(tenant_slug, page_key, page_type, user_message, result, db, gemini_history_json=history_json)
+    await _persist_turn(tenant_slug, page_key, page_type, display_message, result, db, gemini_history_json=history_json)
     return result

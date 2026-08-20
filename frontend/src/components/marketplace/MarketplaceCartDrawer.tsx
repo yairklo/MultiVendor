@@ -6,6 +6,7 @@ import { Store } from 'lucide-react'
 import { useMarketplaceCart } from '@/context/MarketplaceCartContext'
 import { useCurrency } from '@/hooks/useCurrency'
 import { MarketplaceCartItem } from '@/lib/marketplace-cart'
+import { resolveImageUrl } from '@/lib/media'
 
 /** Cross-vendor equivalent of cart/CartDrawer, grouped by vendor so it's visually
  * obvious up front that checkout will split into one order per store. */
@@ -61,7 +62,7 @@ export function MarketplaceCartDrawer() {
                 {group.items.map(item => (
                   <div key={item.id} data-testid="marketplace-cart-item" className="flex gap-3 border-b pb-4">
                     {item.image_url ? (
-                      <img src={item.image_url} alt={item.product_name} className="w-16 h-16 object-cover rounded-lg flex-shrink-0" />
+                      <img src={resolveImageUrl(item.image_url)} alt={item.product_name} className="w-16 h-16 object-cover rounded-lg flex-shrink-0" />
                     ) : (
                       <div
                         role="img"

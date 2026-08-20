@@ -11,6 +11,7 @@ import { StarRating } from '@/components/ui/star-rating'
 import { Star } from 'lucide-react'
 import { useStorefrontTheme } from '@/context/StorefrontThemeContext'
 import { useCurrency } from '@/hooks/useCurrency'
+import { resolveImageUrl } from '@/lib/media'
 
 export function ProductDetailView({
   tenantSlug,
@@ -94,7 +95,7 @@ export function ProductDetailView({
         <div className="mt-4 bg-white rounded-xl shadow-md border border-gray-100 p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
           <div>
             {images.length > 0 ? (
-              <img src={images[0]} alt={name} className="w-full h-80 object-cover rounded-lg" />
+              <img src={resolveImageUrl(images[0])} alt={name} className="w-full h-80 object-cover rounded-lg" />
             ) : (
               <div className="w-full h-80 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
                 No image
