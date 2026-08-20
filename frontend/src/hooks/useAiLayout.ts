@@ -26,14 +26,21 @@ export function useAiLayout() {
     return apiClient(`/api/v1/admin/store/${tenantSlug}/ai/page-schema?${params.toString()}`)
   }
 
-  const sendChatMessage = async (message: string, pageContext: PageContext): Promise<AIChatResponse> => {
+  const sendChatMessage = async (
+    message: string, pageContext: PageContext, attachedFile?: File | null
+  ): Promise<AIChatResponse> => {
+    const formData = new FormData()
+    formData.append('message', message)
+    if (pageContext) {
+      formData.append('page_key', pageContext.pageKey)
+      formData.append('page_type', pageContext.pageType)
+    }
+    if (attachedFile) {
+      formData.append('file', attachedFile)
+    }
     return apiClient(`/api/v1/admin/store/${tenantSlug}/ai/chat`, {
       method: 'POST',
-      body: JSON.stringify({
-        message,
-        page_key: pageContext?.pageKey ?? null,
-        page_type: pageContext?.pageType ?? null,
-      }),
+      body: formData,
     })
   }
 

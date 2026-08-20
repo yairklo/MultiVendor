@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.catalog_schemas import ProductCreateRequest, ProductUpdateRequest, ProductVariantSchema
 from app.schemas.order_schemas import CouponCreateRequest
 from app.schemas.ai_schemas import PendingConfirmation
-from app.services import ai_pending_action_service, catalog_service, coupon_service, order_service, store_page_service, tenant_service
+from app.services import ai_pending_action_service, catalog_service, coupon_service, import_service, order_service, store_page_service, tenant_service
 from app.services.storefront_templates import get_storefront_template
 
 
@@ -185,6 +185,23 @@ async def execute_tool(
                 for v in product.variants:
                     context.mark("variant", v.id)
             return ToolExecutionResult(tool_name, product.model_dump(mode="json"), False)
+
+        if tool_name == "bulk_import_products":
+            rows = raw_input.get("rows")
+            if not isinstance(rows, list) or not rows:
+                raise ValueError("rows must be a non-empty array")
+            # commit_products_import expects the same {"data": {...}} shape the
+            # REST preview/commit endpoints pass around -- each model-supplied
+            # row IS the data dict directly, so wrap it once here.
+            summary = await import_service.commit_products_import(
+                tenant_slug, [{"row_number": i + 1, "data": row} for i, row in enumerate(rows)], db
+            )
+            if context:
+                for entry in summary["created"]:
+                    context.mark("product", entry["product_id"])
+                for entry in summary["updated"]:
+                    context.mark("variant", entry["variant_id"])
+            return ToolExecutionResult(tool_name, summary, False)
 
         # --- Storefront templates -------------------------------------------
         if tool_name == "list_storefront_templates":

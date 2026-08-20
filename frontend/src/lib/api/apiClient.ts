@@ -15,7 +15,9 @@ export const apiClient = async (url: string, options: RequestInit = {}) => {
     headers.set('Authorization', `Bearer ${token}`)
   }
   
-  if (!headers.has('Content-Type')) {
+  // A FormData body (file uploads) must NOT get an explicit Content-Type --
+  // the browser sets its own multipart boundary, which we can't replicate.
+  if (!headers.has('Content-Type') && !(options.body instanceof FormData)) {
     headers.set('Content-Type', 'application/json')
   }
 

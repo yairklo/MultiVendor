@@ -1,11 +1,15 @@
-from fastapi import APIRouter, Depends, status, Query, Path, HTTPException
+from fastapi import APIRouter, Depends, status, Query, Path, HTTPException, UploadFile, File, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional, Literal
 from fastapi.responses import StreamingResponse
 from app.db.session import get_db
-from app.deps import get_tenant_admin
+from app.deps import get_tenant_admin, get_current_tenant
 from app.models.user import User
 from app.models.tenant import Tenant, SubscriptionPlan
+from app.services.storage_service import save_image
+from app.schemas.upload_schemas import ImageUploadResponse
+from app.services.import_service import build_import_template, parse_products_excel, commit_products_import
+from app.schemas.import_schemas import ImportPreviewResponse, ImportCommitRequest, ImportSummaryResponse
 from app.schemas.catalog_schemas import (
     ProductCreateRequest, ProductUpdateRequest, ProductResponse,
     ProductVariantSchema, CategoryCreateRequest, CategoryResponse,
@@ -42,6 +46,26 @@ from app.services.coupon_service import (
 )
 
 tenant_admin_router = APIRouter(prefix="/api/v1/admin/store/{tenant_slug}", tags=["Tenant Admin & CMS"])
+
+# UPLOADS
+@tenant_admin_router.post(
+    "/uploads/image",
+    response_model=ImageUploadResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Upload a Product Image",
+    description="Uploads an image file and returns its URL. Not product-scoped -- upload first, then use the returned URL wherever an image_url field is expected (e.g. creating a product).",
+    responses={
+        201: {"description": "Image uploaded successfully."},
+        400: {"description": "File is not a valid image, unsupported format, or exceeds the 5MB limit."}
+    }
+)
+async def upload_product_image(
+    file: UploadFile = File(...),
+    tenant: Tenant = Depends(get_current_tenant),
+    admin: User = Depends(get_tenant_admin),
+):
+    url = await save_image(file, tenant.id)
+    return ImageUploadResponse(url=url)
 
 # CATEGORIES
 @tenant_admin_router.post(
@@ -85,10 +109,53 @@ async def delete_category(
     await delete_category_service(tenant_slug, category_id, db)
     return None
 
+# PRODUCTS / INVENTORY IMPORT
+@tenant_admin_router.get(
+    "/products/import/template",
+    summary="Download Product Import Template",
+    description="Downloads a blank .xlsx with the expected column headers for the products/inventory import.",
+    responses={200: {"content": {"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {}}}}
+)
+async def download_import_template():
+    content = build_import_template()
+    return Response(
+        content=content,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=product_import_template.xlsx"},
+    )
+
+@tenant_admin_router.post(
+    "/products/import/preview",
+    response_model=ImportPreviewResponse,
+    summary="Preview a Product/Inventory Import",
+    description="Parses an uploaded .xlsx and validates each row without writing anything to the database.",
+)
+async def preview_products_import(
+    file: UploadFile = File(...),
+    tenant_slug: str = Path(...),
+    admin: User = Depends(get_tenant_admin),
+):
+    raw = await file.read()
+    return parse_products_excel(raw)
+
+@tenant_admin_router.post(
+    "/products/import/commit",
+    response_model=ImportSummaryResponse,
+    summary="Commit a Product/Inventory Import",
+    description="Creates new products or updates stock/price on existing ones (matched by SKU) from previously-previewed rows.",
+)
+async def commit_products_import_endpoint(
+    req: ImportCommitRequest,
+    tenant_slug: str = Path(...),
+    admin: User = Depends(get_tenant_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    return await commit_products_import(tenant_slug, [r.model_dump() for r in req.rows], db)
+
 # PRODUCTS
 @tenant_admin_router.post(
-    "/products", 
-    response_model=ProductResponse, 
+    "/products",
+    response_model=ProductResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create Product",
     description="Creates a new product. **Architectural Note:** Before creation, the system strictly checks the store's `subscription_plan`. If the store has reached its `max_products` quota, the request is rejected with a `403 Forbidden`.",

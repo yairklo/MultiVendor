@@ -346,9 +346,26 @@ async def update_product_service(tenant_slug: str, product_id: int, req: Product
 
     # bundle_items lives on a separate association table, not a Product column;
     # editing bundle composition isn't wired up here, so leave it untouched.
-    update_fields = req.model_dump(exclude_unset=True, exclude={"bundle_items"})
+    # images is likewise not a plain column -- it's the related ProductImage
+    # rows -- so it's handled separately below rather than via setattr.
+    update_fields = req.model_dump(exclude_unset=True, exclude={"bundle_items", "images"})
     for field, value in update_fields.items():
         setattr(product, field, value)
+
+    if req.images is not None:
+        # Full replace, matching create_product_service's shape (first URL
+        # is primary) -- the edit form only ever submits one image_url today,
+        # so there's no partial-update case to preserve here.
+        for old_image in product.images:
+            await db.delete(old_image)
+        for i, img_url in enumerate(req.images):
+            db.add(ProductImage(
+                tenant_id=tenant_id,
+                product_id=product.id,
+                image_url=img_url,
+                is_primary=(i == 0),
+                sort_order=i,
+            ))
 
     await db.commit()
     await db.refresh(product)

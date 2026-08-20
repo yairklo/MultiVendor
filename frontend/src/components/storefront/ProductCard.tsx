@@ -9,6 +9,7 @@ import { StarRating } from '@/components/ui/star-rating'
 import { resolveCardStyleClasses, CardStyle } from '@/lib/product-card-styles'
 
 import { useCurrency } from '@/hooks/useCurrency'
+import { resolveImageUrl } from '@/lib/media'
 
 const STRINGS = {
   en: { addToCart: 'Add to Cart', outOfStock: 'Out of stock', adding: 'Adding…' },
@@ -71,7 +72,7 @@ export function ProductCard({
           // URLs with no host allowlist; next/image would require allowing every hostname,
           // turning the server into an open image proxy (see next.config.ts history).
           <img
-            src={image}
+            src={resolveImageUrl(image)}
             alt={productName(product)}
             className="aspect-square w-full object-cover"
           />

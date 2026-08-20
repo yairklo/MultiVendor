@@ -18,6 +18,8 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { ImageUploadField } from '@/components/upload/ImageUploadField'
+import { resolveImageUrl } from '@/lib/media'
 
 const formSchema = z.object({
   name_en: z.string().min(2, { message: 'English name must be at least 2 characters.' }),
@@ -28,7 +30,7 @@ const formSchema = z.object({
   base_price: z.coerce.number().gt(0, 'Price must be positive'),
   category_id: z.coerce.number().optional().nullable(),
   stock_quantity: z.coerce.number().min(0, 'Quantity cannot be negative'),
-  is_active: z.boolean().default(true)
+  is_active: z.boolean()
 })
 
 export function EditProductClient({
@@ -81,7 +83,7 @@ export function EditProductClient({
         payload.images = [values.image_url]
       }
 
-      await updateProduct(productId, payload)
+      await updateProduct(Number(productId), payload)
 
       if (variant) {
         await updateVariant(variant.id, {
@@ -193,7 +195,7 @@ export function EditProductClient({
                   {field.value && (
                     // eslint-disable-next-line @next/next/no-img-element -- arbitrary vendor URL, no host allowlist
                     <img
-                      src={field.value}
+                      src={resolveImageUrl(field.value)}
                       alt="Preview"
                       className="mt-2 h-24 w-24 rounded-lg border border-gray-100 object-cover"
                     />
@@ -201,6 +203,12 @@ export function EditProductClient({
                   <FormMessage />
                 </FormItem>
               )}
+            />
+
+            <ImageUploadField
+              label="Upload Image File"
+              value={form.watch('image_url') || ''}
+              onChange={(url) => form.setValue('image_url', url, { shouldDirty: true })}
             />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

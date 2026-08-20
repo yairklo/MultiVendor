@@ -1,20 +1,44 @@
-from typing import Optional
+from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Query, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-from app.deps import get_tenant_admin
+from app.deps import get_current_tenant, get_tenant_admin
+from app.models.tenant import Tenant
 from app.models.user import User
 from app.schemas.ai_schemas import (
-    AIChatRequest, AIChatResponse, AIStatusResponse, ApplyStorefrontTemplateResponse, ConversationResponse, PageType,
+    AIChatResponse, AIStatusResponse, ApplyStorefrontTemplateResponse, ConversationResponse, PageType,
     PendingConfirmation, SavePageSectionsRequest, StorePageSchema, StorePageSummary, StorePageVersionSummary,
     StorefrontTemplateSummary, ToolCallRecord
 )
 from app.services import ai_conversation_service, ai_pending_action_service, store_page_service
 from app.services.ai_agent_service import is_gemini_configured, run_agent_turn
 from app.services.catalog_service import get_store_config_service
+from app.services.import_service import parse_products_excel
+from app.services.storage_service import save_image
 from app.schemas.tenant_schemas import TenantSettingsSchema
+
+_SPREADSHEET_EXTENSIONS = (".xlsx",)
+_IMAGE_CONTENT_PREFIX = "image/"
+
+
+async def _build_chat_attachment(file: Optional[UploadFile], tenant: Tenant) -> Optional[Dict[str, Any]]:
+    if file is None or not file.filename:
+        return None
+
+    if (file.content_type or "").startswith(_IMAGE_CONTENT_PREFIX):
+        raw = await file.read()
+        await file.seek(0)  # save_image below re-reads the file from the start
+        url = await save_image(file, tenant.id, subdir="chat")
+        return {"kind": "image", "filename": file.filename, "url": url, "mime_type": file.content_type, "bytes": raw}
+
+    if file.filename.lower().endswith(_SPREADSHEET_EXTENSIONS):
+        raw = await file.read()
+        parsed = parse_products_excel(raw)
+        return {"kind": "spreadsheet", "filename": file.filename, "parsed": parsed}
+
+    raise HTTPException(status_code=400, detail="Unsupported file type -- attach an image or an .xlsx spreadsheet")
 
 ai_router = APIRouter(prefix="/api/v1/admin/store/{tenant_slug}/ai", tags=["AI Layout & Product Assistant"])
 
@@ -108,21 +132,29 @@ async def put_page_schema(
     description=(
         "Runs one turn of the AI tool-calling loop, scoped strictly to the authenticated vendor's own store. "
         "The AI can inspect/edit the given page's sections or create a new product using the same validation "
-        "and subscription-limit checks as the manual admin flows."
+        "and subscription-limit checks as the manual admin flows. Accepts multipart/form-data so an image or "
+        ".xlsx spreadsheet can optionally be attached alongside the message -- the agent can see the image or "
+        "act on the parsed spreadsheet rows (e.g. via bulk_import_products)."
     ),
 )
 async def post_ai_chat(
-    req: AIChatRequest,
+    message: str = Form(..., min_length=0, max_length=4000),
+    page_key: Optional[str] = Form(None),
+    page_type: Optional[PageType] = Form(None),
+    file: Optional[UploadFile] = File(None),
     tenant_slug: str = Path(...),
+    tenant: Tenant = Depends(get_current_tenant),
     admin: User = Depends(get_tenant_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await run_agent_turn(db, tenant_slug, req.message, req.page_key, req.page_type)
+    _require_both_or_neither(page_key, page_type)
+    attachment = await _build_chat_attachment(file, tenant)
+    result = await run_agent_turn(db, tenant_slug, message, page_key, page_type, attachment=attachment)
 
     page = None
-    if req.page_key is not None:
+    if page_key is not None:
         try:
-            page = await store_page_service.get_page_schema_service(tenant_slug, req.page_key, req.page_type, db)
+            page = await store_page_service.get_page_schema_service(tenant_slug, page_key, page_type, db)
         except HTTPException:
             pass
 

@@ -6,6 +6,7 @@ import { Store } from 'lucide-react'
 import { StarRating } from '@/components/ui/star-rating'
 import { resolveI18nText } from '@/lib/i18n-text'
 import { useMarketplaceCart } from '@/context/MarketplaceCartContext'
+import { resolveImageUrl } from '@/lib/media'
 
 const STRINGS = {
   en: { addToCart: 'Add to Cart', outOfStock: 'Out of stock', adding: 'Adding…' },
@@ -57,7 +58,7 @@ export function MarketplaceProductCard({
         {image ? (
           // eslint-disable-next-line @next/next/no-img-element -- arbitrary vendor-supplied
           // URLs with no host allowlist, same reasoning as storefront/ProductCard.
-          <img src={image} alt={name} className="aspect-square w-full object-cover" />
+          <img src={resolveImageUrl(image)} alt={name} className="aspect-square w-full object-cover" />
         ) : (
           <div className="aspect-square w-full bg-gray-100" />
         )}

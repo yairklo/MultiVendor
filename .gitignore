@@ -3,6 +3,7 @@
 __pycache__/
 *.pyc
 venv/
+uploads/
 test-results/
 debug.py
 extract.py
