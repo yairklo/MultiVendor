@@ -12,6 +12,7 @@ import { DispatchedAction, Section, StorePageSchema } from '@/lib/ai/types'
 import { renderSections } from '@/components/storefront/PageRenderer'
 import { resolveDesignVariantClasses } from '@/lib/design-tokens'
 import { SectionPropertiesEditor } from './SectionPropertiesEditor'
+import { useStorefrontTheme } from '@/context/StorefrontThemeContext'
 
 type RenderOpts = {
   onAction?: (action: DispatchedAction) => void
@@ -284,6 +285,7 @@ export function DraggablePageEditor({
   onAskAI?: (id: string, prompt: string) => void
 }) {
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null)
+  const { lang } = useStorefrontTheme()
 
   if (!page) {
     return <div className="p-8 text-center text-gray-400">Loading page…</div>
@@ -343,8 +345,15 @@ export function DraggablePageEditor({
   }
 
   return (
-    <div className="flex w-full">
-      <div className="flex-1 px-4">
+    // dir is forced to ltr here regardless of the previewed store's language -- this row lays
+    // out the admin's OWN editing chrome (section list vs. properties panel), not customer-facing
+    // content. Letting it inherit dir="rtl" from PreviewWrapper (set when the Hebrew tab is active)
+    // reverses this flex row's visual order, so the properties panel jumps from the right side to
+    // the left -- reads as "the panel disappeared" since nobody expects it to relocate. The actual
+    // section content one level in re-applies the real preview language below so WYSIWYG RTL
+    // rendering of the store's own text is unaffected.
+    <div className="flex w-full" dir="ltr">
+      <div className="flex-1 px-4" dir={lang === 'he' ? 'rtl' : 'ltr'}>
         <div className="flex flex-col gap-3">
           <div className="sticky top-0 z-30 flex items-center justify-between bg-gray-50/95 py-2 backdrop-blur">
             <p className="text-xs text-gray-400">Use the toolbar on each section to reorder or edit.</p>

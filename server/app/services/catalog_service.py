@@ -15,6 +15,7 @@ from app.schemas.catalog_schemas import (
 )
 from app.schemas.ai_schemas import InventoryHealthItem, InventoryHealthResponse
 from app.schemas.marketplace_schemas import MarketplaceProductResponse, PaginatedMarketplaceProductResponse
+from app.db.tenant_context import platform_plane
 
 # Matches frontend/src/lib/stock.ts's LOW_STOCK_THRESHOLD — per-product configurable
 # thresholds don't exist in the schema, so this is a fixed, shared definition of "low".
@@ -23,13 +24,7 @@ from io import StringIO
 import csv
 from fastapi.responses import StreamingResponse
 from typing import Any
-
-def validate_i18n(field_dict: Any, supported_langs: list, field_name: str):
-    if not isinstance(field_dict, dict):
-        raise HTTPException(status_code=422, detail=f"{field_name} must be a dictionary of translations")
-    missing = [lang for lang in supported_langs if lang not in field_dict or not str(field_dict[lang]).strip()]
-    if missing:
-        raise HTTPException(status_code=422, detail=f"Missing required translations for {field_name} in languages: {missing}")
+from app.services.i18n_utils import validate_i18n
 
 async def get_store_config_service(tenant_slug: str, db: AsyncSession, admin_preview: bool = False) -> TenantSettingsSchema:
     result = await db.execute(select(Tenant).where(Tenant.slug == tenant_slug).options(selectinload(Tenant.settings)))
@@ -725,6 +720,7 @@ def _build_marketplace_product_response(p: "Product", tenant: Tenant, review_sta
         created_at=p.created_at
     )
 
+@platform_plane
 async def list_marketplace_products_service(page: int, page_size: int, q: str | None, db: AsyncSession) -> PaginatedMarketplaceProductResponse:
     # A product is marketplace-visible if it opted in individually, or its
     # store opted in wholesale (Tenant.show_all_products_in_marketplace) --

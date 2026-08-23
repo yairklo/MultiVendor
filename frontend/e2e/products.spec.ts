@@ -8,10 +8,11 @@ test.describe('Products Management', () => {
     await page.goto('/admin/products/new');
 
     // Fill out form
-    await page.getByLabel(/Product Name/i).fill(productName);
+    await page.getByLabel(/Product Name \(English\)/i).fill(productName);
+    await page.getByLabel(/Product Name \(Hebrew\)/i).fill(productName);
     await page.getByLabel(/slug/i).fill(`e2e-test-product-${uniqueId}`);
     await page.getByLabel(/price/i).fill('99.99');
-    await page.getByLabel(/description/i).fill('High quality E2E tested product');
+    await page.getByLabel(/Description \(English\)/i).fill('High quality E2E tested product');
 
     // Category is optional — a real dropdown of the store's categories now,
     // not a raw numeric ID field. Leaving it at "No category" is valid.
@@ -40,7 +41,8 @@ test.describe('Products Management', () => {
     });
 
     await page.goto('/admin/products/new');
-    await page.getByLabel(/Product Name/i).fill('Limit Test Product');
+    await page.getByLabel(/Product Name \(English\)/i).fill('Limit Test Product');
+    await page.getByLabel(/Product Name \(Hebrew\)/i).fill('Limit Test Product');
     await page.getByLabel(/slug/i).fill(`limit-test-product-${Date.now()}`);
     await page.getByLabel(/price/i).fill('1');
     await page.getByRole('button', { name: /save product/i }).click();

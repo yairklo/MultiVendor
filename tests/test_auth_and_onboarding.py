@@ -20,10 +20,28 @@ async def test_register_tenant_success(async_client: AsyncClient, db_session):
     assert data["role"] == "user"
 
 @pytest.mark.asyncio
-async def test_register_tenant_duplicate_admin_email_is_global_conflict(async_client: AsyncClient, db_session):
-    # customer@gmail.com already exists globally (seeded). Registering a
-    # brand-new store with that email as the admin must conflict just like a
-    # duplicate slug would, even though it was never tenant_admin anywhere before.
+async def test_register_tenant_existing_customer_becomes_admin_with_correct_password(async_client: AsyncClient, db_session):
+    payload = {
+        "store_name": "Yet Another Store",
+        "store_slug": "yet-another-store",
+        "admin_email": "customer@gmail.com",
+        "admin_password": "password",
+        "admin_full_name": "Someone",
+        "plan_code": "free"
+    }
+    response = await async_client.post("/api/v1/auth/register-tenant", json=payload)
+    assert response.status_code == 201
+    data = response.json()
+    assert data["role"] == "user"
+    assert data["store_role"] == "tenant_admin"
+    assert data["access_token"] != data["refresh_token"]
+
+    admin_headers = {"Authorization": f"Bearer {data['access_token']}"}
+    orders = await async_client.get("/api/v1/admin/store/yet-another-store/orders", headers=admin_headers)
+    assert orders.status_code == 200
+
+@pytest.mark.asyncio
+async def test_register_tenant_existing_email_rejects_wrong_password(async_client: AsyncClient, db_session):
     payload = {
         "store_name": "Yet Another Store",
         "store_slug": "yet-another-store",
@@ -33,7 +51,7 @@ async def test_register_tenant_duplicate_admin_email_is_global_conflict(async_cl
         "plan_code": "free"
     }
     response = await async_client.post("/api/v1/auth/register-tenant", json=payload)
-    assert response.status_code == 409
+    assert response.status_code == 401
 
 @pytest.mark.asyncio
 async def test_register_tenant_duplicate_slug_conflict(async_client: AsyncClient, db_session):
@@ -67,7 +85,16 @@ async def test_login_super_admin_success(async_client: AsyncClient, db_session):
     }
     response = await async_client.post("/api/v1/auth/login", json=payload)
     assert response.status_code == 200
-    assert response.json()["role"] == "super_admin"
+    body = response.json()
+    assert body["role"] == "super_admin"
+    assert body["access_token"] != body["refresh_token"]
+
+    reused = await async_client.post("/api/v1/auth/refresh", json={"refresh_token": body["refresh_token"]})
+    assert reused.status_code == 200
+    assert reused.json()["refresh_token"] != body["refresh_token"]
+
+    replay = await async_client.post("/api/v1/auth/refresh", json={"refresh_token": body["refresh_token"]})
+    assert replay.status_code == 401
 
 @pytest.mark.asyncio
 async def test_login_tenant_admin_success(async_client: AsyncClient, db_session):

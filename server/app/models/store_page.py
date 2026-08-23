@@ -2,8 +2,9 @@ from sqlalchemy import Column, BigInteger, Integer, String, Enum, DateTime, Fore
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.base_class import Base
+from app.db.tenant_scope import TenantScoped
 
-class StorePage(Base):
+class StorePage(TenantScoped, Base):
     __tablename__ = "store_pages"
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
@@ -35,7 +36,7 @@ class StorePage(Base):
     tenant = relationship("Tenant")
 
 
-class StorePageVersion(Base):
+class StorePageVersion(TenantScoped, Base):
     __tablename__ = "store_page_versions"
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     store_page_id = Column(BigInteger, ForeignKey("store_pages.id", ondelete="CASCADE"), nullable=False)
@@ -49,7 +50,7 @@ class StorePageVersion(Base):
     created_at = Column(DateTime, default=func.now())
 
 
-class AIConversation(Base):
+class AIConversation(TenantScoped, Base):
     __tablename__ = "ai_conversations"
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)

@@ -5,7 +5,9 @@ from sqlalchemy import select
 from app.models.order import Order, OrderItem
 from app.models.catalog import ProductVariant
 from app.db.session import redis_client
+from app.db.tenant_context import platform_plane
 
+@platform_plane
 async def cleanup_abandoned_checkouts(db: AsyncSession):
     # Find orders in pending_payment older than 15 minutes
     cutoff_time = datetime.now(timezone.utc) - timedelta(minutes=15)

@@ -1,9 +1,10 @@
 import secrets
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 from fastapi import HTTPException
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.tenant import Tenant, TenantSettings
 from app.models.store_page import StorePage, StorePageVersion
@@ -15,6 +16,29 @@ from app.schemas.ai_schemas import (
 from app.services.storefront_templates import (
     StorefrontTemplateMeta, get_storefront_template, list_storefront_template_metas,
 )
+from app.services.i18n_utils import validate_i18n
+
+# Scalar (single-string) text fields per section type -- each becomes
+# {"en": "...", "he": "...", ...} instead of a plain string. Array/object
+# text fields (testimonials/feature_highlights items, button labels, table
+# cells) are handled separately below since they're not flat key lookups.
+SECTION_SCALAR_TEXT_FIELDS: Dict[str, List[str]] = {
+    "hero_banner": ["headline"],
+    "text_block": ["heading", "body"],
+    "testimonials": ["title"],
+    "feature_highlights": ["title"],
+    "gallery": ["title"],
+    "video_embed": ["title"],
+    "product_grid": ["title"],
+    "table": ["title"],
+}
+
+# section type -> (settings key holding the array, text field names within each item)
+SECTION_ITEM_TEXT_FIELDS: Dict[str, Tuple[str, List[str]]] = {
+    "testimonials": ("items", ["quote", "author", "role"]),
+    "feature_highlights": ("items", ["title", "text"]),
+    "button_group": ("buttons", ["label"]),
+}
 
 MAX_VERSIONS_PER_PAGE = 20
 
@@ -113,7 +137,10 @@ def _sanitize_button_group_settings(settings: Dict[str, Any]) -> Dict[str, Any]:
     for b in buttons:
         if not isinstance(b, dict):
             continue
-        if not isinstance(b.get("label"), str) or b.get("actionType") not in BUTTON_ACTION_TYPES:
+        # label is a localized {lang: text} dict (see _sanitize_section_text, which runs
+        # after this and enforces every supported language is present) -- a legacy plain
+        # string is also accepted here since it's what auto-upgrades on that later pass.
+        if not b.get("label") or b.get("actionType") not in BUTTON_ACTION_TYPES:
             continue
         entry = {
             "label": b["label"],
@@ -148,8 +175,76 @@ def _sanitize_card_style_settings(settings: Dict[str, Any]) -> Dict[str, Any]:
     return settings
 
 
+def _localize_value(value: Any, supported_langs: List[str]) -> Any:
+    """Auto-upgrades a legacy plain-string value (every section saved before
+    per-language text existed, plus every premium template's hardcoded
+    single-language copy -- see apply_storefront_template_service) to the
+    same text duplicated under every supported language, in place.
+
+    Deliberately NOT "put it under default_language only and force the rest
+    to be filled in" -- that would make re-saving any pre-existing page, or
+    applying a template to a multi-language store, fail outright with a 422
+    the moment this feature shipped. Duplicating means nothing is ever
+    blank/broken and old content keeps saving; the store owner then narrows
+    a language down to a real translation via the editor's language tabs
+    whenever they get to it. Enforcement (validate_i18n below) still does
+    real work going forward: once a field is genuinely {lang: text} and an
+    admin clears one language's tab, that language is missing again and the
+    save is rejected -- it just doesn't retroactively punish content nobody
+    has touched since this shipped."""
+    return {lang: value for lang in supported_langs} if isinstance(value, str) else value
+
+
+def _validate_and_upgrade_text_field(
+    container: Dict[str, Any], field: str, supported_langs: List[str]
+) -> None:
+    if field not in container or container[field] is None:
+        return
+    container[field] = _localize_value(container[field], supported_langs)
+    validate_i18n(container[field], supported_langs, field)
+
+
+def _sanitize_section_text(settings: Dict[str, Any], section_type: str, supported_langs: List[str]) -> None:
+    """Mutates `settings` in place: upgrades any legacy plain-string text field to
+    {lang: text} and enforces every supported language is present, for every text
+    field this section type carries -- scalars, item-array fields, and (table only)
+    the header/row cell arrays."""
+    for field in SECTION_SCALAR_TEXT_FIELDS.get(section_type, []):
+        _validate_and_upgrade_text_field(settings, field, supported_langs)
+
+    if section_type in SECTION_ITEM_TEXT_FIELDS:
+        array_key, item_fields = SECTION_ITEM_TEXT_FIELDS[section_type]
+        items = settings.get(array_key)
+        if isinstance(items, list):
+            for item in items:
+                if isinstance(item, dict):
+                    for field in item_fields:
+                        _validate_and_upgrade_text_field(item, field, supported_langs)
+
+    if section_type == "table":
+        headers = settings.get("headers")
+        if isinstance(headers, list):
+            settings["headers"] = [_localize_value(h, supported_langs) for h in headers]
+            for i, cell in enumerate(settings["headers"]):
+                validate_i18n(cell, supported_langs, f"headers[{i}]")
+
+        rows = settings.get("rows")
+        if isinstance(rows, list):
+            new_rows = []
+            for r, row in enumerate(rows):
+                if not isinstance(row, list):
+                    new_rows.append(row)
+                    continue
+                new_row = [_localize_value(cell, supported_langs) for cell in row]
+                for c, cell in enumerate(new_row):
+                    validate_i18n(cell, supported_langs, f"rows[{r}][{c}]")
+                new_rows.append(new_row)
+            settings["rows"] = new_rows
+
+
 def _sanitize_sections(
-    raw_sections: List[Dict[str, Any]], seen_ids: "set | None" = None, depth: int = 0
+    raw_sections: List[Dict[str, Any]], supported_langs: List[str],
+    seen_ids: "set | None" = None, depth: int = 0,
 ) -> List[Dict[str, Any]]:
     # A single seen_ids set is threaded through every recursive call (never recreated per
     # call) so generated ids stay globally unique across nesting levels, not just within one.
@@ -179,6 +274,8 @@ def _sanitize_sections(
         elif section_type == "product_grid":
             settings = _sanitize_card_style_settings(settings)
 
+        _sanitize_section_text(settings, section_type, supported_langs)
+
         entry: Dict[str, Any] = {"id": section_id, "type": section_type, "settings": settings}
         media = raw.get("media")
         if isinstance(media, dict):
@@ -191,11 +288,11 @@ def _sanitize_sections(
 
         if section_type == "grid_container":
             children = raw.get("children") if isinstance(raw.get("children"), list) else []
-            entry["children"] = _sanitize_sections(children, seen_ids, depth + 1)
+            entry["children"] = _sanitize_sections(children, supported_langs, seen_ids, depth + 1)
         elif section_type == "two_column_layout":
             zones_raw = raw.get("zones") if isinstance(raw.get("zones"), dict) else {}
             entry["zones"] = {
-                zone: _sanitize_sections(items, seen_ids, depth + 1)
+                zone: _sanitize_sections(items, supported_langs, seen_ids, depth + 1)
                 for zone, items in zones_raw.items()
                 if zone in ("left", "right") and isinstance(items, list)
             }
@@ -430,7 +527,15 @@ async def upsert_page_sections_service(
         raise HTTPException(status_code=400, detail=f"'{page_key}' is a reserved page_key and cannot be used for a real page")
 
     tenant_id = await _get_tenant_id(tenant_slug, db)
-    sanitized_sections = _sanitize_sections(sections)
+
+    tenant_result = await db.execute(
+        select(Tenant).where(Tenant.id == tenant_id).options(selectinload(Tenant.settings))
+    )
+    tenant = tenant_result.scalar_one()
+    supported_langs = (
+        tenant.settings.supported_languages if tenant.settings and tenant.settings.supported_languages else ["he"]
+    )
+    sanitized_sections = _sanitize_sections(sections, supported_langs)
 
     # Enforce Pydantic validation before committing so any hallucinated payload
     # that bypassed the basic sanitizer is caught as a ValidationError here,

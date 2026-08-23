@@ -1,10 +1,11 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi } from 'vitest'
 import NewProductPage from '../new/page'
 import { ApiError } from '@/lib/api/apiClient'
 
 const createProductMock = vi.fn()
+const uploadImageMock = vi.fn()
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
@@ -12,6 +13,10 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('@/hooks/useProducts', () => ({
   useProducts: () => ({ createProduct: createProductMock }),
+}))
+
+vi.mock('@/hooks/useUploads', () => ({
+  useUploads: () => ({ uploadImage: uploadImageMock }),
 }))
 
 describe('NewProductPage subscription limit handling', () => {
@@ -73,10 +78,29 @@ describe('NewProductPage image upload', () => {
     expect(createProductMock).toHaveBeenCalledWith(expect.objectContaining({ images: [] }))
   })
 
-  it('shows a disabled file upload input marked as not yet supported by the backend', () => {
+  it('uploads a selected file and includes the returned URL in the images array', async () => {
+    uploadImageMock.mockResolvedValueOnce({ url: '/uploads/1/products/abc123.png' })
+    createProductMock.mockResolvedValueOnce({ id: 3 })
+    const user = userEvent.setup()
+
     render(<NewProductPage />)
+
+    await user.type(screen.getByLabelText(/product name \(english\)/i), 'Uploaded Product')
+    await user.type(screen.getByLabelText(/product name \(hebrew\)/i), 'מוצר')
+    await user.type(screen.getByLabelText(/slug/i), 'uploaded-product')
+    await user.clear(screen.getByLabelText(/base price/i))
+    await user.type(screen.getByLabelText(/base price/i), '10')
+
+    const file = new File(['fake-image-bytes'], 'photo.png', { type: 'image/png' })
     const fileInput = screen.getByLabelText(/upload image file/i)
-    expect(fileInput).toBeDisabled()
-    expect(screen.getByText(/requires backend storage support/i)).toBeInTheDocument()
+    expect(fileInput).not.toBeDisabled()
+    await user.upload(fileInput, file)
+
+    await waitFor(() => expect(uploadImageMock).toHaveBeenCalledWith(file))
+    await user.click(screen.getByRole('button', { name: /save product/i }))
+
+    expect(createProductMock).toHaveBeenCalledWith(
+      expect.objectContaining({ images: ['/uploads/1/products/abc123.png'] })
+    )
   })
 })

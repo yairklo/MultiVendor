@@ -1,7 +1,8 @@
 from sqlalchemy import Column, Integer, BigInteger, String, Enum, DateTime, ForeignKey, Numeric, Boolean
 from app.db.base_class import Base
+from app.db.tenant_scope import TenantScoped
 
-class Coupon(Base):
+class Coupon(TenantScoped, Base):
     __tablename__ = "coupons"
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)

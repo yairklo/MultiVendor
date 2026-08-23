@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api/apiClient'
-import { getCookie } from 'cookies-next'
+import { useTenantSlug } from './useTenantSlug'
 import {
   AIChatResponse, ConversationResponse, PageContext, PageType, StorePageSchema, StorePageSummary,
   StorePageVersionSummary,
@@ -11,19 +11,24 @@ function pageContextParams(pageContext: PageContext): Record<string, string> {
 }
 
 export function useAiLayout() {
-  const tenantSlug = String(getCookie('tenantSlug') || 'test-tenant')
+  const tenantSlug = useTenantSlug()
+
+  const adminPath = (suffix: string) => {
+    if (!tenantSlug) throw new Error('Tenant slug is not resolved')
+    return `/api/v1/admin/store/${tenantSlug}${suffix}`
+  }
 
   const fetchStatus = async (): Promise<{ provider: 'gemini' | 'mock' }> => {
-    return apiClient(`/api/v1/admin/store/${tenantSlug}/ai/status`)
+    return apiClient(adminPath('/ai/status'))
   }
 
   const fetchPageTargets = async (): Promise<StorePageSummary[]> => {
-    return apiClient(`/api/v1/admin/store/${tenantSlug}/ai/page-targets`)
+    return apiClient(adminPath('/ai/page-targets'))
   }
 
   const fetchPageSchema = async (pageKey: string, pageType: PageType): Promise<StorePageSchema> => {
     const params = new URLSearchParams({ page_key: pageKey, page_type: pageType })
-    return apiClient(`/api/v1/admin/store/${tenantSlug}/ai/page-schema?${params.toString()}`)
+    return apiClient(adminPath(`/ai/page-schema?${params.toString()}`))
   }
 
   const sendChatMessage = async (
@@ -38,7 +43,7 @@ export function useAiLayout() {
     if (attachedFile) {
       formData.append('file', attachedFile)
     }
-    return apiClient(`/api/v1/admin/store/${tenantSlug}/ai/chat`, {
+    return apiClient(adminPath('/ai/chat'), {
       method: 'POST',
       body: formData,
     })
@@ -46,12 +51,12 @@ export function useAiLayout() {
 
   const fetchPageVersions = async (pageKey: string, pageType: PageType): Promise<StorePageVersionSummary[]> => {
     const params = new URLSearchParams({ page_key: pageKey, page_type: pageType })
-    return apiClient(`/api/v1/admin/store/${tenantSlug}/ai/page-versions?${params.toString()}`)
+    return apiClient(adminPath(`/ai/page-versions?${params.toString()}`))
   }
 
   const revertToVersion = async (pageKey: string, pageType: PageType, versionId: number): Promise<StorePageSchema> => {
     const params = new URLSearchParams({ page_key: pageKey, page_type: pageType })
-    return apiClient(`/api/v1/admin/store/${tenantSlug}/ai/page-versions/${versionId}/revert?${params.toString()}`, {
+    return apiClient(adminPath(`/ai/page-versions/${versionId}/revert?${params.toString()}`), {
       method: 'POST',
     })
   }
@@ -59,39 +64,39 @@ export function useAiLayout() {
   const fetchConversation = async (pageContext: PageContext): Promise<ConversationResponse> => {
     const params = new URLSearchParams(pageContextParams(pageContext))
     const query = params.toString()
-    return apiClient(`/api/v1/admin/store/${tenantSlug}/ai/conversation${query ? `?${query}` : ''}`)
+    return apiClient(adminPath(`/ai/conversation${query ? `?${query}` : ''}`))
   }
 
   const clearConversation = async (pageContext: PageContext): Promise<void> => {
     const params = new URLSearchParams(pageContextParams(pageContext))
     const query = params.toString()
-    await apiClient(`/api/v1/admin/store/${tenantSlug}/ai/conversation${query ? `?${query}` : ''}`, {
+    await apiClient(adminPath(`/ai/conversation${query ? `?${query}` : ''}`), {
       method: 'DELETE',
     })
   }
 
   const publishPage = async (pageKey: string, pageType: PageType): Promise<StorePageSchema> => {
     const params = new URLSearchParams({ page_key: pageKey, page_type: pageType })
-    return apiClient(`/api/v1/admin/store/${tenantSlug}/ai/publish?${params.toString()}`, {
+    return apiClient(adminPath(`/ai/publish?${params.toString()}`), {
       method: 'POST',
     })
   }
 
   const confirmPendingAction = async (confirmationId: string): Promise<any> => {
-    return apiClient(`/api/v1/admin/store/${tenantSlug}/ai/pending-actions/${confirmationId}/confirm`, {
+    return apiClient(adminPath(`/ai/pending-actions/${confirmationId}/confirm`), {
       method: 'POST',
     })
   }
 
   const cancelPendingAction = async (confirmationId: string): Promise<void> => {
-    await apiClient(`/api/v1/admin/store/${tenantSlug}/ai/pending-actions/${confirmationId}/cancel`, {
+    await apiClient(adminPath(`/ai/pending-actions/${confirmationId}/cancel`), {
       method: 'POST',
     })
   }
 
   /** Direct write path for manual drag-and-drop reordering — bypasses the AI chat loop entirely. */
   const saveLayout = async (schema: StorePageSchema): Promise<StorePageSchema> => {
-    return apiClient(`/api/v1/admin/store/${tenantSlug}/ai/page-schema`, {
+    return apiClient(adminPath('/ai/page-schema'), {
       method: 'PUT',
       body: JSON.stringify({
         page_key: schema.page_key,
@@ -105,11 +110,11 @@ export function useAiLayout() {
   }
 
   const fetchTemplates = async (): Promise<any[]> => {
-    return apiClient(`/api/v1/admin/store/${tenantSlug}/ai/templates`)
+    return apiClient(adminPath('/ai/templates'))
   }
 
   const applyTemplate = async (templateKey: string): Promise<any> => {
-    return apiClient(`/api/v1/admin/store/${tenantSlug}/ai/templates/${templateKey}/apply`, {
+    return apiClient(adminPath(`/ai/templates/${templateKey}/apply`), {
       method: 'POST',
     })
   }

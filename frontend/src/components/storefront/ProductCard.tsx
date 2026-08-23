@@ -10,14 +10,11 @@ import { resolveCardStyleClasses, CardStyle } from '@/lib/product-card-styles'
 
 import { useCurrency } from '@/hooks/useCurrency'
 import { resolveImageUrl } from '@/lib/media'
+import { resolveI18nText } from '@/lib/i18n-text'
 
 const STRINGS = {
   en: { addToCart: 'Add to Cart', outOfStock: 'Out of stock', adding: 'Adding…' },
   he: { addToCart: 'הוסף לעגלה', outOfStock: 'אזל מהמלאי', adding: 'מוסיף…' },
-}
-
-function productName(p: any): string {
-  return typeof p.name === 'object' ? p.name?.en || p.name?.he || Object.values(p.name ?? {})[0] || '' : p.name
 }
 
 /**
@@ -31,19 +28,23 @@ export function ProductCard({
   product,
   tenantSlug,
   styleVariant = 'default',
-  lang = 'en',
+  lang,
 }: {
   product: any
   tenantSlug: string
   styleVariant?: CardStyle
+  /** Defaults to the storefront's current language (see StorefrontThemeContext) when omitted --
+   * callers only need to pass this explicitly to override it. */
   lang?: 'en' | 'he'
 }) {
   const { addItem } = useCart()
-  const { theme } = useStorefrontTheme()
+  const { theme, lang: contextLang } = useStorefrontTheme()
   const { formatCurrency } = useCurrency()
   const [quantity, setQuantity] = useState(1)
   const [adding, setAdding] = useState(false)
-  const t = STRINGS[lang]
+  const resolvedLang = lang ?? contextLang
+  const t = STRINGS[resolvedLang]
+  const name = resolveI18nText(product.name, resolvedLang)
 
   const stock = totalStock(product.variants)
   const stockKnown = Number.isFinite(stock)
@@ -73,7 +74,7 @@ export function ProductCard({
           // turning the server into an open image proxy (see next.config.ts history).
           <img
             src={resolveImageUrl(image)}
-            alt={productName(product)}
+            alt={name}
             className="aspect-square w-full object-cover"
           />
         ) : (
@@ -84,7 +85,7 @@ export function ProductCard({
         href={`/store/${tenantSlug}/products/${product.slug}`}
         className="line-clamp-2 text-sm font-semibold text-gray-900 transition-colors hover:text-blue-600"
       >
-        {productName(product)}
+        {name}
       </Link>
       {product.review_count > 0 && (
         <div className="mt-1 flex items-center gap-1">

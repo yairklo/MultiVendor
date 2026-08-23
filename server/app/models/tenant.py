@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, BigInteger, String, Enum, DateTime, Fore
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.base_class import Base
+from app.db.tenant_scope import TenantScoped
 
 class SubscriptionPlan(Base):
     __tablename__ = "subscription_plans"
@@ -36,7 +37,7 @@ class Tenant(Base):
     products = relationship("Product", back_populates="tenant", cascade="all, delete-orphan")
     settings = relationship("TenantSettings", back_populates="tenant", uselist=False, cascade="all, delete-orphan")
 
-class TenantSettings(Base):
+class TenantSettings(TenantScoped, Base):
     __tablename__ = "tenant_settings"
     tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), primary_key=True)
     logo_url = Column(Text, nullable=True)

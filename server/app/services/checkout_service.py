@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from app.db.session import redis_client
+from app.db.tenant_context import unscoped
 from app.models.tenant import Tenant
 from app.models.catalog import ProductVariant, Product, ProductBundleItem
 from app.models.order import Cart, CartItem, Order, OrderItem, ShippingMethod
@@ -24,19 +25,40 @@ def _resolve_product_name(name) -> str:
         return name.get('en') or next(iter(name.values()), '')
     return str(name)
 
-async def add_to_cart_service(tenant_slug: str, cart_id: UUID, req: AddToCartRequest, user_id: Optional[int], db: AsyncSession):
+async def _resolve_tenant_id(tenant_slug: str, db: AsyncSession) -> int:
     tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
     tenant_id = tenant_result.scalar_one_or_none()
     if not tenant_id:
         raise HTTPException(status_code=404, detail="Store not found")
+    return tenant_id
+
+def _assert_cart_ownership(cart: Cart, user_id: Optional[int], *, claim: bool = False) -> None:
+    if user_id is not None:
+        if cart.user_id is not None and cart.user_id != user_id:
+            raise HTTPException(status_code=404, detail="Cart not found")
+        if claim and cart.user_id is None:
+            cart.user_id = user_id
+    elif cart.user_id is not None:
+        raise HTTPException(status_code=404, detail="Cart not found")
+
+async def add_to_cart_service(tenant_slug: str, cart_id: UUID, req: AddToCartRequest, user_id: Optional[int], db: AsyncSession):
+    tenant_id = await _resolve_tenant_id(tenant_slug, db)
 
     cart_result = await db.execute(select(Cart).where(Cart.id == str(cart_id)))
     cart = cart_result.scalar_one_or_none()
-    
+
+    if not cart:
+        with unscoped():
+            foreign = await db.execute(select(Cart.id).where(Cart.id == str(cart_id)))
+        if foreign.scalar_one_or_none():
+            raise HTTPException(status_code=404, detail="Cart not found")
+
     if not cart:
         cart = Cart(id=str(cart_id), tenant_id=tenant_id, user_id=user_id)
         db.add(cart)
         await db.flush()
+    else:
+        _assert_cart_ownership(cart, user_id, claim=True)
 
     variant_result = await db.execute(
         select(ProductVariant)
@@ -71,15 +93,12 @@ async def add_to_cart_service(tenant_slug: str, cart_id: UUID, req: AddToCartReq
     await db.commit()
     return {"status": "ok"}
 
-async def get_cart_service(tenant_slug: str, cart_id: UUID, db: AsyncSession) -> CartResponse:
-    tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
-    tenant_id = tenant_result.scalar_one_or_none()
-    if not tenant_id:
-        raise HTTPException(status_code=404, detail="Store not found")
+async def get_cart_service(tenant_slug: str, cart_id: UUID, user_id: Optional[int], db: AsyncSession) -> CartResponse:
+    tenant_id = await _resolve_tenant_id(tenant_slug, db)
 
     cart_result = await db.execute(
         select(Cart)
-        .where(Cart.id == str(cart_id))
+        .where(Cart.id == str(cart_id), Cart.tenant_id == tenant_id)
         .options(
             selectinload(Cart.items)
             .selectinload(CartItem.variant)
@@ -89,7 +108,13 @@ async def get_cart_service(tenant_slug: str, cart_id: UUID, db: AsyncSession) ->
     )
     cart = cart_result.scalar_one_or_none()
     if not cart:
+        with unscoped():
+            foreign = await db.execute(select(Cart.id).where(Cart.id == str(cart_id)))
+        if foreign.scalar_one_or_none():
+            raise HTTPException(status_code=404, detail="Cart not found")
         return CartResponse(cart_id=cart_id, tenant_id=tenant_id, items=[], subtotal=Decimal("0.00"))
+
+    _assert_cart_ownership(cart, user_id)
 
     items = []
     subtotal = Decimal("0.00")
@@ -126,9 +151,16 @@ async def get_cart_service(tenant_slug: str, cart_id: UUID, db: AsyncSession) ->
         subtotal=subtotal
     )
 
-async def remove_from_cart_service(tenant_slug: str, cart_id: UUID, item_id: int, db: AsyncSession):
+async def remove_from_cart_service(tenant_slug: str, cart_id: UUID, item_id: int, user_id: Optional[int], db: AsyncSession):
+    tenant_id = await _resolve_tenant_id(tenant_slug, db)
+    cart_result = await db.execute(select(Cart).where(Cart.id == str(cart_id), Cart.tenant_id == tenant_id))
+    cart = cart_result.scalar_one_or_none()
+    if not cart:
+        raise HTTPException(status_code=404, detail="Item not found")
+    _assert_cart_ownership(cart, user_id, claim=True)
+
     item_result = await db.execute(
-        select(CartItem).join(Cart).where(Cart.id == str(cart_id), CartItem.id == item_id)
+        select(CartItem).join(Cart).where(Cart.id == str(cart_id), Cart.tenant_id == tenant_id, CartItem.id == item_id)
     )
     item = item_result.scalar_one_or_none()
     if not item:
@@ -138,9 +170,16 @@ async def remove_from_cart_service(tenant_slug: str, cart_id: UUID, item_id: int
     await db.commit()
     return {"status": "ok"}
 
-async def update_cart_item_service(tenant_slug: str, cart_id: UUID, item_id: int, quantity: int, db: AsyncSession):
+async def update_cart_item_service(tenant_slug: str, cart_id: UUID, item_id: int, quantity: int, user_id: Optional[int], db: AsyncSession):
+    tenant_id = await _resolve_tenant_id(tenant_slug, db)
+    cart_result = await db.execute(select(Cart).where(Cart.id == str(cart_id), Cart.tenant_id == tenant_id))
+    cart = cart_result.scalar_one_or_none()
+    if not cart:
+        raise HTTPException(status_code=404, detail="Item not found")
+    _assert_cart_ownership(cart, user_id, claim=True)
+
     item_result = await db.execute(
-        select(CartItem).join(Cart).where(Cart.id == str(cart_id), CartItem.id == item_id)
+        select(CartItem).join(Cart).where(Cart.id == str(cart_id), Cart.tenant_id == tenant_id, CartItem.id == item_id)
     )
     item = item_result.scalar_one_or_none()
     if not item:
@@ -181,20 +220,19 @@ async def validate_coupon_service(tenant_slug: str, coupon_code: str, db: AsyncS
     return coupon
 
 async def checkout_service(tenant_slug: str, req: CheckoutRequest, user_id: int, db: AsyncSession) -> OrderResponse:
-    tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
-    tenant_id = tenant_result.scalar_one_or_none()
-    if not tenant_id:
-        raise HTTPException(status_code=404, detail="Store not found")
+    tenant_id = await _resolve_tenant_id(tenant_slug, db)
 
     cart_result = await db.execute(
         select(Cart)
-        .where(Cart.id == str(req.cart_id))
+        .where(Cart.id == str(req.cart_id), Cart.tenant_id == tenant_id)
         .options(selectinload(Cart.items).selectinload(CartItem.variant).selectinload(ProductVariant.product))
     )
     cart = cart_result.scalar_one_or_none()
-    
+
     if not cart or not cart.items:
         raise HTTPException(status_code=400, detail="Cart is empty or not found")
+
+    _assert_cart_ownership(cart, user_id, claim=True)
 
     # Analyze order type and gather variants to lock
     is_entirely_digital = True

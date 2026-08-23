@@ -1,8 +1,9 @@
 from sqlalchemy import Column, String, Integer, JSON, DateTime, ForeignKey
 from sqlalchemy.sql import func
 from app.db.base_class import Base
+from app.db.tenant_scope import TenantScoped
 
-class AIPendingAction(Base):
+class AIPendingAction(TenantScoped, Base):
     """
     A destructive action (delete_product, cancelling an order) the AI has
     proposed but not executed — it only runs once a human confirms it through

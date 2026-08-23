@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from app.db.session import redis_client
+from app.db.tenant_context import platform_plane
 from app.models.tenant import Tenant
 from app.models.catalog import ProductVariant, Product
 from app.models.order import MarketplaceCartItem, MasterOrder, Order, OrderItem
@@ -35,6 +36,7 @@ def _round2(value: Decimal) -> Decimal:
     return value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
+@platform_plane
 async def add_to_marketplace_cart_service(cart_id: UUID, req: MarketplaceAddToCartRequest, db: AsyncSession):
     variant_result = await db.execute(
         select(ProductVariant)
@@ -74,6 +76,7 @@ async def add_to_marketplace_cart_service(cart_id: UUID, req: MarketplaceAddToCa
     return {"status": "ok"}
 
 
+@platform_plane
 async def get_marketplace_cart_service(cart_id: UUID, db: AsyncSession) -> MarketplaceCartResponse:
     result = await db.execute(
         select(MarketplaceCartItem, Tenant)
@@ -119,6 +122,7 @@ async def get_marketplace_cart_service(cart_id: UUID, db: AsyncSession) -> Marke
     )
 
 
+@platform_plane
 async def remove_from_marketplace_cart_service(cart_id: UUID, item_id: int, db: AsyncSession):
     item_result = await db.execute(
         select(MarketplaceCartItem).where(MarketplaceCartItem.cart_id == str(cart_id), MarketplaceCartItem.id == item_id)
@@ -132,6 +136,7 @@ async def remove_from_marketplace_cart_service(cart_id: UUID, item_id: int, db: 
     return {"status": "ok"}
 
 
+@platform_plane
 async def update_marketplace_cart_item_service(cart_id: UUID, item_id: int, quantity: int, db: AsyncSession):
     item_result = await db.execute(
         select(MarketplaceCartItem).where(MarketplaceCartItem.cart_id == str(cart_id), MarketplaceCartItem.id == item_id)
@@ -172,6 +177,7 @@ def _order_to_response(order: Order, items: list[OrderItem]) -> OrderResponse:
     )
 
 
+@platform_plane
 async def get_master_order_service(master_order_id: int, user_id: int, db: AsyncSession) -> MasterOrderResponse:
     master_result = await db.execute(
         select(MasterOrder).where(MasterOrder.id == master_order_id, MasterOrder.user_id == user_id)
@@ -194,6 +200,7 @@ async def get_master_order_service(master_order_id: int, user_id: int, db: Async
     )
 
 
+@platform_plane
 async def pay_master_order_service(master_order_id: int, user_id: int, db: AsyncSession) -> MasterOrderResponse:
     # Mock payment gateway, same as the single-store pay_order_service -- but
     # pays every vendor's sub-order under this master order in one call/one
@@ -230,6 +237,7 @@ async def pay_master_order_service(master_order_id: int, user_id: int, db: Async
     )
 
 
+@platform_plane
 async def marketplace_checkout_service(req: MarketplaceCheckoutRequest, user_id: int, db: AsyncSession) -> MasterOrderResponse:
     cart_id = str(req.cart_id)
     result = await db.execute(

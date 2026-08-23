@@ -39,27 +39,54 @@ export default function AiLayoutPage() {
   const [applyingTemplate, setApplyingTemplate] = useState(false)
 
   useEffect(() => {
-    fetchStatus().then((s) => setProvider(s.provider)).catch(() => {})
-    fetchPageTargets().then(setTargets).catch((err) => showToast(err.message, 'error'))
-    fetchTemplates().then(setTemplates).catch(() => {})
+    // Skip entirely while tenantSlug is still the placeholder — these requests are
+    // guaranteed to 404 and get thrown away the instant the real slug resolves (see
+    // useTenantSlug), so firing them just adds console noise for no benefit.
+    if (!tenantSlug) return
+    // See the cancellation comment on the effect below — same stale-placeholder-response
+    // race applies here (a 'test-tenant' request resolving after the real 'store1' one
+    // would otherwise clobber good state).
+    let cancelled = false
+    fetchStatus().then((s) => { if (!cancelled) setProvider(s.provider) }).catch(() => {})
+    fetchPageTargets().then((t) => { if (!cancelled) setTargets(t) }).catch((err) => showToast(err.message, 'error'))
+    fetchTemplates().then((t) => { if (!cancelled) setTemplates(t) }).catch(() => {})
+    return () => { cancelled = true }
+    // tenantSlug starts at a deterministic 'test-tenant' placeholder and is swapped for the
+    // real cookie-derived value shortly after mount (see useTenantSlug) to avoid an SSR/
+    // hydration mismatch — this effect must re-fire when that swap happens, or every fetch
+    // above stays permanently scoped to the wrong (placeholder) store.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [tenantSlug])
 
   useEffect(() => {
+    // Skip entirely while tenantSlug is still the placeholder (see the effect above).
+    if (!tenantSlug) return
+    // tenantSlug flips from the 'test-tenant' placeholder to the real value shortly after
+    // mount (see useTenantSlug), which re-fires this effect while the placeholder's own
+    // fetches may still be in flight. Without this guard, the stale placeholder request's
+    // rejection can resolve AFTER the real one's success and clobber good state back to
+    // null/empty — the page gets stuck on "Loading page…" forever even though the real
+    // fetch succeeded. Same pattern as StorefrontThemeContext's tenant-config effect.
+    let cancelled = false
     setPage(null)
     fetchPageSchema(pageKey, pageType)
-      .then(setPage)
-      .catch(() => setPage(null)) // page doesn't exist yet — the AI will create it on first edit
+      .then((p) => { if (!cancelled) setPage(p) })
+      .catch(() => { if (!cancelled) setPage(null) }) // page doesn't exist yet — the AI will create it on first edit
 
-    fetchPageVersions(pageKey, pageType).then(setVersions).catch(() => setVersions([]))
+    fetchPageVersions(pageKey, pageType)
+      .then((v) => { if (!cancelled) setVersions(v) })
+      .catch(() => { if (!cancelled) setVersions([]) })
 
     // Restore the real persisted conversation for this page, rather than
     // just showing an empty drawer — the AI genuinely remembers this history too.
     fetchConversation({ pageKey, pageType })
-      .then((res) => setMessages(res.messages.map((m) => ({ role: m.role, text: m.text, toolCalls: m.tool_calls ?? undefined }))))
-      .catch(() => setMessages([]))
+      .then((res) => { if (!cancelled) setMessages(res.messages.map((m) => ({ role: m.role, text: m.text, toolCalls: m.tool_calls ?? undefined }))) })
+      .catch(() => { if (!cancelled) setMessages([]) })
+
+    return () => { cancelled = true }
+    // Same tenantSlug-resolves-after-mount reasoning as the effect above.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageKey, pageType])
+  }, [pageKey, pageType, tenantSlug])
 
   function handleAction(action: DispatchedAction) {
     showToast(`${action.label} → ${action.actionType}`, 'info')
@@ -288,9 +315,9 @@ export default function AiLayoutPage() {
 }
 
 function PreviewWrapper({ tenantSlug, page, handleSend, handleSectionsReorder, handleSaveLayout, savingLayout, handleAction }: any) {
-  const { defaultLanguage } = useStorefrontTheme()
+  const { lang } = useStorefrontTheme()
   return (
-    <div dir={defaultLanguage === 'he' ? 'rtl' : 'ltr'} className="flex-1 flex flex-col h-full w-full">
+    <div dir={lang === 'he' ? 'rtl' : 'ltr'} className="flex-1 flex flex-col h-full w-full">
       <div className="pointer-events-none sticky top-0 z-10 opacity-75 grayscale-[0.2]">
         <StorefrontHeader tenantSlug={tenantSlug} storeName={tenantSlug} isLoggedIn={false} />
       </div>

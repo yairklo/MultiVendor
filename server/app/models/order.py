@@ -2,8 +2,9 @@ from sqlalchemy import Column, Integer, BigInteger, String, Enum, DateTime, Fore
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.base_class import Base
+from app.db.tenant_scope import TenantScoped
 
-class ShippingMethod(Base):
+class ShippingMethod(TenantScoped, Base):
     __tablename__ = "shipping_methods"
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
@@ -12,7 +13,7 @@ class ShippingMethod(Base):
     free_shipping_threshold = Column(Numeric(10, 2), nullable=True)
     is_active = Column(Boolean, default=True)
 
-class Cart(Base):
+class Cart(TenantScoped, Base):
     __tablename__ = "carts"
     id = Column(String(36), primary_key=True)
     tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
@@ -22,7 +23,7 @@ class Cart(Base):
     
     items = relationship("CartItem", back_populates="cart", cascade="all, delete-orphan")
 
-class CartItem(Base):
+class CartItem(TenantScoped, Base):
     __tablename__ = "cart_items"
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
@@ -60,7 +61,7 @@ class MasterOrder(Base):
 
     sub_orders = relationship("Order", back_populates="master_order")
 
-class Order(Base):
+class Order(TenantScoped, Base):
     __tablename__ = "orders"
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
@@ -87,7 +88,7 @@ class Order(Base):
     items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
     master_order = relationship("MasterOrder", back_populates="sub_orders")
 
-class OrderItem(Base):
+class OrderItem(TenantScoped, Base):
     __tablename__ = "order_items"
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)

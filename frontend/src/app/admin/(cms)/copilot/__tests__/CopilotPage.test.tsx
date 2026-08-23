@@ -10,6 +10,7 @@ const showToastMock = vi.fn()
 
 vi.mock('@/hooks/useAiLayout', () => ({
   useAiLayout: () => ({
+    tenantSlug: 'test-tenant',
     fetchConversation: fetchConversationMock,
     sendChatMessage: sendChatMessageMock,
     clearConversation: clearConversationMock,
@@ -43,7 +44,7 @@ describe('CopilotPage — the tenant-wide global copilot, not scoped to any page
     await user.type(textbox, 'how many orders this week')
     await user.click(screen.getByRole('button', { name: 'Send' }))
 
-    await waitFor(() => expect(sendChatMessageMock).toHaveBeenCalledWith('how many orders this week', null))
+    await waitFor(() => expect(sendChatMessageMock).toHaveBeenCalledWith('how many orders this week', null, null))
   })
 
   it('clears the global conversation with no page context on "New conversation"', async () => {

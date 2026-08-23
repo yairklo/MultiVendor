@@ -19,7 +19,7 @@ export function StorefrontHeader({
    * first render, breaking hydration. */
   isLoggedIn: boolean
 }) {
-  const { theme } = useStorefrontTheme()
+  const { theme, lang, setLang } = useStorefrontTheme()
   const { cart, openDrawer } = useCart()
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -55,6 +55,14 @@ export function StorefrontHeader({
         </nav>
 
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            data-testid="header-language-switcher"
+            onClick={() => setLang(lang === 'en' ? 'he' : 'en')}
+            className={`hidden text-sm md:inline ${theme.navLinkClass}`}
+          >
+            {lang === 'en' ? 'עברית' : 'English'}
+          </button>
           <Link
             data-testid="account-link"
             href={isLoggedIn ? '/account/orders' : '/login'}
@@ -69,7 +77,7 @@ export function StorefrontHeader({
             className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold transition-colors ${theme.primaryButtonClass}`}
           >
             <ShoppingBag className="h-4 w-4" />
-            <span>Cart ({cartCount})</span>
+            <span>{lang === 'he' ? `עגלה (${cartCount})` : `Cart (${cartCount})`}</span>
           </button>
           <button
             type="button"
@@ -94,6 +102,13 @@ export function StorefrontHeader({
               {item.label}
             </Link>
           ))}
+          <button
+            type="button"
+            onClick={() => setLang(lang === 'en' ? 'he' : 'en')}
+            className={`rounded-lg px-2 py-2 text-left text-sm ${theme.navLinkClass}`}
+          >
+            {lang === 'en' ? 'עברית' : 'English'}
+          </button>
           <Link
             href={isLoggedIn ? '/account/orders' : '/login'}
             onClick={() => setMobileOpen(false)}

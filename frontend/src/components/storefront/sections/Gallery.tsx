@@ -1,7 +1,11 @@
 import { CSSProperties } from 'react'
 import { Section } from '@/lib/ai/types'
+import { resolveI18nText } from '@/lib/i18n-text'
+import { useStorefrontTheme } from '@/context/StorefrontThemeContext'
 
 export function Gallery({ section, themeStyle }: { section: Section; themeStyle: CSSProperties }) {
+  const { lang } = useStorefrontTheme()
+  const title = resolveI18nText(section.settings.title, lang)
   const layout = section.settings.layout ?? 'grid'
   const images: string[] = Array.isArray(section.settings.images)
     ? section.settings.images.filter((u: unknown) => typeof u === 'string' && u.trim().length > 0)
@@ -14,7 +18,7 @@ export function Gallery({ section, themeStyle }: { section: Section; themeStyle:
       className="rounded-2xl p-6"
       style={{ ...themeStyle, background: 'var(--section-bg, #f9fafb)', color: 'var(--section-text, #111827)' }}
     >
-      {section.settings.title && <h2 className="mb-4 text-xl font-bold">{section.settings.title}</h2>}
+      {title && <h2 className="mb-4 text-xl font-bold">{title}</h2>}
       {images.length === 0 ? (
         <div className="grid grid-cols-4 gap-3">
           {Array.from({ length: 4 }).map((_, i) => (

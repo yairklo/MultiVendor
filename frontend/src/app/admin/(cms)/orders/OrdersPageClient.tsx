@@ -6,6 +6,7 @@ import { getCookie } from 'cookies-next'
 import { orderStatusClass, orderStatusLabel } from '@/lib/orderStatus'
 import { useToast } from '@/context/ToastContext'
 import { useCurrency } from '@/hooks/useCurrency'
+import { useTenantSlug } from '@/hooks/useTenantSlug'
 
 // No real order is ever in plain 'pending' — checkout always creates
 // 'pending_payment', which becomes 'processing' once paid. 'pending' was a
@@ -18,9 +19,10 @@ export function OrdersPageClient({ initialOrders }: { initialOrders: any[] }) {
   const [orders, setOrders] = useState<any[]>(initialOrders)
   const [exporting, setExporting] = useState(false)
   const [updatingId, setUpdatingId] = useState<number | null>(null)
-  const tenantSlug = getCookie('tenantSlug') || 'test-tenant'
+  const tenantSlug = useTenantSlug()
 
   const fetchOrders = async () => {
+    if (!tenantSlug) return
     try {
       const data = await apiClient(`/api/v1/admin/store/${tenantSlug}/orders`)
       setOrders(data.items || data || [])

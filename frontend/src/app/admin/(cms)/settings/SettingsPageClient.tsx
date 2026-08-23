@@ -2,8 +2,8 @@
 
 import React, { useState } from 'react'
 import { apiClient } from '@/lib/api/apiClient'
-import { getCookie } from 'cookies-next'
 import { useToast } from '@/context/ToastContext'
+import { useTenantSlug } from '@/hooks/useTenantSlug'
 
 export interface StoreSettings {
   currency: string
@@ -31,7 +31,7 @@ export function SettingsPageClient({
 }: {
   initialSettings: StoreSettings
 }) {
-  const tenantSlug = getCookie('tenantSlug') || 'test-tenant'
+  const tenantSlug = useTenantSlug()
   const { showToast } = useToast()
 
   const [formData, setFormData] = useState<StoreSettings>(initialSettings)
@@ -49,6 +49,11 @@ export function SettingsPageClient({
       banner_url: formData.banner_url || null,
       custom_css: formData.custom_css || null,
       template_key: formData.template_key || null,
+    }
+
+    if (!tenantSlug) {
+      showToast('Store is not resolved yet. Please sign in again.', 'error')
+      return
     }
 
     try {

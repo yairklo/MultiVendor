@@ -1,26 +1,74 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from fastapi import HTTPException, status
+from jose import JWTError, jwt
 from app.models.user import User, UserStoreMembership
 from app.models.tenant import Tenant, SubscriptionPlan
 from app.schemas.tenant_schemas import TenantRegisterRequest
-from app.schemas.auth_schemas import LoginRequest, CustomerRegisterRequest, TokenResponse, UserResponse
+from app.schemas.auth_schemas import LoginRequest, CustomerRegisterRequest, TokenResponse
 from app.schemas.common_schemas import UserRole
-from app.core.security import get_password_hash, verify_password, create_access_token
+from app.core.security import (
+    get_password_hash, verify_password, create_access_token,
+    create_refresh_token, refresh_token_ttl_seconds,
+)
+from app.core.config import settings
+from app.db.session import redis_client
+
+REFRESH_KEY_PREFIX = "refresh:"
+
+
+async def _persist_refresh_jti(jti: str, user_id: int) -> None:
+    await redis_client.set(f"{REFRESH_KEY_PREFIX}{jti}", str(user_id), ex=refresh_token_ttl_seconds())
+
+
+async def _issue_token_pair(user: User, store_role: str | None = None) -> tuple[str, str]:
+    access = create_access_token(
+        subject=user.id,
+        is_super_admin=(user.role == UserRole.SUPER_ADMIN),
+        role=user.role,
+        store_role=store_role,
+    )
+    refresh, jti = create_refresh_token(user.id)
+    await _persist_refresh_jti(jti, user.id)
+    return access, refresh
+
+
+def _token_response(user: User, access: str, refresh: str, store_role: str | None = None) -> TokenResponse:
+    return TokenResponse(
+        access_token=access,
+        refresh_token=refresh,
+        user_id=user.id,
+        role=user.role,
+        store_role=store_role,
+    )
+
+
+async def _lookup_store_role(user_id: int, tenant_slug: str | None, db: AsyncSession) -> str | None:
+    if not tenant_slug:
+        return None
+    tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
+    tenant_id = tenant_result.scalar_one_or_none()
+    if not tenant_id:
+        return None
+    membership_result = await db.execute(
+        select(UserStoreMembership.role).where(
+            UserStoreMembership.user_id == user_id,
+            UserStoreMembership.tenant_id == tenant_id,
+        )
+    )
+    return membership_result.scalar_one_or_none()
+
 
 async def register_tenant_service(req: TenantRegisterRequest, db: AsyncSession) -> TokenResponse:
-    # 1. Check if slug exists
     result = await db.execute(select(Tenant).where(Tenant.slug == req.store_slug))
     if result.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Tenant slug already exists")
 
-    # 2. Get Plan
     plan_result = await db.execute(select(SubscriptionPlan).where(SubscriptionPlan.code == req.plan_code))
     plan = plan_result.scalar_one_or_none()
     if not plan:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid plan code")
 
-    # 3. Create Tenant
     tenant = Tenant(
         name=req.store_name,
         slug=req.store_slug,
@@ -30,21 +78,25 @@ async def register_tenant_service(req: TenantRegisterRequest, db: AsyncSession) 
     db.add(tenant)
     await db.flush()
 
-    # 4. Identity is global now: the admin's email must be free platform-wide,
-    # not just within this new tenant.
     user_result = await db.execute(select(User).where(User.email == req.admin_email))
-    if user_result.scalar_one_or_none():
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
+    existing = user_result.scalar_one_or_none()
 
-    user = User(
-        email=req.admin_email,
-        password_hash=get_password_hash(req.admin_password),
-        full_name=req.admin_full_name,
-        role=UserRole.USER,
-        is_active=True
-    )
-    db.add(user)
-    await db.flush()
+    if existing:
+        if existing.role == UserRole.SUPER_ADMIN:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
+        if not existing.is_active or not verify_password(req.admin_password, existing.password_hash):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+        user = existing
+    else:
+        user = User(
+            email=req.admin_email,
+            password_hash=get_password_hash(req.admin_password),
+            full_name=req.admin_full_name,
+            role=UserRole.USER,
+            is_active=True
+        )
+        db.add(user)
+        await db.flush()
 
     membership = UserStoreMembership(user_id=user.id, tenant_id=tenant.id, role='tenant_admin')
     db.add(membership)
@@ -52,49 +104,53 @@ async def register_tenant_service(req: TenantRegisterRequest, db: AsyncSession) 
     await db.commit()
     await db.refresh(user)
 
-    token = create_access_token(subject=user.id, is_super_admin=False)
+    access, refresh = await _issue_token_pair(user, store_role='tenant_admin')
+    return _token_response(user, access, refresh, store_role='tenant_admin')
 
-    return TokenResponse(
-        access_token=token,
-        refresh_token=token,
-        user_id=user.id,
-        role=user.role,
-    )
 
 async def login_service(req: LoginRequest, db: AsyncSession) -> TokenResponse:
-    # Identity is global: one row per email regardless of which store(s) the
-    # user shops at or administers. req.tenant_slug is accepted for backwards
-    # compatibility with older clients but no longer affects the lookup --
-    # store-level authorization is re-checked per request (see deps.py), not
-    # decided at login time.
     user_result = await db.execute(select(User).where(User.email == req.email))
     user = user_result.scalar_one_or_none()
 
     if not user or not verify_password(req.password, user.password_hash) or not user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
-    token = create_access_token(subject=user.id, is_super_admin=(user.role == UserRole.SUPER_ADMIN))
+    store_role = await _lookup_store_role(user.id, req.tenant_slug, db)
+    access, refresh = await _issue_token_pair(user, store_role=store_role)
+    return _token_response(user, access, refresh, store_role=store_role)
 
-    store_role = None
-    if req.tenant_slug:
-        tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == req.tenant_slug))
-        tenant_id = tenant_result.scalar_one_or_none()
-        if tenant_id:
-            membership_result = await db.execute(
-                select(UserStoreMembership.role).where(
-                    UserStoreMembership.user_id == user.id,
-                    UserStoreMembership.tenant_id == tenant_id,
-                )
-            )
-            store_role = membership_result.scalar_one_or_none()
 
-    return TokenResponse(
-        access_token=token,
-        refresh_token=token,
-        user_id=user.id,
-        role=user.role,
-        store_role=store_role,
+async def refresh_tokens_service(refresh_token: str, db: AsyncSession) -> TokenResponse:
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
     )
+    try:
+        payload = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+    except JWTError:
+        raise credentials_exception
+
+    if payload.get("typ") != "refresh":
+        raise credentials_exception
+    user_id = payload.get("sub")
+    jti = payload.get("jti")
+    if user_id is None or not jti:
+        raise credentials_exception
+
+    stored = await redis_client.get(f"{REFRESH_KEY_PREFIX}{jti}")
+    if stored is None or str(stored) != str(user_id):
+        raise credentials_exception
+    await redis_client.delete(f"{REFRESH_KEY_PREFIX}{jti}")
+
+    result = await db.execute(select(User).where(User.id == int(user_id)))
+    user = result.scalar_one_or_none()
+    if user is None or not user.is_active:
+        raise credentials_exception
+
+    access, refresh = await _issue_token_pair(user)
+    return _token_response(user, access, refresh)
+
 
 async def register_customer_service(tenant_slug: str, req: CustomerRegisterRequest, db: AsyncSession) -> User:
     tenant_result = await db.execute(select(Tenant).where(Tenant.slug == tenant_slug))
@@ -104,10 +160,6 @@ async def register_customer_service(tenant_slug: str, req: CustomerRegisterReque
 
     user_result = await db.execute(select(User).where(User.email == req.email))
     if user_result.scalar_one_or_none():
-        # A global account already owns this email -- direct them to log in
-        # instead (logging in auto-joins any store they then shop at, see
-        # deps.get_tenant_customer), rather than silently taking over the
-        # existing account or creating a duplicate.
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered. Please log in instead.")
 
     user = User(

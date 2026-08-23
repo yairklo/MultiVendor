@@ -11,7 +11,7 @@ import { useToast } from '@/context/ToastContext'
 const NO_PAGE_CONTEXT = null
 
 export default function CopilotPage() {
-  const { fetchConversation, sendChatMessage, clearConversation, confirmPendingAction, cancelPendingAction } = useAiLayout()
+  const { tenantSlug, fetchConversation, sendChatMessage, clearConversation, confirmPendingAction, cancelPendingAction } = useAiLayout()
   const { showToast } = useToast()
 
   const [messages, setMessages] = useState<any[]>([])
@@ -19,11 +19,12 @@ export default function CopilotPage() {
   const [resolvingConfirmationId, setResolvingConfirmationId] = useState<string | null>(null)
 
   useEffect(() => {
+    if (!tenantSlug) return
     fetchConversation(NO_PAGE_CONTEXT)
       .then((res) => setMessages(res.messages.map((m: any) => ({ role: m.role, text: m.text, toolCalls: m.tool_calls ?? undefined }))))
       .catch(() => setMessages([]))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [tenantSlug])
 
   async function handleSend(message: string, file?: File | null) {
     setMessages((prev) => [

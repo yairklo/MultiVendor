@@ -5,6 +5,11 @@ from sqlalchemy import select
 from app.models.tenant import Tenant, SubscriptionPlan
 from app.services.ai_tool_executor import execute_tool
 
+def loc(value):
+    if isinstance(value, dict):
+        return value.get("en") or value.get("he") or next(iter(value.values()), "")
+    return value
+
 
 @pytest.mark.asyncio
 async def test_status_defaults_to_mock_without_gemini_key(async_client: AsyncClient, seed_tokens):
@@ -135,7 +140,7 @@ async def test_update_page_sections_drops_unrecognized_button_action_type(async_
     )
     assert result.is_error is False
     buttons = result.output["sections"][0]["settings"]["buttons"]
-    assert [b["label"] for b in buttons] == ["Legit"]
+    assert [loc(b["label"]) for b in buttons] == ["Legit"]
 
 
 @pytest.mark.asyncio
@@ -536,7 +541,7 @@ async def test_update_page_sections_drops_unrecognized_button_action_type_when_n
     )
     assert result.is_error is False
     nested_buttons = result.output["sections"][0]["children"][0]["settings"]["buttons"]
-    assert [b["label"] for b in nested_buttons] == ["Legit"]
+    assert [loc(b["label"]) for b in nested_buttons] == ["Legit"]
 
 
 @pytest.mark.asyncio
@@ -564,8 +569,8 @@ async def test_update_page_sections_sanitizes_two_column_layout_zones(async_clie
     assert result.is_error is False
     zones = result.output["sections"][0]["zones"]
     assert set(zones.keys()) == {"left", "right"}  # unrecognized "middle" key dropped
-    assert zones["left"][0]["settings"]["heading"] == "Left"
-    assert zones["right"][0]["settings"]["heading"] == "Right"
+    assert loc(zones["left"][0]["settings"]["heading"]) == "Left"
+    assert loc(zones["right"][0]["settings"]["heading"]) == "Right"
 
 
 # ---------------------------------------------------------------------------
@@ -584,14 +589,14 @@ async def test_manual_save_page_schema_endpoint_persists_sections(async_client: 
         "/api/v1/admin/store/tenant-a/ai/page-schema", json=payload, headers=headers
     )
     assert put_resp.status_code == 200
-    assert put_resp.json()["sections"][0]["settings"]["heading"] == "Manually placed"
+    assert loc(put_resp.json()["sections"][0]["settings"]["heading"]) == "Manually placed"
 
     get_resp = await async_client.get(
         "/api/v1/admin/store/tenant-a/ai/page-schema?page_key=manual-save-test&page_type=static_page",
         headers=headers,
     )
     assert get_resp.status_code == 200
-    assert get_resp.json()["sections"][0]["settings"]["heading"] == "Manually placed"
+    assert loc(get_resp.json()["sections"][0]["settings"]["heading"]) == "Manually placed"
 
 
 @pytest.mark.asyncio

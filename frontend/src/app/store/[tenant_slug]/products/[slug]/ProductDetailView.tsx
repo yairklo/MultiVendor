@@ -12,6 +12,7 @@ import { Star } from 'lucide-react'
 import { useStorefrontTheme } from '@/context/StorefrontThemeContext'
 import { useCurrency } from '@/hooks/useCurrency'
 import { resolveImageUrl } from '@/lib/media'
+import { resolveI18nText } from '@/lib/i18n-text'
 
 export function ProductDetailView({
   tenantSlug,
@@ -32,7 +33,7 @@ export function ProductDetailView({
   const [submittingReview, setSubmittingReview] = useState(false)
   const { addItem, openDrawer } = useCart()
   const { showToast } = useToast()
-  const { theme } = useStorefrontTheme()
+  const { theme, lang } = useStorefrontTheme()
   const { formatCurrency } = useCurrency()
 
   const loadReviews = () => {
@@ -67,8 +68,8 @@ export function ProductDetailView({
   const stock = totalStock(product.variants)
   const stockKnown = Number.isFinite(stock)
   const outOfStock = stockKnown && stock <= 0
-  const name = typeof product.name === 'object' ? (product.name?.en || product.name?.he) : product.name
-  const description = typeof product.description === 'object' ? (product.description?.en || product.description?.he) : product.description
+  const name = resolveI18nText(product.name, lang)
+  const description = resolveI18nText(product.description, lang)
   const images: string[] = product.images?.length ? product.images : (product.primary_image_url ? [product.primary_image_url] : [])
 
   const clampQuantity = (qty: number) => Math.max(1, Math.min(qty, stockKnown ? Math.max(stock, 1) : qty))
