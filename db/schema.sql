@@ -269,6 +269,9 @@ CREATE TABLE master_orders (
     user_id BIGINT NOT NULL,
     master_order_number VARCHAR(50) NOT NULL UNIQUE,
     total_amount DECIMAL(10, 2) NOT NULL,
+    -- One payment (a single Stripe PaymentIntent) covers every sub-order
+    -- under this master order; NULL in mock-payment mode.
+    payment_intent_id VARCHAR(255) NULL UNIQUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
@@ -294,6 +297,10 @@ CREATE TABLE orders (
     status ENUM('pending', 'pending_payment', 'processing', 'completed', 'cancelled', 'expired') DEFAULT 'pending',
     order_type ENUM('physical', 'digital') DEFAULT 'physical',
     shipping_json JSON NULL,
+    -- Set when PAYMENT_PROVIDER=stripe creates a PaymentIntent for this
+    -- (single-store) order; NULL for mock-mode orders and for marketplace
+    -- sub-orders, which use master_orders.payment_intent_id instead.
+    payment_intent_id VARCHAR(255) NULL UNIQUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -396,6 +403,23 @@ CREATE TABLE ai_pending_actions (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     expires_at TIMESTAMP NOT NULL,
     FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Global reference content (not tenant-scoped, same category as
+-- subscription_plans): the seller-selectable premium storefront templates.
+-- Moved here (out of a static Python list) so adding/editing one is a data
+-- change, not a code deploy -- see app/services/storefront_templates.py.
+CREATE TABLE storefront_templates (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    template_key VARCHAR(50) NOT NULL UNIQUE,
+    name VARCHAR(100) NOT NULL,
+    tagline VARCHAR(255) NOT NULL,
+    swatch_json JSON NOT NULL,
+    pages_json JSON NOT NULL,
+    display_order INT NOT NULL DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
 -- ================================================================================

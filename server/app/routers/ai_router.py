@@ -319,8 +319,9 @@ async def get_conversation(
 async def get_storefront_templates(
     tenant_slug: str = Path(...),
     admin: User = Depends(get_tenant_admin),
+    db: AsyncSession = Depends(get_db),
 ):
-    return await store_page_service.list_storefront_templates_service()
+    return await store_page_service.list_storefront_templates_service(db)
 
 
 @ai_router.post(

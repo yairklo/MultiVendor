@@ -19,3 +19,6 @@ httpx==0.28.1
 python-multipart==0.0.32
 openpyxl==3.1.5
 pillow==11.3.0
+
+# Payments (real Stripe integration behind PAYMENT_PROVIDER=stripe; mock is the default)
+stripe==11.6.0

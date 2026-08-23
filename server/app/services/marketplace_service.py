@@ -7,6 +7,7 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
+from app.core.config import settings
 from app.db.session import redis_client
 from app.db.tenant_context import platform_plane
 from app.models.tenant import Tenant
@@ -17,7 +18,8 @@ from app.schemas.marketplace_schemas import (
     MarketplaceAddToCartRequest, MarketplaceCartResponse, MarketplaceCartItemResponse,
     MarketplaceCheckoutRequest, MasterOrderResponse,
 )
-from app.schemas.order_schemas import OrderResponse, OrderItemResponse
+from app.schemas.order_schemas import OrderResponse, OrderItemResponse, PaymentIntentInfo
+from app.services.payments import get_payment_provider
 
 # Flat platform cut of each vendor's sub-order subtotal. A fixed constant
 # rather than a per-tenant/per-plan rate table -- good enough for the MVP
@@ -202,11 +204,11 @@ async def get_master_order_service(master_order_id: int, user_id: int, db: Async
 
 @platform_plane
 async def pay_master_order_service(master_order_id: int, user_id: int, db: AsyncSession) -> MasterOrderResponse:
-    # Mock payment gateway, same as the single-store pay_order_service -- but
-    # pays every vendor's sub-order under this master order in one call/one
-    # commit, rather than making the frontend loop N separate pay requests
-    # (which could fail partway through and leave some vendors paid and
-    # others not, for what the shopper experienced as a single purchase).
+    # Pays every vendor's sub-order under this master order in one call/one
+    # commit (mock) or behind one shared PaymentIntent (real gateway) --
+    # rather than making the frontend loop N separate pay requests (which
+    # could fail partway through and leave some vendors paid and others not,
+    # for what the shopper experienced as a single purchase).
     master_result = await db.execute(
         select(MasterOrder).where(MasterOrder.id == master_order_id, MasterOrder.user_id == user_id)
     )
@@ -223,10 +225,29 @@ async def pay_master_order_service(master_order_id: int, user_id: int, db: Async
     if not any(o.status == 'pending_payment' for o in sub_orders):
         raise HTTPException(status_code=400, detail="Order is not awaiting payment")
 
-    for order in sub_orders:
-        if order.status == 'pending_payment':
-            order.status = 'processing'
-    await db.commit()
+    payment_info = None
+    if settings.PAYMENT_PROVIDER == "mock":
+        for order in sub_orders:
+            if order.status == 'pending_payment':
+                order.status = 'processing'
+        await db.commit()
+    else:
+        # Real gateway: one PaymentIntent for the whole multi-vendor cart.
+        # Sub-orders stay 'pending_payment' until the webhook confirms it.
+        provider = get_payment_provider()
+        intent = await provider.create_payment_intent(
+            amount=master_order.total_amount,
+            currency=settings.STRIPE_CURRENCY,
+            reference=master_order.master_order_number,
+            metadata={"master_order_id": str(master_order.id)},
+        )
+        master_order.payment_intent_id = intent.provider_ref
+        await db.commit()
+        payment_info = PaymentIntentInfo(
+            provider=settings.PAYMENT_PROVIDER,
+            client_secret=intent.client_secret,
+            publishable_key=intent.publishable_key,
+        )
 
     return MasterOrderResponse(
         id=master_order.id,
@@ -234,6 +255,7 @@ async def pay_master_order_service(master_order_id: int, user_id: int, db: Async
         total_amount=master_order.total_amount,
         created_at=master_order.created_at,
         sub_orders=[_order_to_response(order, order.items) for order in sub_orders],
+        payment=payment_info,
     )
 
 

@@ -1,5 +1,5 @@
 """
-Seed data for the 3 selectable premium storefront templates. Deliberately just plain Python
+Definitions for the 3 built-in premium storefront templates. Deliberately just plain Python
 data structured exactly like the `sections` array `update_page_sections`/upsert_page_sections_service
 already accepts — applying a template is nothing more than calling the same upsert path 3 times
 (once per page_key below) with one of these dicts, which is what makes the result immediately
@@ -8,13 +8,22 @@ editable by the AI agent through its existing tools: it's just another StorePage
 Imagery is Lorem Picsum placeholder photography (deterministic by seed, always resolves) — sellers
 are expected to swap it for real product photography via the AI chat or admin editor.
 
-TODO: STOREFRONT_TEMPLATES is a static in-code list for this MVP/feature branch — fine while
-there are only 3 curated templates ship with the app, but it means adding/editing a template
-requires a code change + deploy. If templates need to be authored without a release (e.g. more
-templates, marketplace-style third-party templates, or per-tenant custom templates), move this
-to a DB table (or versioned JSON files loaded at startup) instead of hardcoding it here.
+STOREFRONT_TEMPLATES below is the shipped set of *built-in* templates: their content lives here in
+Python and is seeded into the `storefront_templates` table by Alembic migration 0002 (and mirrored
+into db/seed.sql for the test DB). It is NOT the live source the running app reads from -- that's
+the `StorefrontTemplate` DB table (see app/models/storefront_template.py), which is what
+list_storefront_template_metas/get_storefront_template below query. That split is what makes adding
+a 4th template, or editing swatch/copy on an existing one, a DB write instead of a code deploy;
+STOREFRONT_TEMPLATES here stays purely as the canonical definition of the 3 templates that ship
+with the app (used to generate the seed data, and validated by
+test_every_storefront_template_page_is_schema_valid).
 """
 from typing import Any, Dict, List, TypedDict
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.storefront_template import StorefrontTemplate as StorefrontTemplateRow
 
 
 class StorefrontTemplateMeta(TypedDict):
@@ -467,9 +476,21 @@ STOREFRONT_TEMPLATES: List[StorefrontTemplate] = [AURORA, ATELIER, NOVA]
 STOREFRONT_TEMPLATES_BY_KEY: Dict[str, StorefrontTemplate] = {t["key"]: t for t in STOREFRONT_TEMPLATES}
 
 
-def list_storefront_template_metas() -> List[StorefrontTemplateMeta]:
-    return [{"key": t["key"], "name": t["name"], "tagline": t["tagline"], "swatch": t["swatch"]} for t in STOREFRONT_TEMPLATES]
+async def list_storefront_template_metas(db: AsyncSession) -> List[StorefrontTemplateMeta]:
+    result = await db.execute(
+        select(StorefrontTemplateRow)
+        .where(StorefrontTemplateRow.is_active == True)
+        .order_by(StorefrontTemplateRow.display_order)
+    )
+    rows = result.scalars().all()
+    return [{"key": r.template_key, "name": r.name, "tagline": r.tagline, "swatch": r.swatch_json} for r in rows]
 
 
-def get_storefront_template(template_key: str) -> StorefrontTemplate | None:
-    return STOREFRONT_TEMPLATES_BY_KEY.get(template_key)
+async def get_storefront_template(template_key: str, db: AsyncSession) -> StorefrontTemplate | None:
+    result = await db.execute(
+        select(StorefrontTemplateRow).where(StorefrontTemplateRow.template_key == template_key)
+    )
+    row = result.scalar_one_or_none()
+    if not row:
+        return None
+    return {"key": row.template_key, "name": row.name, "tagline": row.tagline, "swatch": row.swatch_json, "pages": row.pages_json}

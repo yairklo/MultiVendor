@@ -14,10 +14,11 @@ from app.core.limiter import limiter
 from app.db.session import redis_client
 from sqlalchemy import text
 from app.db.session import AsyncSessionLocal
-from app.services.tasks import cleanup_abandoned_checkouts
+from app.services.tasks import cleanup_abandoned_checkouts, cleanup_expired_guest_carts
 
 logger = logging.getLogger(__name__)
 CHECKOUT_CLEANUP_INTERVAL_SECONDS = 60
+GUEST_CART_CLEANUP_INTERVAL_SECONDS = 6 * 60 * 60
 
 openapi_tags = [
     {
@@ -64,11 +65,25 @@ async def _checkout_cleanup_loop():
             logger.exception("checkout cleanup sweep failed")
         await asyncio.sleep(CHECKOUT_CLEANUP_INTERVAL_SECONDS)
 
+async def _guest_cart_cleanup_loop():
+    # Guest carts (Cart.user_id IS NULL) are protected by a time-limited
+    # capability token (see app/core/cart_token.py); once that token's TTL
+    # has passed the cart can never be reached again, so it's safe to purge.
+    while True:
+        try:
+            async with AsyncSessionLocal() as session:
+                await cleanup_expired_guest_carts(session)
+        except Exception:
+            logger.exception("guest cart cleanup sweep failed")
+        await asyncio.sleep(GUEST_CART_CLEANUP_INTERVAL_SECONDS)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     cleanup_task = asyncio.create_task(_checkout_cleanup_loop())
+    guest_cart_task = asyncio.create_task(_guest_cart_cleanup_loop())
     yield
     cleanup_task.cancel()
+    guest_cart_task.cancel()
 
 app = FastAPI(
     title="MultiVendor Hub API",
@@ -145,6 +160,7 @@ from app.routers.cart_router import cart_router
 from app.routers.tenant_admin_router import tenant_admin_router
 from app.routers.ai_router import ai_router
 from app.routers.marketplace_router import marketplace_router
+from app.routers.payments_router import payments_router
 
 app.include_router(auth_router)
 app.include_router(customer_router)
@@ -154,3 +170,4 @@ app.include_router(cart_router)
 app.include_router(tenant_admin_router)
 app.include_router(ai_router)
 app.include_router(marketplace_router)
+app.include_router(payments_router)

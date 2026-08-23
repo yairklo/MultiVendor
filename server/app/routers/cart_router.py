@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status, Path
+from fastapi import APIRouter, Depends, status, Path, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 from uuid import UUID
@@ -39,10 +39,11 @@ async def add_to_cart(
     tenant_slug: str = Path(...),
     cart_id: UUID = Path(...),
     user: Optional[User] = Depends(get_optional_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    x_cart_token: Optional[str] = Header(None, alias="X-Cart-Token"),
 ):
     user_id = user.id if user else None
-    return await add_to_cart_service(tenant_slug, cart_id, req, user_id, db)
+    return await add_to_cart_service(tenant_slug, cart_id, req, user_id, db, cart_token=x_cart_token)
 
 @cart_router.get(
     "/cart/{cart_id}", 
@@ -57,9 +58,10 @@ async def get_cart(
     tenant_slug: str = Path(...),
     cart_id: UUID = Path(...),
     user: Optional[User] = Depends(get_optional_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    x_cart_token: Optional[str] = Header(None, alias="X-Cart-Token"),
 ):
-    return await get_cart_service(tenant_slug, cart_id, user.id if user else None, db)
+    return await get_cart_service(tenant_slug, cart_id, user.id if user else None, db, cart_token=x_cart_token)
 
 @cart_router.delete(
     "/cart/{cart_id}/items/{item_id}",
@@ -76,9 +78,10 @@ async def remove_from_cart(
     cart_id: UUID = Path(...),
     item_id: int = Path(...),
     user: Optional[User] = Depends(get_optional_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    x_cart_token: Optional[str] = Header(None, alias="X-Cart-Token"),
 ):
-    return await remove_from_cart_service(tenant_slug, cart_id, item_id, user.id if user else None, db)
+    return await remove_from_cart_service(tenant_slug, cart_id, item_id, user.id if user else None, db, cart_token=x_cart_token)
 
 @cart_router.patch(
     "/cart/{cart_id}/items/{item_id}",
@@ -97,9 +100,10 @@ async def update_cart_item(
     cart_id: UUID = Path(...),
     item_id: int = Path(...),
     user: Optional[User] = Depends(get_optional_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    x_cart_token: Optional[str] = Header(None, alias="X-Cart-Token"),
 ):
-    return await update_cart_item_service(tenant_slug, cart_id, item_id, req.quantity, user.id if user else None, db)
+    return await update_cart_item_service(tenant_slug, cart_id, item_id, req.quantity, user.id if user else None, db, cart_token=x_cart_token)
 
 @cart_router.post(
     "/coupons/validate",
@@ -136,6 +140,7 @@ async def checkout(
     req: CheckoutRequest,
     tenant_slug: str = Path(...),
     user: User = Depends(get_tenant_customer),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    x_cart_token: Optional[str] = Header(None, alias="X-Cart-Token"),
 ):
-    return await checkout_service(tenant_slug, req, user.id, db)
+    return await checkout_service(tenant_slug, req, user.id, db, cart_token=x_cart_token)

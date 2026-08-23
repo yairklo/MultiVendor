@@ -8,12 +8,14 @@ async def test_concurrent_checkout_overselling_prevention(async_client: AsyncCli
     headers = {"Authorization": seed_tokens["customer_a"]}
     
     cart_ids = []
+    cart_tokens = {}
     # Setup carts first
     for _ in range(5):
         cart_id = str(uuid.uuid4())
-        await async_client.post(f"/api/v1/store/tenant-a/cart/{cart_id}/items", json={"variant_id": 1, "quantity": 1})
+        add_resp = await async_client.post(f"/api/v1/store/tenant-a/cart/{cart_id}/items", json={"variant_id": 1, "quantity": 1})
         cart_ids.append(cart_id)
-        
+        cart_tokens[cart_id] = add_resp.json()["cart_token"]
+
     async def checkout_request(c_id):
         payload = {
             "cart_id": c_id,
@@ -22,9 +24,9 @@ async def test_concurrent_checkout_overselling_prevention(async_client: AsyncCli
             "payment_token": str(uuid.uuid4())
         }
         return await async_client.post(
-            "/api/v1/store/tenant-a/cart/checkout", 
-            json=payload, 
-            headers=headers
+            "/api/v1/store/tenant-a/cart/checkout",
+            json=payload,
+            headers={**headers, "X-Cart-Token": cart_tokens[c_id]}
         )
 
     responses = await asyncio.gather(*(checkout_request(cid) for cid in cart_ids))

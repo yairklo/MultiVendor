@@ -129,10 +129,10 @@ async def get_master_order(
 @marketplace_router.post(
     "/orders/{master_order_id}/pay",
     response_model=MasterOrderResponse,
-    summary="Pay for a Master Order (Mock)",
-    description="Development-only mock payment gateway: marks every vendor sub-order awaiting payment under this master order as paid ('processing') in one call.",
+    summary="Pay for a Master Order",
+    description="Starts payment for every vendor sub-order awaiting payment under this master order. With PAYMENT_PROVIDER=mock (default), all of them are immediately marked paid ('processing') in one call. With PAYMENT_PROVIDER=stripe, one PaymentIntent is started for the whole multi-vendor total; every sub-order moves to 'processing' together once the Stripe webhook confirms it.",
     responses={
-        200: {"description": "Payment successful, all sub-orders now processing."},
+        200: {"description": "Mock: payment successful, all sub-orders now processing. Stripe: PaymentIntent started, response includes `payment.client_secret`."},
         400: {"description": "No sub-order is awaiting payment."},
         404: {"description": "Order not found or does not belong to the user."},
     },

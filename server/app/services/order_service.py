@@ -4,13 +4,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, case
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException
+from app.core.config import settings
 from app.models.tenant import Tenant
-from app.models.order import Order, OrderItem
+from app.models.order import Order, OrderItem, MasterOrder
 from app.models.user import User, UserStoreMembership
 from app.models.catalog import ProductVariant, Product, ProductBundleItem
-from app.schemas.order_schemas import PaginatedOrderResponse, OrderResponse, OrderItemResponse
+from app.schemas.order_schemas import PaginatedOrderResponse, OrderResponse, OrderItemResponse, PaymentIntentInfo
 from app.schemas.auth_schemas import CustomerSummaryResponse
 from app.db.tenant_context import platform_plane
+from app.services.payments import get_payment_provider
 
 PAID_ORDER_STATUSES = ('processing', 'completed')
 
@@ -210,13 +212,32 @@ async def list_customer_orders_service(
         data=order_responses
     )
 
+async def _resolve_optional_tenant_id(tenant_slug: str | None, db: AsyncSession) -> int | None:
+    if not tenant_slug:
+        return None
+    tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
+    tenant_id = tenant_result.scalar_one_or_none()
+    if not tenant_id:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+    return tenant_id
+
 @platform_plane
-async def get_customer_order_service(user_id: int, order_id: int, db: AsyncSession) -> OrderResponse:
-    result = await db.execute(
-        select(Order)
-        .where(Order.id == order_id, Order.user_id == user_id)
-        .options(selectinload(Order.items))
-    )
+async def get_customer_order_service(
+    user_id: int, order_id: int, db: AsyncSession, tenant_slug: str | None = None
+) -> OrderResponse:
+    # tenant_slug is optional: the global "my orders across every store"
+    # account view has no store context to scope by. When a caller *does*
+    # supply one (e.g. a future in-store account page), an order belonging
+    # to the user at a different store must 404, not leak across the
+    # boundary -- ownership by user_id alone isn't a store isolation
+    # guarantee once a customer's identity spans stores.
+    tenant_id = await _resolve_optional_tenant_id(tenant_slug, db)
+
+    query = select(Order).where(Order.id == order_id, Order.user_id == user_id)
+    if tenant_id is not None:
+        query = query.where(Order.tenant_id == tenant_id)
+
+    result = await db.execute(query.options(selectinload(Order.items)))
     order = result.scalar_one_or_none()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
@@ -224,8 +245,16 @@ async def get_customer_order_service(user_id: int, order_id: int, db: AsyncSessi
     return _order_to_response(order)
 
 @platform_plane
-async def cancel_customer_order_service(user_id: int, order_id: int, db: AsyncSession):
-    result = await db.execute(select(Order).options(selectinload(Order.items)).where(Order.id == order_id, Order.user_id == user_id))
+async def cancel_customer_order_service(
+    user_id: int, order_id: int, db: AsyncSession, tenant_slug: str | None = None
+):
+    tenant_id = await _resolve_optional_tenant_id(tenant_slug, db)
+
+    query = select(Order).options(selectinload(Order.items)).where(Order.id == order_id, Order.user_id == user_id)
+    if tenant_id is not None:
+        query = query.where(Order.tenant_id == tenant_id)
+
+    result = await db.execute(query)
     order = result.scalar_one_or_none()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
@@ -240,8 +269,16 @@ async def cancel_customer_order_service(user_id: int, order_id: int, db: AsyncSe
     return {"status": "ok"}
 
 @platform_plane
-async def pay_order_service(user_id: int, order_id: int, db: AsyncSession) -> OrderResponse:
-    result = await db.execute(select(Order).options(selectinload(Order.items)).where(Order.id == order_id, Order.user_id == user_id))
+async def pay_order_service(
+    user_id: int, order_id: int, db: AsyncSession, tenant_slug: str | None = None
+) -> OrderResponse:
+    tenant_id = await _resolve_optional_tenant_id(tenant_slug, db)
+
+    query = select(Order).options(selectinload(Order.items)).where(Order.id == order_id, Order.user_id == user_id)
+    if tenant_id is not None:
+        query = query.where(Order.tenant_id == tenant_id)
+
+    result = await db.execute(query)
     order = result.scalar_one_or_none()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
@@ -249,12 +286,66 @@ async def pay_order_service(user_id: int, order_id: int, db: AsyncSession) -> Or
     if order.status != 'pending_payment':
         raise HTTPException(status_code=400, detail="Order is not awaiting payment")
 
-    # Mock payment gateway: for local/dev use, "paying" always succeeds immediately.
-    order.status = 'processing'
+    if settings.PAYMENT_PROVIDER == "mock":
+        # Dev-only mock gateway: "paying" always succeeds immediately, no
+        # external call and no webhook involved.
+        order.status = 'processing'
+        await db.commit()
+        await db.refresh(order)
+        return _order_to_response(order)
+
+    # Real gateway: start a payment and hand the frontend what it needs to
+    # complete it (e.g. Stripe Elements + confirmPayment). The order stays
+    # 'pending_payment' -- only a verified webhook (see payments_router.py)
+    # is allowed to move it to 'processing'.
+    provider = get_payment_provider()
+    intent = await provider.create_payment_intent(
+        amount=order.total_amount,
+        currency=settings.STRIPE_CURRENCY,
+        reference=order.order_number,
+        metadata={"order_id": str(order.id), "tenant_id": str(order.tenant_id)},
+    )
+    order.payment_intent_id = intent.provider_ref
     await db.commit()
     await db.refresh(order)
 
-    return _order_to_response(order)
+    response = _order_to_response(order)
+    response.payment = PaymentIntentInfo(
+        provider=settings.PAYMENT_PROVIDER,
+        client_secret=intent.client_secret,
+        publishable_key=intent.publishable_key,
+    )
+    return response
+
+
+@platform_plane
+async def mark_order_paid_by_payment_intent(provider_ref: str, db: AsyncSession) -> bool:
+    """
+    Called only from the payments webhook (payments_router.py) after its
+    signature has verified -- this is the one place a real gateway payment
+    actually turns into 'processing'. Returns False for a provider_ref that
+    matches no order/master_order (an unrelated event, or a stale retry),
+    which the webhook treats as a no-op rather than an error.
+    """
+    result = await db.execute(select(Order).where(Order.payment_intent_id == provider_ref))
+    order = result.scalar_one_or_none()
+    if order:
+        if order.status == 'pending_payment':
+            order.status = 'processing'
+            await db.commit()
+        return True
+
+    result = await db.execute(select(MasterOrder).where(MasterOrder.payment_intent_id == provider_ref))
+    master_order = result.scalar_one_or_none()
+    if not master_order:
+        return False
+
+    sub_orders_result = await db.execute(select(Order).where(Order.master_order_id == master_order.id))
+    for sub_order in sub_orders_result.scalars().all():
+        if sub_order.status == 'pending_payment':
+            sub_order.status = 'processing'
+    await db.commit()
+    return True
 
 async def get_customer_insights_service(tenant_slug: str, db: AsyncSession, top_n: int = 5) -> dict:
     """

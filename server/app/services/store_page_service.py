@@ -581,11 +581,11 @@ async def upsert_page_sections_service(
     return _to_schema(page)
 
 
-async def list_storefront_templates_service() -> List[StorefrontTemplateMeta]:
+async def list_storefront_templates_service(db: AsyncSession) -> List[StorefrontTemplateMeta]:
     """Metadata only (key/name/tagline/swatch) — the full section content never leaves the
     server except through apply_storefront_template_service, which writes it straight into the
     tenant's own StorePage rows rather than exposing the raw template payload to the client."""
-    return list_storefront_template_metas()
+    return await list_storefront_template_metas(db)
 
 
 async def apply_storefront_template_service(tenant_slug: str, template_key: str, db: AsyncSession) -> List[StorePageSchema]:
@@ -593,7 +593,7 @@ async def apply_storefront_template_service(tenant_slug: str, template_key: str,
     Seeds (or overwrites) this tenant's home/about/contact draft pages from a premium template.
     Does NOT publish automatically. It updates the draft versions so they can be previewed in the layout editor.
     """
-    template = get_storefront_template(template_key)
+    template = await get_storefront_template(template_key, db)
     if not template:
         raise HTTPException(status_code=404, detail=f"Unknown storefront template: {template_key}")
 

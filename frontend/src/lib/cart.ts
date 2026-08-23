@@ -5,6 +5,12 @@ const CART_STORAGE_KEY = 'mv_cart'
 interface StoredCart {
   tenantSlug: string
   cartId: string
+  // Capability token proving we're the party this guest cart was created
+  // for -- the bare cartId (a client-generated UUID) is not secret, so the
+  // backend requires this on every read/mutation of an unclaimed cart. Set
+  // once, when the cart is first created; cleared once claimed by a login
+  // (the backend then authorizes by session instead).
+  cartToken?: string
 }
 
 export interface CartItem {
@@ -62,22 +68,36 @@ export function clearCart() {
   window.localStorage.removeItem(CART_STORAGE_KEY)
 }
 
+export function cartTokenHeaders(): Record<string, string> {
+  const stored = readStoredCart()
+  return stored?.cartToken ? { 'X-Cart-Token': stored.cartToken } : {}
+}
+
 export async function addItemToCart(tenantSlug: string, variantId: number, quantity = 1) {
   const cart = getOrCreateCart(tenantSlug)
-  await apiClient(`/api/v1/store/${tenantSlug}/cart/${cart.cartId}/items`, {
+  const result = await apiClient(`/api/v1/store/${tenantSlug}/cart/${cart.cartId}/items`, {
     method: 'POST',
+    headers: cartTokenHeaders(),
     body: JSON.stringify({ variant_id: variantId, quantity }),
   })
+  // Only present the first time this cart is created (a fresh guest cart) --
+  // persist it so subsequent requests can prove ownership of it.
+  if (result?.cart_token) {
+    writeStoredCart({ ...cart, cartToken: result.cart_token })
+  }
   return cart
 }
 
 export async function fetchCart(tenantSlug: string, cartId: string): Promise<Cart> {
-  return apiClient(`/api/v1/store/${tenantSlug}/cart/${cartId}`)
+  return apiClient(`/api/v1/store/${tenantSlug}/cart/${cartId}`, {
+    headers: cartTokenHeaders(),
+  })
 }
 
 export async function updateItemQuantity(tenantSlug: string, cartId: string, itemId: number, quantity: number) {
   return apiClient(`/api/v1/store/${tenantSlug}/cart/${cartId}/items/${itemId}`, {
     method: 'PATCH',
+    headers: cartTokenHeaders(),
     body: JSON.stringify({ quantity }),
   })
 }
@@ -85,5 +105,6 @@ export async function updateItemQuantity(tenantSlug: string, cartId: string, ite
 export async function removeCartItem(tenantSlug: string, cartId: string, itemId: number) {
   return apiClient(`/api/v1/store/${tenantSlug}/cart/${cartId}/items/${itemId}`, {
     method: 'DELETE',
+    headers: cartTokenHeaders(),
   })
 }

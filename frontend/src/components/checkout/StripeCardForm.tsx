@@ -1,0 +1,93 @@
+'use client'
+
+import React, { useEffect, useRef, useState } from 'react'
+import type { Stripe, StripeCardElement } from '@stripe/stripe-js'
+import { loadStripe } from '@stripe/stripe-js'
+
+// One loadStripe() call per publishable key for the lifetime of the tab --
+// Stripe's own recommendation, and avoids re-injecting stripe.js on every render.
+const stripePromiseCache = new Map<string, Promise<Stripe | null>>()
+function getStripe(publishableKey: string): Promise<Stripe | null> {
+  if (!stripePromiseCache.has(publishableKey)) {
+    stripePromiseCache.set(publishableKey, loadStripe(publishableKey))
+  }
+  return stripePromiseCache.get(publishableKey)!
+}
+
+interface StripeCardFormProps {
+  clientSecret: string
+  publishableKey: string
+  onSuccess: () => void
+  onError: (message: string) => void
+}
+
+// Deliberately built on the vanilla @stripe/stripe-js API (not
+// @stripe/react-stripe-js) -- this is the one place in the app that needs
+// Stripe at all, so a single mounted CardElement is simpler than adding a
+// whole <Elements> provider tree for one form.
+export function StripeCardForm({ clientSecret, publishableKey, onSuccess, onError }: StripeCardFormProps) {
+  const cardMountRef = useRef<HTMLDivElement>(null)
+  const stripeRef = useRef<Stripe | null>(null)
+  const cardElementRef = useRef<StripeCardElement | null>(null)
+  const [ready, setReady] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    getStripe(publishableKey).then((stripe) => {
+      if (cancelled || !stripe || !cardMountRef.current) return
+      stripeRef.current = stripe
+      const elements = stripe.elements()
+      const card = elements.create('card')
+      card.mount(cardMountRef.current)
+      cardElementRef.current = card
+      setReady(true)
+    })
+    return () => {
+      cancelled = true
+      cardElementRef.current?.unmount()
+    }
+    // publishableKey is stable for the lifetime of one checkout/pay flow.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const stripe = stripeRef.current
+    const card = cardElementRef.current
+    if (!stripe || !card) return
+
+    setSubmitting(true)
+    try {
+      const result = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: { card },
+      })
+      if (result.error) {
+        onError(result.error.message || 'Payment failed.')
+        return
+      }
+      if (result.paymentIntent?.status === 'succeeded' || result.paymentIntent?.status === 'processing') {
+        onSuccess()
+      } else {
+        onError('Payment was not completed.')
+      }
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'Payment failed.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div ref={cardMountRef} className="border rounded-lg px-3 py-3 bg-white" />
+      <button
+        type="submit"
+        disabled={!ready || submitting}
+        className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 disabled:opacity-70"
+      >
+        {submitting ? 'Processing...' : 'Pay with Card'}
+      </button>
+    </form>
+  )
+}

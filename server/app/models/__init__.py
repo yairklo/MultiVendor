@@ -5,6 +5,7 @@ from .coupon import Coupon
 from .order import Cart, CartItem, MarketplaceCartItem, Order, OrderItem, MasterOrder
 from .store_page import StorePage, StorePageVersion, AIConversation
 from .ai_pending_action import AIPendingAction
+from .storefront_template import StorefrontTemplate
 
 __all__ = [
     "Tenant", "SubscriptionPlan", "TenantSettings",
@@ -12,5 +13,6 @@ __all__ = [
     "Category", "Product", "ProductVariant", "ProductImage", "ProductReview",
     "Coupon",
     "Cart", "CartItem", "MarketplaceCartItem", "Order", "OrderItem", "MasterOrder",
-    "StorePage", "StorePageVersion", "AIConversation", "AIPendingAction"
+    "StorePage", "StorePageVersion", "AIConversation", "AIPendingAction",
+    "StorefrontTemplate",
 ]

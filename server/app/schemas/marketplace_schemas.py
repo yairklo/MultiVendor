@@ -4,7 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 from app.schemas.common_schemas import PaginatedResponse
-from app.schemas.order_schemas import OrderResponse
+from app.schemas.order_schemas import OrderResponse, PaymentIntentInfo
 from app.schemas.catalog_schemas import ProductVariantSchema
 
 class MarketplaceProductResponse(BaseModel):
@@ -80,3 +80,4 @@ class MasterOrderResponse(BaseModel):
     total_amount: Decimal
     created_at: datetime
     sub_orders: List[OrderResponse]
+    payment: Optional[PaymentIntentInfo] = None
