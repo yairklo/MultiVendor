@@ -37,10 +37,11 @@ async def get_customer_profile(current_user: User = Depends(get_current_user)):
 async def list_orders(
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=100),
+    tenant_slug: str | None = Query(None, description="When set, only return orders for this store."),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    return await list_customer_orders_service(current_user.id, page, page_size, db)
+    return await list_customer_orders_service(current_user.id, page, page_size, db, tenant_slug=tenant_slug)
 
 @customer_router.get(
     "/orders/{order_id}", 

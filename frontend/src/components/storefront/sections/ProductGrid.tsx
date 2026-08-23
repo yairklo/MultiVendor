@@ -5,6 +5,8 @@ import { Section } from '@/lib/ai/types'
 import { apiClient } from '@/lib/api/apiClient'
 import { ProductCard } from '../ProductCard'
 import { CardStyle } from '@/lib/product-card-styles'
+import { resolveI18nText } from '@/lib/i18n-text'
+import { useStorefrontTheme } from '@/context/StorefrontThemeContext'
 
 export function ProductGrid({
   section,
@@ -16,6 +18,7 @@ export function ProductGrid({
   /** When provided, fetches and renders real products for this store instead of placeholders. */
   tenantSlug?: string
 }) {
+  const { lang } = useStorefrontTheme()
   const columns = Number(section.settings.columns ?? 4)
   const categoryId = section.settings.category_id
   const cardStyle: CardStyle = section.settings.card_style ?? 'default'
@@ -46,7 +49,7 @@ export function ProductGrid({
       className="rounded-2xl p-6"
       style={{ ...themeStyle, background: 'var(--section-bg, #f9fafb)', color: 'var(--section-text, #111827)' }}
     >
-      <h2 className="mb-4 text-xl font-bold">{section.settings.title ?? 'Products'}</h2>
+      <h2 className="mb-4 text-xl font-bold">{resolveI18nText(section.settings.title, lang) || 'Products'}</h2>
       <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
         {products === null &&
           Array.from({ length: columns * 2 }).map((_, i) => (

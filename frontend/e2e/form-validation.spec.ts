@@ -14,7 +14,8 @@ test.describe('CMS form validation', () => {
   test('an invalid slug (uppercase / special characters) is rejected client-side', async ({ page }) => {
     await page.goto('/admin/products/new');
 
-    await page.getByLabel(/Product Name/i).fill('Malformed Slug Product');
+    await page.getByLabel(/Product Name \(English\)/i).fill('Malformed Slug Product');
+    await page.getByLabel(/Product Name \(Hebrew\)/i).fill('Malformed Slug Product');
     await page.getByLabel(/slug/i).fill('Not A Valid Slug!');
     await page.getByLabel(/price/i).fill('10');
     await page.getByRole('button', { name: /save product/i }).click();

@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { getE2eApiBase } from './apiBase';
 
 // The suite's individual specs used to each log in via the UI in their own
 // beforeEach. With enough spec files that adds up fast and trips the
@@ -10,7 +11,7 @@ import path from 'path';
 // flow (auth.spec.ts, session-expiration.spec.ts) opt out with
 // `test.use({ storageState: { cookies: [], origins: [] } })`.
 async function globalSetup() {
-  const backendURL = 'http://localhost:8000';
+  const backendURL = getE2eApiBase();
 
   const response = await fetch(`${backendURL}/api/v1/auth/login`, {
     method: 'POST',

@@ -1,5 +1,6 @@
 import { apiClient, ApiError } from '@/lib/api/apiClient'
 import { getCookie } from 'cookies-next'
+import { useTenantSlug } from './useTenantSlug'
 
 export interface ImportRowPreview {
   row_number: number
@@ -31,9 +32,10 @@ export interface ImportSummary {
 }
 
 export function useUploads() {
-  const tenantSlug = getCookie('tenantSlug') || 'test-tenant'
+  const tenantSlug = useTenantSlug()
 
   const uploadImage = async (file: File): Promise<{ url: string }> => {
+    if (!tenantSlug) throw new Error('Tenant slug is not resolved')
     const formData = new FormData()
     formData.append('file', file)
     return apiClient(`/api/v1/admin/store/${tenantSlug}/uploads/image`, {

@@ -53,7 +53,7 @@ describe('EditProductClient', () => {
     await user.type(nameInput, 'Renamed Product')
     await user.click(screen.getByRole('button', { name: /save product/i }))
 
-    expect(updateProductMock).toHaveBeenCalledWith('7', expect.objectContaining({
+    expect(updateProductMock).toHaveBeenCalledWith(7, expect.objectContaining({
       name: { en: 'Renamed Product', he: 'מוצר קיים' },
     }))
     expect(pushMock).toHaveBeenCalledWith('/admin/products')

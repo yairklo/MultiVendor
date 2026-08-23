@@ -82,3 +82,63 @@ async def test_idor_product_variant_manipulation(async_client: AsyncClient):
     # Adding tenant B's variant to tenant A's cart
     response = await async_client.post("/api/v1/store/tenant-a/cart/00000000-0000-0000-0000-000000000000/items", json=payload)
     assert response.status_code in (404, 422)
+
+@pytest.mark.asyncio
+async def test_cannot_add_store_a_product_to_store_b_cart(async_client: AsyncClient):
+    cart_id = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+    add_b = await async_client.post(
+        f"/api/v1/store/tenant-b/cart/{cart_id}/items",
+        json={"variant_id": 2, "quantity": 1},
+    )
+    assert add_b.status_code == 201
+
+    cross = await async_client.post(
+        f"/api/v1/store/tenant-b/cart/{cart_id}/items",
+        json={"variant_id": 1, "quantity": 1},
+    )
+    assert cross.status_code == 404
+
+@pytest.mark.asyncio
+async def test_cannot_reuse_store_a_cart_on_store_b_routes(async_client: AsyncClient):
+    cart_id = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+    created = await async_client.post(
+        f"/api/v1/store/tenant-a/cart/{cart_id}/items",
+        json={"variant_id": 1, "quantity": 1},
+    )
+    assert created.status_code == 201
+
+    fetched = await async_client.get(f"/api/v1/store/tenant-b/cart/{cart_id}")
+    assert fetched.status_code == 404
+
+    added = await async_client.post(
+        f"/api/v1/store/tenant-b/cart/{cart_id}/items",
+        json={"variant_id": 2, "quantity": 1},
+    )
+    assert added.status_code == 404
+
+@pytest.mark.asyncio
+async def test_disabled_user_token_is_rejected_on_optional_cart_routes(async_client: AsyncClient, db_session, seed_tokens):
+    from sqlalchemy import update
+    from app.models.user import User
+
+    await db_session.execute(update(User).where(User.id == 4).values(is_active=False))
+    await db_session.commit()
+
+    response = await async_client.post(
+        "/api/v1/store/tenant-a/cart/cccccccc-cccc-cccc-cccc-cccccccccccc/items",
+        json={"variant_id": 1, "quantity": 1},
+        headers={"Authorization": seed_tokens["customer_a"]},
+    )
+    assert response.status_code == 401
+
+@pytest.mark.asyncio
+async def test_customer_orders_can_be_filtered_by_tenant_slug(async_client: AsyncClient, seed_tokens):
+    headers = {"Authorization": seed_tokens["customer_a"]}
+    all_orders = await async_client.get("/api/v1/customer/orders", headers=headers)
+    assert all_orders.status_code == 200
+    assert any(order["tenant_id"] == 1 for order in all_orders.json()["data"])
+    assert all_orders.json()["data"][0]["tenant_slug"] == "tenant-a"
+
+    store_b = await async_client.get("/api/v1/customer/orders?tenant_slug=tenant-b", headers=headers)
+    assert store_b.status_code == 200
+    assert store_b.json()["data"] == []

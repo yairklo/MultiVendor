@@ -1,6 +1,6 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Query, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
@@ -40,7 +40,11 @@ async def _build_chat_attachment(file: Optional[UploadFile], tenant: Tenant) -> 
 
     raise HTTPException(status_code=400, detail="Unsupported file type -- attach an image or an .xlsx spreadsheet")
 
-ai_router = APIRouter(prefix="/api/v1/admin/store/{tenant_slug}/ai", tags=["AI Layout & Product Assistant"])
+ai_router = APIRouter(
+    prefix="/api/v1/admin/store/{tenant_slug}/ai",
+    tags=["AI Layout & Product Assistant"],
+    dependencies=[Depends(get_current_tenant)],
+)
 
 
 def _require_both_or_neither(page_key: Optional[str], page_type: Optional[str]) -> None:
@@ -125,6 +129,37 @@ async def put_page_schema(
     )
 
 
+def _parse_page_type(raw_type: Any) -> Optional[PageType]:
+    if raw_type in (None, ""):
+        return None
+    if raw_type not in ("static_page", "template"):
+        raise HTTPException(status_code=422, detail="Invalid page_type")
+    return raw_type
+
+
+async def _parse_chat_turn(request: Request) -> Tuple[str, Optional[str], Optional[PageType], Optional[UploadFile]]:
+    content_type = request.headers.get("content-type", "")
+    if content_type.startswith("application/json"):
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise HTTPException(status_code=422, detail="Invalid chat payload")
+        message = body.get("message")
+        if message is None or not isinstance(message, str):
+            raise HTTPException(status_code=422, detail="message is required")
+        if len(message) > 4000:
+            raise HTTPException(status_code=422, detail="message is too long")
+        return message, body.get("page_key"), _parse_page_type(body.get("page_type")), None
+
+    form = await request.form()
+    message = form.get("message")
+    if message is None or not isinstance(message, str):
+        raise HTTPException(status_code=422, detail="message is required")
+    uploaded = form.get("file")
+    file = uploaded if isinstance(uploaded, UploadFile) else None
+    page_key = form.get("page_key")
+    return message, str(page_key) if page_key else None, _parse_page_type(form.get("page_type")), file
+
+
 @ai_router.post(
     "/chat",
     response_model=AIChatResponse,
@@ -138,15 +173,13 @@ async def put_page_schema(
     ),
 )
 async def post_ai_chat(
-    message: str = Form(..., min_length=0, max_length=4000),
-    page_key: Optional[str] = Form(None),
-    page_type: Optional[PageType] = Form(None),
-    file: Optional[UploadFile] = File(None),
+    request: Request,
     tenant_slug: str = Path(...),
     tenant: Tenant = Depends(get_current_tenant),
     admin: User = Depends(get_tenant_admin),
     db: AsyncSession = Depends(get_db),
 ):
+    message, page_key, page_type, file = await _parse_chat_turn(request)
     _require_both_or_neither(page_key, page_type)
     attachment = await _build_chat_attachment(file, tenant)
     result = await run_agent_turn(db, tenant_slug, message, page_key, page_type, attachment=attachment)

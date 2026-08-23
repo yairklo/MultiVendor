@@ -7,17 +7,18 @@ test.describe('Storefront Cart Journey', () => {
   test.beforeEach(async ({ page }) => {
     // Seed a product to shop for via the admin CMS.
     await page.goto('/admin/products/new');
-    await page.getByLabel(/Product Name/i).fill(productName);
+    await page.getByLabel(/Product Name \(English\)/i).fill(productName);
+    await page.getByLabel(/Product Name \(Hebrew\)/i).fill(productName);
     await page.getByLabel(/slug/i).fill(`cart-journey-${Date.now()}`);
     await page.getByLabel(/price/i).fill('25.00');
     await page.getByRole('button', { name: /save product/i }).click();
     await page.waitForURL(/\/admin\/products$/);
 
-    await page.goto(`/store/${tenantSlug}`);
+    await page.goto(`/store/${tenantSlug}/shop`);
   });
 
   test('add to cart, adjust quantity, remove item, and proceed to checkout', async ({ page }) => {
-    await expect(page.getByText(productName)).toBeVisible();
+    await expect(page.getByText(productName).first()).toBeVisible();
 
     // Scope to this specific product's card — the storefront may still list
     // products created by earlier test runs, so ".first()" isn't safe here.

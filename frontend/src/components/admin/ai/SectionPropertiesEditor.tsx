@@ -1,8 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Section } from '@/lib/ai/types'
-import { Sparkles } from 'lucide-react'
+import { LocalizedText, Section } from '@/lib/ai/types'
+import { Sparkles, Plus, Trash2 } from 'lucide-react'
+import { useStorefrontTheme } from '@/context/StorefrontThemeContext'
 
 const FONT_FAMILIES: { label: string; value: string }[] = [
   { label: 'Default', value: '' },
@@ -17,6 +18,11 @@ const FONT_SIZES: { label: string; value: string }[] = [
   { label: 'Medium', value: '1.5rem' },
   { label: 'Large', value: '2rem' },
   { label: 'Extra Large', value: '2.75rem' },
+]
+
+const ICON_NAMES = [
+  'Truck', 'ShieldCheck', 'RotateCcw', 'Sparkles', 'Heart', 'Gift', 'Clock', 'Award', 'Leaf',
+  'CreditCard', 'Headphones', 'PackageCheck',
 ]
 
 function ColorField({
@@ -79,6 +85,74 @@ function FontFields({
   )
 }
 
+/** Switches which language every LocalizedInput below reads/writes -- shared with
+ * useStorefrontTheme().lang, so flipping a tab also re-renders the live preview
+ * canvas alongside this panel in that language (WYSIWYG: you edit what you see). */
+function LanguageTabs({
+  languages, active, onChange,
+}: { languages: string[]; active: string; onChange: (lang: 'en' | 'he') => void }) {
+  if (languages.length <= 1) return null
+  return (
+    <div className="mb-1 flex gap-1 rounded-md bg-gray-100 p-1">
+      {languages.map((l) => (
+        <button
+          key={l}
+          type="button"
+          onClick={() => onChange(l as 'en' | 'he')}
+          className={`flex-1 rounded px-2 py-1 text-xs font-semibold uppercase transition-colors ${
+            active === l ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          {l}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/** A section saved before this feature shipped has a plain string here, not {lang: text} --
+ * mirrors the backend's own auto-upgrade (store_page_service._localize_value): treat it as
+ * that string duplicated under every supported language, both for display and as the base an
+ * edit merges into. Without this, reading a legacy field shows blank, and editing one would
+ * spread a string's characters into numeric object keys instead of setting a language key. */
+function normalizeLocalized(value: unknown, supportedLanguages: string[]): LocalizedText {
+  if (typeof value === 'string') {
+    return Object.fromEntries(supportedLanguages.map((l) => [l, value]))
+  }
+  if (value && typeof value === 'object') return value as LocalizedText
+  return {}
+}
+
+/** A text field whose value is {lang: text} instead of a plain string -- always reads/writes
+ * only the currently active tab's language, preserving whatever the other languages hold. */
+function LocalizedInput({
+  label, value, lang, supportedLanguages, onChange, multiline, placeholder,
+}: {
+  label: string
+  value: unknown
+  lang: string
+  supportedLanguages: string[]
+  onChange: (next: LocalizedText) => void
+  multiline?: boolean
+  placeholder?: string
+}) {
+  const normalized = normalizeLocalized(value, supportedLanguages)
+  const current = normalized[lang] ?? ''
+  const commonProps = {
+    className: 'rounded-md border p-2 text-sm',
+    value: current,
+    placeholder,
+    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+      onChange({ ...normalized, [lang]: e.target.value }),
+  }
+  return (
+    <div className="flex flex-col gap-1">
+      <label className="text-xs font-semibold text-gray-700">{label}</label>
+      {multiline ? <textarea rows={3} {...commonProps} /> : <input type="text" {...commonProps} />}
+    </div>
+  )
+}
+
 export function SectionPropertiesEditor({
   section,
   onChange,
@@ -91,10 +165,19 @@ export function SectionPropertiesEditor({
   onAskAI?: (id: string, prompt: string) => void
 }) {
   const [aiPrompt, setAiPrompt] = useState('')
+  const { lang: editingLang, setLang: setEditingLang, supportedLanguages } = useStorefrontTheme()
 
   const handleSettingChange = (key: string, value: any) => {
     onChange({ settings: { ...section.settings, [key]: value } })
   }
+
+  const handleItemsChange = (arrayKey: string, items: any[]) => {
+    handleSettingChange(arrayKey, items)
+  }
+
+  const languageTabs = (
+    <LanguageTabs languages={supportedLanguages} active={editingLang} onChange={setEditingLang} />
+  )
 
   const renderFields = () => {
     switch (section.type) {
@@ -102,17 +185,15 @@ export function SectionPropertiesEditor({
       case 'hero_banner':
         return (
           <>
+            {languageTabs}
             {section.type === 'hero_banner' ? (
               <>
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-semibold text-gray-700">Headline</label>
-                  <input
-                    type="text"
-                    className="rounded-md border p-2 text-sm"
-                    value={section.settings.headline ?? ''}
-                    onChange={(e) => handleSettingChange('headline', e.target.value)}
-                  />
-                </div>
+                <LocalizedInput
+                  label="Headline"
+                  value={section.settings.headline}
+                  lang={editingLang} supportedLanguages={supportedLanguages}
+                  onChange={(v) => handleSettingChange('headline', v)}
+                />
                 <div className="flex gap-3">
                   <div className="flex flex-1 flex-col gap-1">
                     <label className="text-xs font-semibold text-gray-700">Size</label>
@@ -142,24 +223,19 @@ export function SectionPropertiesEditor({
               </>
             ) : (
               <>
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-semibold text-gray-700">Heading</label>
-                  <input
-                    type="text"
-                    className="rounded-md border p-2 text-sm"
-                    value={section.settings.heading ?? ''}
-                    onChange={(e) => handleSettingChange('heading', e.target.value)}
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-semibold text-gray-700">Body</label>
-                  <textarea
-                    className="rounded-md border p-2 text-sm"
-                    rows={4}
-                    value={section.settings.body ?? ''}
-                    onChange={(e) => handleSettingChange('body', e.target.value)}
-                  />
-                </div>
+                <LocalizedInput
+                  label="Heading"
+                  value={section.settings.heading}
+                  lang={editingLang} supportedLanguages={supportedLanguages}
+                  onChange={(v) => handleSettingChange('heading', v)}
+                />
+                <LocalizedInput
+                  label="Body"
+                  value={section.settings.body}
+                  lang={editingLang} supportedLanguages={supportedLanguages}
+                  onChange={(v) => handleSettingChange('body', v)}
+                  multiline
+                />
               </>
             )}
             <FontFields settings={section.settings} onChange={handleSettingChange} />
@@ -217,15 +293,13 @@ export function SectionPropertiesEditor({
       case 'product_grid':
         return (
           <>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold text-gray-700">Title</label>
-              <input
-                type="text"
-                className="rounded-md border p-2 text-sm"
-                value={section.settings.title ?? ''}
-                onChange={(e) => handleSettingChange('title', e.target.value)}
-              />
-            </div>
+            {languageTabs}
+            <LocalizedInput
+              label="Title"
+              value={section.settings.title}
+              lang={editingLang} supportedLanguages={supportedLanguages}
+              onChange={(v) => handleSettingChange('title', v)}
+            />
             <div className="flex flex-col gap-1">
               <label className="text-xs font-semibold text-gray-700">Columns</label>
               <input
@@ -239,6 +313,326 @@ export function SectionPropertiesEditor({
             </div>
           </>
         )
+      case 'video_embed':
+        return (
+          <>
+            {languageTabs}
+            <LocalizedInput
+              label="Title"
+              value={section.settings.title}
+              lang={editingLang} supportedLanguages={supportedLanguages}
+              onChange={(v) => handleSettingChange('title', v)}
+            />
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={!!section.settings.autoplay}
+                onChange={(e) => handleSettingChange('autoplay', e.target.checked)}
+              />
+              Autoplay
+            </label>
+          </>
+        )
+      case 'gallery': {
+        const images: string[] = Array.isArray(section.settings.images) ? section.settings.images : []
+        return (
+          <>
+            {languageTabs}
+            <LocalizedInput
+              label="Title (optional)"
+              value={section.settings.title}
+              lang={editingLang} supportedLanguages={supportedLanguages}
+              onChange={(v) => handleSettingChange('title', v)}
+            />
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold text-gray-700">Layout</label>
+              <select
+                className="rounded-md border p-2 text-sm"
+                value={section.settings.layout ?? 'grid'}
+                onChange={(e) => handleSettingChange('layout', e.target.value)}
+              >
+                <option value="grid">Grid</option>
+                <option value="carousel">Carousel</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-semibold text-gray-700">Image URLs</label>
+              {images.map((url, i) => (
+                <div key={i} className="flex gap-2">
+                  <input
+                    type="text"
+                    className="flex-1 rounded-md border p-2 text-sm"
+                    value={url}
+                    onChange={(e) => {
+                      const next = [...images]
+                      next[i] = e.target.value
+                      handleItemsChange('images', next)
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleItemsChange('images', images.filter((_, idx) => idx !== i))}
+                    className="rounded-md border p-2 text-gray-400 hover:text-red-600"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => handleItemsChange('images', [...images, ''])}
+                className="flex items-center justify-center gap-1 rounded-md border border-dashed p-2 text-xs text-gray-500 hover:border-gray-400"
+              >
+                <Plus className="h-3.5 w-3.5" /> Add image URL
+              </button>
+            </div>
+          </>
+        )
+      }
+      case 'button_group': {
+        const buttons: any[] = Array.isArray(section.settings.buttons) ? section.settings.buttons : []
+        const updateButton = (i: number, patch: Record<string, any>) => {
+          const next = buttons.map((b, idx) => (idx === i ? { ...b, ...patch } : b))
+          handleItemsChange('buttons', next)
+        }
+        return (
+          <>
+            {languageTabs}
+            <div className="flex flex-col gap-3">
+              {buttons.map((button, i) => (
+                <div key={i} className="flex flex-col gap-2 rounded-md border p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-gray-500">Button {i + 1}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleItemsChange('buttons', buttons.filter((_, idx) => idx !== i))}
+                      className="text-gray-400 hover:text-red-600"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  <LocalizedInput
+                    label="Label"
+                    value={button.label}
+                    lang={editingLang} supportedLanguages={supportedLanguages}
+                    onChange={(v) => updateButton(i, { label: v })}
+                  />
+                  <select
+                    className="rounded-md border p-2 text-sm"
+                    value={button.variant ?? 'primary'}
+                    onChange={(e) => updateButton(i, { variant: e.target.value })}
+                  >
+                    <option value="primary">Primary</option>
+                    <option value="secondary">Secondary</option>
+                    <option value="outline">Outline</option>
+                  </select>
+                  <p className="text-xs text-gray-400">
+                    Action target ({button.actionType ?? 'not set'}) — edit via Ask AI below.
+                  </p>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() =>
+                  handleItemsChange('buttons', [
+                    ...buttons,
+                    { label: {}, variant: 'primary', actionType: 'NAVIGATE', actionPayload: { href: '/shop' } },
+                  ])
+                }
+                className="flex items-center justify-center gap-1 rounded-md border border-dashed p-2 text-xs text-gray-500 hover:border-gray-400"
+              >
+                <Plus className="h-3.5 w-3.5" /> Add button
+              </button>
+            </div>
+          </>
+        )
+      }
+      case 'testimonials': {
+        const items: any[] = Array.isArray(section.settings.items) ? section.settings.items : []
+        const updateItem = (i: number, patch: Record<string, any>) => {
+          const next = items.map((it, idx) => (idx === i ? { ...it, ...patch } : it))
+          handleItemsChange('items', next)
+        }
+        return (
+          <>
+            {languageTabs}
+            <LocalizedInput
+              label="Title (optional)"
+              value={section.settings.title}
+              lang={editingLang} supportedLanguages={supportedLanguages}
+              onChange={(v) => handleSettingChange('title', v)}
+            />
+            <div className="flex flex-col gap-3">
+              {items.map((item, i) => (
+                <div key={i} className="flex flex-col gap-2 rounded-md border p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-gray-500">Testimonial {i + 1}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleItemsChange('items', items.filter((_, idx) => idx !== i))}
+                      className="text-gray-400 hover:text-red-600"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  <LocalizedInput label="Quote" value={item.quote} lang={editingLang} supportedLanguages={supportedLanguages} onChange={(v) => updateItem(i, { quote: v })} multiline />
+                  <LocalizedInput label="Author" value={item.author} lang={editingLang} supportedLanguages={supportedLanguages} onChange={(v) => updateItem(i, { author: v })} />
+                  <LocalizedInput label="Role (optional)" value={item.role} lang={editingLang} supportedLanguages={supportedLanguages} onChange={(v) => updateItem(i, { role: v })} />
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => handleItemsChange('items', [...items, { quote: {}, author: {}, role: {} }])}
+                className="flex items-center justify-center gap-1 rounded-md border border-dashed p-2 text-xs text-gray-500 hover:border-gray-400"
+              >
+                <Plus className="h-3.5 w-3.5" /> Add testimonial
+              </button>
+            </div>
+          </>
+        )
+      }
+      case 'feature_highlights': {
+        const items: any[] = Array.isArray(section.settings.items) ? section.settings.items : []
+        const updateItem = (i: number, patch: Record<string, any>) => {
+          const next = items.map((it, idx) => (idx === i ? { ...it, ...patch } : it))
+          handleItemsChange('items', next)
+        }
+        return (
+          <>
+            {languageTabs}
+            <LocalizedInput
+              label="Title (optional)"
+              value={section.settings.title}
+              lang={editingLang} supportedLanguages={supportedLanguages}
+              onChange={(v) => handleSettingChange('title', v)}
+            />
+            <div className="flex flex-col gap-3">
+              {items.map((item, i) => (
+                <div key={i} className="flex flex-col gap-2 rounded-md border p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-gray-500">Highlight {i + 1}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleItemsChange('items', items.filter((_, idx) => idx !== i))}
+                      className="text-gray-400 hover:text-red-600"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  <select
+                    className="rounded-md border p-2 text-sm"
+                    value={item.icon ?? 'Sparkles'}
+                    onChange={(e) => updateItem(i, { icon: e.target.value })}
+                  >
+                    {ICON_NAMES.map((name) => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                  </select>
+                  <LocalizedInput label="Title" value={item.title} lang={editingLang} supportedLanguages={supportedLanguages} onChange={(v) => updateItem(i, { title: v })} />
+                  <LocalizedInput label="Text" value={item.text} lang={editingLang} supportedLanguages={supportedLanguages} onChange={(v) => updateItem(i, { text: v })} multiline />
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => handleItemsChange('items', [...items, { icon: 'Sparkles', title: {}, text: {} }])}
+                className="flex items-center justify-center gap-1 rounded-md border border-dashed p-2 text-xs text-gray-500 hover:border-gray-400"
+              >
+                <Plus className="h-3.5 w-3.5" /> Add highlight
+              </button>
+            </div>
+          </>
+        )
+      }
+      case 'table': {
+        const headers: LocalizedText[] = Array.isArray(section.settings.headers) ? section.settings.headers : []
+        const rows: LocalizedText[][] = Array.isArray(section.settings.rows) ? section.settings.rows : []
+        const setHeaderCell = (i: number, v: LocalizedText) => {
+          const next = headers.map((h, idx) => (idx === i ? v : h))
+          handleSettingChange('headers', next)
+        }
+        const setRowCell = (r: number, c: number, v: LocalizedText) => {
+          const next = rows.map((row, ri) => (ri === r ? row.map((cell, ci) => (ci === c ? v : cell)) : row))
+          handleSettingChange('rows', next)
+        }
+        const addColumn = () => {
+          handleSettingChange('headers', [...headers, {}])
+          handleSettingChange('rows', rows.map((row) => [...row, {}]))
+        }
+        const removeColumn = (c: number) => {
+          handleSettingChange('headers', headers.filter((_, i) => i !== c))
+          handleSettingChange('rows', rows.map((row) => row.filter((_, i) => i !== c)))
+        }
+        const addRow = () => handleSettingChange('rows', [...rows, headers.map(() => ({}))])
+        const removeRow = (r: number) => handleSettingChange('rows', rows.filter((_, i) => i !== r))
+        return (
+          <>
+            {languageTabs}
+            <LocalizedInput
+              label="Title (optional)"
+              value={section.settings.title}
+              lang={editingLang} supportedLanguages={supportedLanguages}
+              onChange={(v) => handleSettingChange('title', v)}
+            />
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-semibold text-gray-700">Columns</label>
+              {headers.map((header, c) => (
+                <div key={c} className="flex gap-2">
+                  <div className="flex-1">
+                    <LocalizedInput
+                      label={`Column ${c + 1} header`}
+                      value={header}
+                      lang={editingLang}
+                      supportedLanguages={supportedLanguages}
+                      onChange={(v) => setHeaderCell(c, v)}
+                    />
+                  </div>
+                  <button type="button" onClick={() => removeColumn(c)} className="mt-5 h-fit rounded-md border p-2 text-gray-400 hover:text-red-600">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={addColumn}
+                className="flex items-center justify-center gap-1 rounded-md border border-dashed p-2 text-xs text-gray-500 hover:border-gray-400"
+              >
+                <Plus className="h-3.5 w-3.5" /> Add column
+              </button>
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-semibold text-gray-700">Rows</label>
+              {rows.map((row, r) => (
+                <div key={r} className="flex flex-col gap-1 rounded-md border p-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-400">Row {r + 1}</span>
+                    <button type="button" onClick={() => removeRow(r)} className="text-gray-400 hover:text-red-600">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  {headers.map((_, c) => (
+                    <LocalizedInput
+                      key={c}
+                      label={`Column ${c + 1}`}
+                      value={row[c]}
+                      lang={editingLang}
+                      supportedLanguages={supportedLanguages}
+                      onChange={(v) => setRowCell(r, c, v)}
+                    />
+                  ))}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={addRow}
+                disabled={headers.length === 0}
+                className="flex items-center justify-center gap-1 rounded-md border border-dashed p-2 text-xs text-gray-500 hover:border-gray-400 disabled:opacity-50"
+              >
+                <Plus className="h-3.5 w-3.5" /> Add row
+              </button>
+            </div>
+          </>
+        )
+      }
       default:
         return <div className="text-sm text-gray-500">Manual editing for {section.type} is coming soon. Use Ask AI below.</div>
     }
@@ -255,7 +649,7 @@ export function SectionPropertiesEditor({
         {renderFields()}
 
         <hr className="my-4 border-gray-200" />
-        
+
         <div className="flex flex-col gap-2 rounded-lg border border-indigo-100 bg-indigo-50 p-4">
           <div className="flex items-center gap-2 text-indigo-700">
             <Sparkles className="h-4 w-4" />

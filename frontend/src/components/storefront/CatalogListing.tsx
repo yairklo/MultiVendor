@@ -11,6 +11,7 @@ import { ProductCardSkeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/context/ToastContext'
 import { resolvePageKeyHref } from '@/lib/storefront-nav'
 import { DispatchedAction, StorePageSchema } from '@/lib/ai/types'
+import { useStorefrontTheme } from '@/context/StorefrontThemeContext'
 
 const PAGE_SIZE = 12
 
@@ -53,7 +54,7 @@ export function CatalogListing({
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [categoryId, setCategoryId] = useState('')
-  const [lang, setLang] = useState<Lang>('en')
+  const { lang, setLang } = useStorefrontTheme()
   const t = strings[lang]
 
   function handleAiAction(action: DispatchedAction) {
@@ -173,7 +174,7 @@ export function CatalogListing({
         <button
           data-testid="language-switcher"
           className="cursor-pointer font-medium text-gray-600 transition-colors hover:text-blue-600"
-          onClick={() => setLang((l) => (l === 'en' ? 'he' : 'en'))}
+          onClick={() => setLang(lang === 'en' ? 'he' : 'en')}
         >
           {t.switcherLabel}
         </button>

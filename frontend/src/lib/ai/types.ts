@@ -13,6 +13,13 @@ export type SectionType =
 
 export type DesignVariant = 'primary' | 'accent' | 'secondary' | 'muted' | 'neutral'
 
+/** A text value with one entry per the store's supported languages, e.g. {en: "Sale", he: "מבצע"}.
+ * Every text field inside a Section's `settings` (headline, heading/body, title, button label,
+ * testimonial/feature item text, table header/row cells) is one of these, not a plain string --
+ * enforced server-side (store_page_service._sanitize_section_text) and resolved for display via
+ * resolveI18nText(value, lang) from lib/i18n-text.ts. */
+export type LocalizedText = Record<string, string>
+
 export const MAX_SECTION_NESTING_DEPTH = 3
 
 export type PageType = 'static_page' | 'template'
@@ -28,7 +35,7 @@ export type ButtonVariant = 'primary' | 'secondary' | 'outline'
 export type ButtonActionType = 'NAVIGATE' | 'OPEN_MODAL' | 'ADD_TO_CART' | 'APPLY_COUPON'
 
 export interface ButtonSpec {
-  label: string
+  label: LocalizedText
   variant?: ButtonVariant
   actionType: ButtonActionType
   actionPayload?: Record<string, any>

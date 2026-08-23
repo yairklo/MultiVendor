@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react'
 import { useProducts } from '@/hooks/useProducts'
+import { useTenantSlug } from '@/hooks/useTenantSlug'
 import Link from 'next/link'
 import { useToast } from '@/context/ToastContext'
 import { useConfirm } from '@/context/ConfirmContext'
@@ -32,6 +33,7 @@ export function ProductsPageClient({
   initialProducts: any[]
   initialMeta: PaginationMeta | null
 }) {
+  const tenantSlug = useTenantSlug()
   const { fetchProducts, deleteProduct } = useProducts()
   const { showToast } = useToast()
   const { confirm } = useConfirm()
@@ -73,6 +75,7 @@ export function ProductsPageClient({
   }, [page, debouncedSearch, categoryId])
 
   const loadProducts = async (pageToLoad = page, s = search, cid = categoryId) => {
+    if (!tenantSlug) return
     setLoading(true)
     const { data, meta } = await fetchProducts(pageToLoad, 20, s, cid)
     setProducts(data)

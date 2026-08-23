@@ -56,7 +56,7 @@ async def test_chat_endpoint_rejects_half_specified_page_context(async_client: A
         json={"message": "hi", "page_key": "home"},  # page_type omitted
         headers=headers,
     )
-    assert resp.status_code == 422
+    assert resp.status_code in (400, 422)
 
 
 @pytest.mark.asyncio

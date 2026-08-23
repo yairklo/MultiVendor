@@ -1,12 +1,10 @@
 'use client'
 
 import React, { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { setCookie } from 'cookies-next'
 import { apiClient } from '@/lib/api/apiClient'
 
 export default function AdminLoginPage() {
-  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [tenantSlug, setTenantSlug] = useState('')
@@ -41,12 +39,14 @@ export default function AdminLoginPage() {
         // would otherwise land on /admin/dashboard and 403 on every request.
         // Tenant-admin status is per-store (UserStoreMembership), not on the
         // account itself, so it comes back as `store_role`, not `role`.
+        // Hard navigation so the next request includes the cookies we just set
+        // (router.push can race the RSC read of tenantSlug and bounce back to login).
         if (data.role === 'super_admin') {
-          router.push('/super-admin')
+          window.location.assign('/super-admin')
         } else if (data.store_role === 'tenant_admin') {
-          router.push('/admin/dashboard')
+          window.location.assign('/admin/dashboard')
         } else {
-          router.push(`/store/${tenantSlug || 'test-tenant'}`)
+          window.location.assign(tenantSlug ? `/store/${tenantSlug}` : '/marketplace')
         }
       }
     } catch (err: any) {

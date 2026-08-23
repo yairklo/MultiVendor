@@ -2,7 +2,8 @@ import { test, expect, Page } from '@playwright/test';
 
 async function createProduct(page: Page, name: string) {
   await page.goto('/admin/products/new');
-  await page.getByLabel(/Product Name/i).fill(name);
+  await page.getByLabel(/Product Name \(English\)/i).fill(name);
+  await page.getByLabel(/Product Name \(Hebrew\)/i).fill(name);
   await page.getByLabel(/slug/i).fill(`crud-product-${Date.now()}-${Math.floor(Math.random() * 10000)}`);
   await page.getByLabel(/price/i).fill('40.00');
   await page.getByRole('button', { name: /save product/i }).click();
@@ -17,15 +18,17 @@ test.describe('Product Edit (CMS CRUD)', () => {
     await createProduct(page, originalName);
 
     const row = page.locator('tr', { hasText: originalName });
+    await expect(row).toBeVisible();
     await row.getByRole('link', { name: /edit/i }).click();
 
     await page.waitForURL(/\/admin\/products\/\d+\/edit$/);
 
-    const nameInput = page.getByLabel(/Product Name/i);
+    const nameInput = page.getByLabel(/Product Name \(English\)/i);
     await expect(nameInput).toHaveValue(originalName);
     await expect(page.getByLabel(/price/i)).toHaveValue('40');
 
     await nameInput.fill(updatedName);
+    await page.getByLabel(/Product Name \(Hebrew\)/i).fill(updatedName);
     await page.getByRole('button', { name: /save product/i }).click();
 
     await page.waitForURL(/\/admin\/products$/);

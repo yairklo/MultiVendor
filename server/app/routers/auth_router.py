@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, status, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.schemas.tenant_schemas import TenantRegisterRequest
-from app.schemas.auth_schemas import TokenResponse, LoginRequest, CustomerRegisterRequest, UserResponse
-from app.services.auth_service import register_tenant_service, login_service, register_customer_service
+from app.schemas.auth_schemas import TokenResponse, LoginRequest, CustomerRegisterRequest, UserResponse, RefreshTokenRequest
+from app.services.auth_service import register_tenant_service, login_service, register_customer_service, refresh_tokens_service
 from fastapi import Request
 from app.core.limiter import limiter
 
@@ -39,6 +39,17 @@ async def register_tenant(request: Request, req: TenantRegisterRequest, bg_tasks
 @limiter.limit("10/minute")
 async def login(request: Request, req: LoginRequest, db: AsyncSession = Depends(get_db)):
     return await login_service(req, db)
+
+@auth_router.post(
+    "/refresh",
+    response_model=TokenResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Rotate Refresh Token",
+    description="Exchanges a valid refresh token for a new access token and a rotated refresh token. The previous refresh token is invalidated.",
+)
+@limiter.limit("10/minute")
+async def refresh_tokens(request: Request, req: RefreshTokenRequest, db: AsyncSession = Depends(get_db)):
+    return await refresh_tokens_service(req.refresh_token, db)
 
 @auth_router.post(
     "/register-customer/{tenant_slug}", 

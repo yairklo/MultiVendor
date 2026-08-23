@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { getE2eApiBase } from './apiBase';
 
 test.describe('Storefront & Checkout Flow', () => {
   const tenantSlug = 'test-tenant';
@@ -7,7 +8,8 @@ test.describe('Storefront & Checkout Flow', () => {
   test.beforeEach(async ({ page }) => {
     // We need at least one product to test the storefront. Let's create one.
     await page.goto('/admin/products/new');
-    await page.getByLabel(/Product Name/i).fill(productName);
+    await page.getByLabel(/Product Name \(English\)/i).fill(productName);
+    await page.getByLabel(/Product Name \(Hebrew\)/i).fill(productName);
     await page.getByLabel(/slug/i).fill(`storefront-e2e-${Date.now()}`);
     await page.getByLabel(/price/i).fill('19.99');
     await page.getByRole('button', { name: /save product/i }).click();
@@ -15,7 +17,7 @@ test.describe('Storefront & Checkout Flow', () => {
   });
 
   test('Browse and add to cart', async ({ page }) => {
-    await page.goto(`/store/${tenantSlug}`);
+    await page.goto(`/store/${tenantSlug}/shop`);
     
     // Verify product is visible
     await expect(page.locator(`text=${productName}`).first()).toBeVisible({ timeout: 10000 });
@@ -32,16 +34,25 @@ test.describe('Storefront & Checkout Flow', () => {
     // their own store), but paying is customer-only — switch off the
     // shared admin session (used elsewhere for speed, see global-setup.ts)
     // to the seeded customer account for this flow.
-    const loginResponse = await request.post('http://localhost:8000/api/v1/auth/login', {
-      data: { email: 'customer@gmail.com', password: 'customer123', tenant_slug: tenantSlug },
+    const apiBase = getE2eApiBase()
+    const customerEmail = `e2e-customer-${Date.now()}@example.com`
+    const customerPassword = 'customer123'
+    const registerResponse = await request.post(`${apiBase}/api/v1/auth/register-customer/${tenantSlug}`, {
+      data: { email: customerEmail, password: customerPassword, full_name: 'E2E Customer' },
+    })
+    expect(registerResponse.ok()).toBeTruthy()
+    const loginResponse = await request.post(`${apiBase}/api/v1/auth/login`, {
+      data: { email: customerEmail, password: customerPassword, tenant_slug: tenantSlug },
     });
+    expect(loginResponse.ok()).toBeTruthy()
     const { access_token } = await loginResponse.json();
+    expect(access_token).toBeTruthy()
     await page.context().addCookies([
       { name: 'token', value: access_token, domain: 'localhost', path: '/' },
       { name: 'tenantSlug', value: tenantSlug, domain: 'localhost', path: '/' },
     ]);
 
-    await page.goto(`/store/${tenantSlug}`);
+    await page.goto(`/store/${tenantSlug}/shop`);
 
     // add to cart first — wait for the add to actually land server-side
     // before navigating away, or /checkout can find an empty cart.

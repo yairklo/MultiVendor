@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query, Path
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 from app.db.session import get_db
-from app.deps import get_tenant_customer
+from app.deps import get_current_tenant, get_tenant_customer
 from app.models.user import User
 from app.schemas.tenant_schemas import TenantSettingsSchema
 from app.schemas.catalog_schemas import (
@@ -16,7 +16,11 @@ from app.services.catalog_service import (
 from app.schemas.ai_schemas import StorePageSchema
 from app.services.store_page_service import get_published_page_schema_service
 
-storefront_router = APIRouter(prefix="/api/v1/store", tags=["Public Storefront"])
+storefront_router = APIRouter(
+    prefix="/api/v1/store",
+    tags=["Public Storefront"],
+    dependencies=[Depends(get_current_tenant)],
+)
 
 @storefront_router.get(
     "/{tenant_slug}/config", 

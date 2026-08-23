@@ -45,7 +45,11 @@ from app.services.coupon_service import (
     list_tenant_coupons_service, create_tenant_coupon_service, delete_tenant_coupon_service
 )
 
-tenant_admin_router = APIRouter(prefix="/api/v1/admin/store/{tenant_slug}", tags=["Tenant Admin & CMS"])
+tenant_admin_router = APIRouter(
+    prefix="/api/v1/admin/store/{tenant_slug}",
+    tags=["Tenant Admin & CMS"],
+    dependencies=[Depends(get_current_tenant)],
+)
 
 # UPLOADS
 @tenant_admin_router.post(

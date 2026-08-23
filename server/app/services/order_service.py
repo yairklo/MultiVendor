@@ -10,13 +10,15 @@ from app.models.user import User, UserStoreMembership
 from app.models.catalog import ProductVariant, Product, ProductBundleItem
 from app.schemas.order_schemas import PaginatedOrderResponse, OrderResponse, OrderItemResponse
 from app.schemas.auth_schemas import CustomerSummaryResponse
+from app.db.tenant_context import platform_plane
 
 PAID_ORDER_STATUSES = ('processing', 'completed')
 
-def _order_to_response(order: Order, customer: User | None = None) -> OrderResponse:
+def _order_to_response(order: Order, customer: User | None = None, tenant_slug: str | None = None) -> OrderResponse:
     return OrderResponse(
         id=order.id,
         tenant_id=order.tenant_id,
+        tenant_slug=tenant_slug,
         customer_id=order.user_id,
         customer_name=customer.full_name if customer else None,
         customer_email=customer.email if customer else None,
@@ -173,9 +175,18 @@ async def update_order_status_service(tenant_slug: str, order_id: int, status: s
     await db.commit()
     return {"status": "ok", "order_status": order.status}
 
-async def list_customer_orders_service(user_id: int, page: int, page_size: int, db: AsyncSession) -> PaginatedOrderResponse:
+@platform_plane
+async def list_customer_orders_service(
+    user_id: int, page: int, page_size: int, db: AsyncSession, tenant_slug: str | None = None
+) -> PaginatedOrderResponse:
     query = select(Order).where(Order.user_id == user_id)
-    
+    if tenant_slug:
+        tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
+        tenant_id = tenant_result.scalar_one_or_none()
+        if not tenant_id:
+            raise HTTPException(status_code=404, detail="Tenant not found")
+        query = query.where(Order.tenant_id == tenant_id)
+
     total_query = select(func.count()).select_from(query.subquery())
     total_result = await db.execute(total_query)
     total = total_result.scalar_one()
@@ -185,7 +196,13 @@ async def list_customer_orders_service(user_id: int, page: int, page_size: int, 
     result = await db.execute(query)
     orders = result.scalars().all()
 
-    order_responses = [_order_to_response(order) for order in orders]
+    tenant_ids = {order.tenant_id for order in orders}
+    slug_by_id: dict[int, str] = {}
+    if tenant_ids:
+        tenants = await db.execute(select(Tenant).where(Tenant.id.in_(tenant_ids)))
+        slug_by_id = {t.id: t.slug for t in tenants.scalars().all()}
+
+    order_responses = [_order_to_response(order, tenant_slug=slug_by_id.get(order.tenant_id)) for order in orders]
 
     total_pages = math.ceil(total / page_size) if total > 0 else 1
     return PaginatedOrderResponse(
@@ -193,6 +210,7 @@ async def list_customer_orders_service(user_id: int, page: int, page_size: int, 
         data=order_responses
     )
 
+@platform_plane
 async def get_customer_order_service(user_id: int, order_id: int, db: AsyncSession) -> OrderResponse:
     result = await db.execute(
         select(Order)
@@ -205,6 +223,7 @@ async def get_customer_order_service(user_id: int, order_id: int, db: AsyncSessi
 
     return _order_to_response(order)
 
+@platform_plane
 async def cancel_customer_order_service(user_id: int, order_id: int, db: AsyncSession):
     result = await db.execute(select(Order).options(selectinload(Order.items)).where(Order.id == order_id, Order.user_id == user_id))
     order = result.scalar_one_or_none()
@@ -220,6 +239,7 @@ async def cancel_customer_order_service(user_id: int, order_id: int, db: AsyncSe
     await db.commit()
     return {"status": "ok"}
 
+@platform_plane
 async def pay_order_service(user_id: int, order_id: int, db: AsyncSession) -> OrderResponse:
     result = await db.execute(select(Order).options(selectinload(Order.items)).where(Order.id == order_id, Order.user_id == user_id))
     order = result.scalar_one_or_none()

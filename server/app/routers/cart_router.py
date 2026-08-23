@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 from uuid import UUID
 from app.db.session import get_db
-from app.deps import get_optional_user, get_tenant_customer
+from app.deps import get_current_tenant, get_optional_user, get_tenant_customer
 from app.models.user import User
 from app.schemas.order_schemas import (
     AddToCartRequest, CartResponse, CheckoutRequest, OrderResponse, CartItemResponse, UpdateCartItemRequest,
@@ -16,7 +16,11 @@ from app.services.checkout_service import (
 from fastapi import Request
 from app.core.limiter import limiter
 
-cart_router = APIRouter(prefix="/api/v1/store/{tenant_slug}", tags=["Cart & Checkout"])
+cart_router = APIRouter(
+    prefix="/api/v1/store/{tenant_slug}",
+    tags=["Cart & Checkout"],
+    dependencies=[Depends(get_current_tenant)],
+)
 
 @cart_router.post(
     "/cart/{cart_id}/items",
@@ -55,7 +59,7 @@ async def get_cart(
     user: Optional[User] = Depends(get_optional_user),
     db: AsyncSession = Depends(get_db)
 ):
-    return await get_cart_service(tenant_slug, cart_id, db)
+    return await get_cart_service(tenant_slug, cart_id, user.id if user else None, db)
 
 @cart_router.delete(
     "/cart/{cart_id}/items/{item_id}",
@@ -74,7 +78,7 @@ async def remove_from_cart(
     user: Optional[User] = Depends(get_optional_user),
     db: AsyncSession = Depends(get_db)
 ):
-    return await remove_from_cart_service(tenant_slug, cart_id, item_id, db)
+    return await remove_from_cart_service(tenant_slug, cart_id, item_id, user.id if user else None, db)
 
 @cart_router.patch(
     "/cart/{cart_id}/items/{item_id}",
@@ -95,7 +99,7 @@ async def update_cart_item(
     user: Optional[User] = Depends(get_optional_user),
     db: AsyncSession = Depends(get_db)
 ):
-    return await update_cart_item_service(tenant_slug, cart_id, item_id, req.quantity, db)
+    return await update_cart_item_service(tenant_slug, cart_id, item_id, req.quantity, user.id if user else None, db)
 
 @cart_router.post(
     "/coupons/validate",

@@ -72,6 +72,7 @@ class OrderItemResponse(BaseModel):
 class OrderResponse(BaseModel):
     id: int
     tenant_id: int
+    tenant_slug: Optional[str] = None
     customer_id: int
     customer_name: Optional[str] = None
     customer_email: Optional[str] = None

@@ -2,8 +2,9 @@ from sqlalchemy import Column, Integer, BigInteger, String, Boolean, DateTime, F
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.base_class import Base
+from app.db.tenant_scope import TenantScoped
 
-class Category(Base):
+class Category(TenantScoped, Base):
     __tablename__ = "categories"
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
@@ -11,7 +12,7 @@ class Category(Base):
     name = Column(JSON, nullable=False)
     slug = Column(String(100), nullable=False)
 
-class Product(Base):
+class Product(TenantScoped, Base):
     __tablename__ = "products"
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
@@ -35,7 +36,7 @@ class Product(Base):
     images = relationship("ProductImage", back_populates="product", cascade="all, delete-orphan")
     reviews = relationship("ProductReview", back_populates="product", cascade="all, delete-orphan")
 
-class ProductVariant(Base):
+class ProductVariant(TenantScoped, Base):
     __tablename__ = "product_variants"
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
@@ -47,7 +48,7 @@ class ProductVariant(Base):
 
     product = relationship("Product", back_populates="variants")
 
-class ProductImage(Base):
+class ProductImage(TenantScoped, Base):
     __tablename__ = "product_images"
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
@@ -58,7 +59,7 @@ class ProductImage(Base):
 
     product = relationship("Product", back_populates="images")
 
-class ProductReview(Base):
+class ProductReview(TenantScoped, Base):
     __tablename__ = "product_reviews"
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)

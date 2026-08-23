@@ -1,21 +1,28 @@
 import { CSSProperties, FocusEvent } from 'react'
 import { Section } from '@/lib/ai/types'
+import { resolveI18nText } from '@/lib/i18n-text'
+import { useStorefrontTheme } from '@/context/StorefrontThemeContext'
 
 const SIZE_HEIGHTS: Record<string, number> = { small: 160, medium: 280, large: 420 }
 
 export function HeroBanner({
   section, themeStyle, onInlineEdit,
 }: { section: Section; themeStyle: CSSProperties; onInlineEdit?: (sectionId: string, patch: Partial<Section>) => void }) {
+  const { lang } = useStorefrontTheme()
   const size = section.settings.size ?? 'medium'
   const height = SIZE_HEIGHTS[size] ?? SIZE_HEIGHTS.medium
   const alignment = section.settings.alignment === 'left' ? 'items-start text-left' : section.settings.alignment === 'right' ? 'items-end text-right' : 'items-center text-center'
   const imageUrl = section.media?.type === 'image' ? section.media.url : undefined
   const fontSize = typeof section.settings.font_size === 'string' && section.settings.font_size ? section.settings.font_size : undefined
-  const headline = section.settings.headline ?? 'Hero Banner'
+  const headline = resolveI18nText(section.settings.headline, lang) || 'Hero Banner'
 
   const handleHeadlineBlur = (e: FocusEvent<HTMLHeadingElement>) => {
     const next = e.currentTarget.textContent ?? ''
-    if (next !== headline) onInlineEdit?.(section.id, { settings: { ...section.settings, headline: next } })
+    if (next !== headline) {
+      onInlineEdit?.(section.id, {
+        settings: { ...section.settings, headline: { ...section.settings.headline, [lang]: next } },
+      })
+    }
   }
 
   return (

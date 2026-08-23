@@ -8,7 +8,11 @@ export { ApiError }
 
 export async function getServerTenantSlug() {
   const cookieStore = await cookies()
-  return cookieStore.get('tenantSlug')?.value || 'test-tenant'
+  const slug = cookieStore.get('tenantSlug')?.value
+  if (!slug) {
+    redirect('/admin/login')
+  }
+  return slug as string
 }
 
 export const serverApiClient = async (url: string, options: RequestInit = {}) => {
@@ -68,8 +72,10 @@ export const getTenantHomeLayout = cache(async (tenantSlug: string) => {
   try {
     return await serverApiClient(`/api/v1/store/${tenantSlug}/pages/home`)
   } catch (e) {
+    // Missing layout is the normal case for a store that hasn't used the
+    // AI editor yet. A down/misconfigured API must not 500 the storefront.
     if (e instanceof ApiError && e.status === 404) return null
-    throw e
+    return null
   }
 })
 

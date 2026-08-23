@@ -1,10 +1,11 @@
 import { apiClient } from '@/lib/api/apiClient'
-import { getCookie } from 'cookies-next'
+import { useTenantSlug } from './useTenantSlug'
 
 export function useCoupons() {
-  const tenantSlug = getCookie('tenantSlug') || 'test-tenant'
+  const tenantSlug = useTenantSlug()
 
   const fetchCoupons = async () => {
+    if (!tenantSlug) return []
     const data = await apiClient(`/api/v1/admin/store/${tenantSlug}/coupons`)
     return Array.isArray(data) ? data : (data.data || [])
   }
