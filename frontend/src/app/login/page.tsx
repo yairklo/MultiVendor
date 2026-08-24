@@ -103,6 +103,13 @@ export default function CustomerLoginPage() {
               {loading ? 'Authenticating...' : 'Sign In'}
             </button>
           </form>
+
+          <p className="mt-6 text-center text-sm text-muted-foreground">
+            Don&apos;t have an account?{' '}
+            <a href="/signup" className="font-medium text-primary hover:underline">
+              Sign up
+            </a>
+          </p>
         </div>
       </div>
     </div>
