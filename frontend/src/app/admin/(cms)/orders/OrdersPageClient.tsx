@@ -7,6 +7,16 @@ import { orderStatusClass, orderStatusLabel } from '@/lib/orderStatus'
 import { useToast } from '@/context/ToastContext'
 import { useCurrency } from '@/hooks/useCurrency'
 import { useTenantSlug } from '@/hooks/useTenantSlug'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 
 // No real order is ever in plain 'pending' — checkout always creates
 // 'pending_payment', which becomes 'processing' once paid. 'pending' was a
@@ -73,55 +83,49 @@ export function OrdersPageClient({ initialOrders }: { initialOrders: any[] }) {
   return (
     <div>
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Store Orders</h1>
-        <button
-          onClick={handleExport}
-          disabled={exporting}
-          className="px-4 py-2 bg-gray-800 text-white rounded-lg font-medium hover:bg-gray-900 disabled:opacity-50"
-        >
+        <h1 className="font-heading text-3xl font-bold text-foreground">Store Orders</h1>
+        <Button onClick={handleExport} disabled={exporting} variant="default">
           {exporting ? 'Exporting...' : 'Export CSV'}
-        </button>
+        </Button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-gray-50 border-b border-gray-100">
-              <th className="p-4 font-semibold text-gray-600">Order ID</th>
-              <th className="p-4 font-semibold text-gray-600">Customer</th>
-              <th className="p-4 font-semibold text-gray-600">Total</th>
-              <th className="p-4 font-semibold text-gray-600">Status</th>
-            </tr>
-          </thead>
-          <tbody>
+      <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Order ID</TableHead>
+              <TableHead>Customer</TableHead>
+              <TableHead>Total</TableHead>
+              <TableHead>Status</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {orders.length === 0 && (
-              <tr>
-                <td colSpan={4} className="p-8 text-center text-gray-500">No orders found.</td>
-              </tr>
+              <TableRow>
+                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">No orders found.</TableCell>
+              </TableRow>
             )}
             {orders.map(order => (
-              <tr key={order.id} className="border-b border-gray-50 hover:bg-gray-50">
-                <td className="p-4 font-medium">#{order.id}</td>
-                <td className="p-4">
-                  <div className="font-medium text-gray-900">{order.customer_name || 'Guest'}</div>
+              <TableRow key={order.id} className="hover:bg-muted/50 transition-colors">
+                <TableCell className="font-medium">#{order.id}</TableCell>
+                <TableCell>
+                  <div className="font-medium text-foreground">{order.customer_name || 'Guest'}</div>
                   {order.customer_email && (
-                    <div className="text-sm text-gray-500">{order.customer_email}</div>
+                    <div className="text-sm text-muted-foreground">{order.customer_email}</div>
                   )}
-                </td>
-                <td className="p-4">{formatCurrency(Number(order.total_amount))}</td>
-                <td className="p-4">
+                </TableCell>
+                <TableCell>{formatCurrency(Number(order.total_amount))}</TableCell>
+                <TableCell>
                   <div className="flex items-center gap-2">
-                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                      orderStatusClass[order.status] || 'bg-gray-100 text-gray-700'
-                    }`}>
+                    <Badge variant="outline" className={orderStatusClass[order.status] || 'bg-muted text-muted-foreground'}>
                       {orderStatusLabel[order.status] || order.status || 'Pending'}
-                    </span>
+                    </Badge>
                     <select
                       aria-label={`Change status for order ${order.id}`}
                       value={MANUAL_STATUSES.includes(order.status) ? order.status : ''}
                       disabled={updatingId === order.id}
                       onChange={e => handleStatusChange(order.id, e.target.value)}
-                      className="text-xs border rounded px-1 py-1 text-gray-600"
+                      className="text-xs border border-input rounded-md px-1.5 py-1 text-muted-foreground bg-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-ring/50 disabled:opacity-50"
                     >
                       {!MANUAL_STATUSES.includes(order.status) && (
                         <option value="" disabled>{orderStatusLabel[order.status] || order.status}</option>
@@ -131,11 +135,11 @@ export function OrdersPageClient({ initialOrders }: { initialOrders: any[] }) {
                       ))}
                     </select>
                   </div>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </div>
   )

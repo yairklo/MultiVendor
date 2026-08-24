@@ -31,7 +31,7 @@ export function ButtonGroupSection({
             <button
               key={i}
               type="button"
-              className={`rounded-full px-5 py-2 text-sm font-semibold transition-colors ${VARIANT_CLASSES[button.variant ?? 'primary']}`}
+              className={`rounded-full px-5 py-2 text-sm font-semibold transition-all duration-150 active:scale-[0.98] ${VARIANT_CLASSES[button.variant ?? 'primary']}`}
               onClick={() =>
                 // Only ever dispatches a structured {actionType, actionPayload} record —
                 // never evaluates or executes anything the AI wrote.

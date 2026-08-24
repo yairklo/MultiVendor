@@ -45,7 +45,7 @@ export function HeroBanner({
         </>
       )}
       <h1
-        className={`relative z-10 text-3xl font-bold md:text-4xl${onInlineEdit ? ' cursor-text rounded outline-none hover:bg-black/5 focus:bg-black/5 focus:ring-2 focus:ring-indigo-400' : ''}`}
+        className={`relative z-10 text-3xl font-bold md:text-4xl${onInlineEdit ? ' cursor-text rounded outline-none transition-colors hover:bg-black/5 focus:bg-black/5 focus:ring-2 focus:ring-indigo-400' : ''}`}
         style={fontSize ? { fontSize } : undefined}
         contentEditable={!!onInlineEdit}
         suppressContentEditableWarning={!!onInlineEdit}

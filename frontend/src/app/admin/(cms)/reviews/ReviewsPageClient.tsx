@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import { useReviews } from '@/hooks/useReviews'
 import { useToast } from '@/context/ToastContext'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { StarRating } from '@/components/ui/star-rating'
 
 export function ReviewsPageClient({ initialReviews }: { initialReviews: any[] }) {
@@ -32,32 +33,30 @@ export function ReviewsPageClient({ initialReviews }: { initialReviews: any[] })
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">Reviews</h1>
+      <h1 className="font-heading text-3xl font-bold text-foreground mb-8">Reviews</h1>
 
       {reviews.length === 0 ? (
-        <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 text-center text-gray-500">
+        <div className="bg-card p-8 rounded-xl shadow-sm border border-border text-center text-muted-foreground">
           No reviews yet.
         </div>
       ) : (
         <div className="space-y-4">
           {reviews.map(review => (
-            <div key={review.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div key={review.id} className="bg-card p-6 rounded-xl shadow-sm border border-border transition-shadow hover:shadow-md">
               <div className="flex justify-between items-start mb-2">
                 <div>
-                  <div className="font-bold text-gray-900">{review.product_name}</div>
-                  <div className="text-sm text-gray-500">by {review.customer_name}</div>
+                  <div className="font-bold text-foreground">{review.product_name}</div>
+                  <div className="text-sm text-muted-foreground">by {review.customer_name}</div>
                 </div>
                 <div className="flex items-center gap-2">
                   <StarRating rating={review.rating} />
-                  <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                    review.is_approved ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                  }`}>
+                  <Badge variant={review.is_approved ? 'success' : 'warning'}>
                     {review.is_approved ? 'Approved' : 'Pending'}
-                  </span>
+                  </Badge>
                 </div>
               </div>
 
-              {review.comment && <p className="text-gray-700 mb-4">{review.comment}</p>}
+              {review.comment && <p className="text-foreground/80 mb-4">{review.comment}</p>}
 
               <div className="flex gap-2">
                 <Button

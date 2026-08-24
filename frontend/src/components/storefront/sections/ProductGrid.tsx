@@ -53,7 +53,7 @@ export function ProductGrid({
       <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
         {products === null &&
           Array.from({ length: columns * 2 }).map((_, i) => (
-            <div key={i} className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm">
+            <div key={i} className="animate-pulse rounded-xl border border-gray-100 bg-white p-3 shadow-sm">
               <div className="mb-2 aspect-square rounded-lg bg-gray-100" />
               <span className="text-sm text-gray-600">Product {i + 1}</span>
             </div>

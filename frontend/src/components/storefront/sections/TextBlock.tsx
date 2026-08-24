@@ -10,7 +10,7 @@ export function TextBlock({
   const fontSize = typeof section.settings.font_size === 'string' && section.settings.font_size ? section.settings.font_size : undefined
   const heading = resolveI18nText(section.settings.heading, lang) || 'Text'
   const body = resolveI18nText(section.settings.body, lang)
-  const editableClass = onInlineEdit ? ' cursor-text rounded outline-none hover:bg-black/5 focus:bg-black/5 focus:ring-2 focus:ring-indigo-400' : ''
+  const editableClass = onInlineEdit ? ' cursor-text rounded outline-none transition-colors hover:bg-black/5 focus:bg-black/5 focus:ring-2 focus:ring-indigo-400' : ''
 
   const commit = (key: 'heading' | 'body', current: string) => (e: FocusEvent<HTMLElement>) => {
     const next = e.currentTarget.textContent ?? ''

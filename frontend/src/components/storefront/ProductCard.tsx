@@ -66,7 +66,7 @@ export function ProductCard({
   }
 
   return (
-    <div className={`flex flex-col p-3 ${resolveCardStyleClasses(styleVariant)}`}>
+    <div className={`group flex flex-col p-3 ${resolveCardStyleClasses(styleVariant)}`}>
       <Link href={`/store/${tenantSlug}/products/${product.slug}`} className="mb-2 block overflow-hidden rounded-lg">
         {image ? (
           // eslint-disable-next-line @next/next/no-img-element -- arbitrary vendor-supplied
@@ -75,7 +75,7 @@ export function ProductCard({
           <img
             src={resolveImageUrl(image)}
             alt={name}
-            className="aspect-square w-full object-cover"
+            className="aspect-square w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
           <div className="aspect-square w-full bg-gray-100" />

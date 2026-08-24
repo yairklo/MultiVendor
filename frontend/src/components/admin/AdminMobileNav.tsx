@@ -22,26 +22,33 @@ export function AdminMobileNav({
 
   return (
     <>
-      <header className="md:hidden h-16 bg-white border-b border-gray-200 flex items-center px-4 justify-between">
-        <button aria-label="Open menu" onClick={() => setOpen(true)}>
-          <Menu className="w-6 h-6 text-gray-700" />
+      <header className="flex h-16 items-center justify-between border-b border-border bg-card px-4 md:hidden">
+        <button aria-label="Open menu" onClick={() => setOpen(true)} className="text-foreground transition-colors duration-150 hover:text-primary">
+          <Menu className="w-6 h-6" />
         </button>
-        <h1 className="text-lg font-bold text-gray-900">Tenant CMS</h1>
+        <h1 className="font-heading text-lg font-bold text-foreground">Tenant CMS</h1>
         {logoutButtonCompact}
       </header>
 
       {open && (
-        <div className="md:hidden fixed inset-0 z-50 flex">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
-          <div className="relative w-64 bg-white h-full flex flex-col shadow-xl">
-            <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200">
-              <h1 className="text-lg font-bold text-gray-900">Tenant CMS</h1>
-              <button aria-label="Close menu" onClick={() => setOpen(false)}>
-                <X className="w-5 h-5 text-gray-500" />
+        <div className="fixed inset-0 z-50 flex md:hidden">
+          <div
+            className="absolute inset-0 bg-black/40 duration-200 animate-in fade-in-0"
+            onClick={() => setOpen(false)}
+          />
+          <div className="relative flex h-full w-64 flex-col bg-sidebar shadow-xl duration-200 animate-in slide-in-from-left">
+            <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4">
+              <h1 className="font-heading text-lg font-bold text-sidebar-foreground">Tenant CMS</h1>
+              <button
+                aria-label="Close menu"
+                onClick={() => setOpen(false)}
+                className="text-muted-foreground transition-colors duration-150 hover:text-foreground"
+              >
+                <X className="w-5 h-5" />
               </button>
             </div>
             {navContent}
-            <div className="p-4 border-t border-gray-200">{logoutButtonDrawer}</div>
+            <div className="border-t border-sidebar-border p-4">{logoutButtonDrawer}</div>
           </div>
         </div>
       )}

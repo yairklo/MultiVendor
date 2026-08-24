@@ -53,39 +53,43 @@ export function MarketplaceProductCard({
   }
 
   return (
-    <div className="flex flex-col rounded-xl border border-gray-100 bg-white p-3 shadow-sm transition-shadow duration-300 hover:shadow-lg">
+    <div className="group flex flex-col rounded-xl border border-border bg-card p-3 shadow-sm transition-shadow duration-300 hover:shadow-lg">
       <Link href={href} className="mb-2 block overflow-hidden rounded-lg">
         {image ? (
           // eslint-disable-next-line @next/next/no-img-element -- arbitrary vendor-supplied
           // URLs with no host allowlist, same reasoning as storefront/ProductCard.
-          <img src={resolveImageUrl(image)} alt={name} className="aspect-square w-full object-cover" />
+          <img
+            src={resolveImageUrl(image)}
+            alt={name}
+            className="aspect-square w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
         ) : (
-          <div className="aspect-square w-full bg-gray-100" />
+          <div className="aspect-square w-full bg-muted" />
         )}
       </Link>
-      <span className="mb-1 inline-flex w-fit items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+      <span className="mb-1 inline-flex w-fit items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
         <Store className="h-3 w-3" />
         {product.tenant_name}
       </span>
       <Link
         href={href}
-        className="line-clamp-2 text-sm font-semibold text-gray-900 transition-colors hover:text-blue-600"
+        className="line-clamp-2 text-sm font-semibold text-foreground transition-colors hover:text-primary"
       >
         {name}
       </Link>
       {product.review_count > 0 && (
         <div className="mt-1 flex items-center gap-1">
           <StarRating rating={product.average_rating} size={12} />
-          <span className="text-xs text-gray-400">({product.review_count})</span>
+          <span className="text-xs text-muted-foreground">({product.review_count})</span>
         </div>
       )}
-      <span className="mt-1 text-sm font-medium text-gray-700">{formatCurrency(product.base_price)}</span>
+      <span className="mt-1 text-sm font-medium text-foreground/80">{formatCurrency(product.base_price)}</span>
 
       <button
         type="button"
         disabled={!variant?.id || outOfStock || adding}
         onClick={handleAddToCart}
-        className="mt-3 w-full rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+        className="mt-3 w-full rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition-colors duration-150 hover:bg-primary/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
       >
         {outOfStock ? t.outOfStock : adding ? t.adding : t.addToCart}
       </button>

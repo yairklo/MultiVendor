@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react'
 import { Search } from 'lucide-react'
+import { motion, useReducedMotion } from 'motion/react'
 import { apiClient } from '@/lib/api/apiClient'
 import { MarketplaceProductCard } from './MarketplaceProductCard'
 import { PaginationControls, PaginationMeta } from '@/components/ui/pagination-controls'
@@ -9,6 +10,16 @@ import { ProductCardSkeleton } from '@/components/ui/skeleton'
 import { useCurrency } from '@/hooks/useCurrency'
 
 const PAGE_SIZE = 12
+
+const gridContainerVariants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.05 } },
+}
+
+const gridItemVariants = {
+  hidden: { opacity: 0, y: 16 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.16, 1, 0.3, 1] as const } },
+}
 
 type Lang = 'en' | 'he'
 
@@ -51,6 +62,7 @@ export function MarketplaceListing({
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [lang, setLang] = useState<Lang>('en')
   const t = strings[lang]
+  const prefersReducedMotion = useReducedMotion()
 
   useEffect(() => {
     const handle = setTimeout(() => setDebouncedSearch(search), 300)
@@ -88,12 +100,12 @@ export function MarketplaceListing({
       <div className="mx-auto max-w-6xl px-4 py-8 md:px-8">
         <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{t.title}</h1>
-            <p className="mt-1 text-sm text-gray-500">{t.subtitle}</p>
+            <h1 className="text-2xl font-bold text-foreground font-heading">{t.title}</h1>
+            <p className="mt-1 text-sm text-muted-foreground">{t.subtitle}</p>
           </div>
           <button
             data-testid="language-switcher"
-            className="cursor-pointer font-medium text-gray-600 transition-colors hover:text-blue-600"
+            className="cursor-pointer font-medium text-muted-foreground transition-colors hover:text-primary"
             onClick={() => setLang((l) => (l === 'en' ? 'he' : 'en'))}
           >
             {t.switcherLabel}
@@ -101,30 +113,38 @@ export function MarketplaceListing({
         </div>
 
         <div className="relative mb-6 max-w-sm">
-          <Search className="absolute left-3 top-1/2 w-4 h-4 -translate-y-1/2 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 w-4 h-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t.searchPlaceholder}
             aria-label="Search marketplace"
-            className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 outline-none focus:ring-2 focus:ring-blue-600"
+            className="w-full rounded-lg border border-input bg-card py-2 pl-9 pr-3 outline-none transition-shadow focus:ring-2 focus:ring-ring"
           />
         </div>
 
-        <div data-testid="marketplace-product-grid" className="grid grid-cols-1 gap-6 md:grid-cols-3 lg:grid-cols-4">
+        <motion.div
+          data-testid="marketplace-product-grid"
+          className="grid grid-cols-1 gap-6 md:grid-cols-3 lg:grid-cols-4"
+          variants={prefersReducedMotion ? undefined : gridContainerVariants}
+          initial={prefersReducedMotion ? undefined : 'hidden'}
+          animate={prefersReducedMotion ? undefined : 'show'}
+        >
           {productsLoading
             ? Array.from({ length: 8 }, (_, i) => <ProductCardSkeleton key={i} />)
             : products.map((p) => (
-                <MarketplaceProductCard key={p.id} product={p} lang={lang} formatCurrency={formatCurrency} />
+                <motion.div key={p.id} variants={prefersReducedMotion ? undefined : gridItemVariants}>
+                  <MarketplaceProductCard product={p} lang={lang} formatCurrency={formatCurrency} />
+                </motion.div>
               ))}
           {!productsLoading && products.length === 0 && (
-            <div className="col-span-full py-12 text-center text-gray-500">{t.noProducts}</div>
+            <div className="col-span-full py-12 text-center text-muted-foreground">{t.noProducts}</div>
           )}
-        </div>
+        </motion.div>
 
         {meta && meta.total_pages > 1 && (
-          <div className="mt-6 rounded-lg bg-white shadow-sm">
+          <div className="mt-6 rounded-lg bg-card shadow-sm">
             <PaginationControls meta={meta} onPageChange={setPage} />
           </div>
         )}

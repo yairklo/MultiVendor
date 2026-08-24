@@ -38,7 +38,7 @@ export function StorefrontHeader({
   return (
     <header className={`sticky top-0 z-40 ${theme.headerClass}`}>
       <div className={`mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 md:px-8 ${theme.headerText}`}>
-        <Link href={`/store/${tenantSlug}`} className={`text-xl font-bold ${theme.headingFont}`}>
+        <Link href={`/store/${tenantSlug}`} className={`text-xl font-bold transition-opacity hover:opacity-80 ${theme.headingFont}`}>
           {storeName}
         </Link>
 
@@ -74,7 +74,7 @@ export function StorefrontHeader({
             type="button"
             data-testid="cart-icon"
             onClick={openDrawer}
-            className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold transition-colors ${theme.primaryButtonClass}`}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold transition-colors duration-150 active:scale-[0.98] ${theme.primaryButtonClass}`}
           >
             <ShoppingBag className="h-4 w-4" />
             <span>{lang === 'he' ? `עגלה (${cartCount})` : `Cart (${cartCount})`}</span>
@@ -82,7 +82,7 @@ export function StorefrontHeader({
           <button
             type="button"
             aria-label="Toggle menu"
-            className={`md:hidden ${theme.headerText}`}
+            className={`md:hidden transition-opacity hover:opacity-70 ${theme.headerText}`}
             onClick={() => setMobileOpen((v) => !v)}
           >
             {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -91,7 +91,7 @@ export function StorefrontHeader({
       </div>
 
       {mobileOpen && (
-        <nav className={`flex flex-col gap-1 border-t border-current/10 px-4 py-3 md:hidden ${theme.headerText}`}>
+        <nav className={`flex flex-col gap-1 border-t border-current/10 px-4 py-3 md:hidden animate-in fade-in-0 slide-in-from-top-2 duration-200 ${theme.headerText}`}>
           {navItems.map((item) => (
             <Link
               key={item.href}

@@ -11,6 +11,14 @@ import { useCurrency } from '@/hooks/useCurrency'
 import { Input } from '@/components/ui/input'
 
 import { Button, buttonVariants } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -138,7 +146,7 @@ export function ProductsPageClient({
   return (
     <div>
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Products</h1>
+        <h1 className="font-heading text-3xl font-bold text-foreground">Products</h1>
         <div className="flex space-x-3">
           {selectedIds.length > 0 && (
             <Button variant="destructive" onClick={handleBulkDelete}>
@@ -171,21 +179,25 @@ export function ProductsPageClient({
           onChange={e => setSearch(e.target.value)}
           className="max-w-xs"
         />
-        <select
-          className="flex h-10 w-full sm:max-w-xs items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-          value={categoryId || ''}
-          onChange={e => setCategoryId(e.target.value ? Number(e.target.value) : null)}
+        <Select
+          value={categoryId}
+          onValueChange={(value) => setCategoryId(value)}
         >
-          <option value="">All Categories</option>
-          {categories.map(cat => (
-            <option key={cat.id} value={cat.id}>
-              {typeof cat.name === 'object' ? (cat.name?.en || cat.name?.he || 'Unnamed') : cat.name}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger className="w-full sm:max-w-xs">
+            <SelectValue placeholder="All Categories" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={null}>All Categories</SelectItem>
+            {categories.map(cat => (
+              <SelectItem key={cat.id} value={cat.id}>
+                {typeof cat.name === 'object' ? (cat.name?.en || cat.name?.he || 'Unnamed') : cat.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
@@ -194,7 +206,7 @@ export function ProductsPageClient({
                   type="checkbox"
                   checked={products.length > 0 && selectedIds.length === products.length}
                   onChange={handleSelectAll}
-                  className="rounded border-gray-300"
+                  className="rounded border-input"
                 />
               </TableHead>
               <TableHead className="w-16"></TableHead>
@@ -210,20 +222,20 @@ export function ProductsPageClient({
               Array.from({ length: 5 }, (_, i) => <TableRowSkeleton key={i} columns={6} />)
             ) : products.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-gray-500">No products found.</TableCell>
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No products found.</TableCell>
               </TableRow>
             ) : (
               products.map(product => {
                 const stock = totalStock(product.variants)
                 const level = stockLevel(stock)
                 return (
-                <TableRow key={product.id}>
+                <TableRow key={product.id} className="hover:bg-muted/50 transition-colors">
                   <TableCell>
                     <input
                       type="checkbox"
                       checked={selectedIds.includes(product.id)}
                       onChange={(e) => handleSelectOne(product.id, e.target.checked)}
-                      className="rounded border-gray-300"
+                      className="rounded border-input"
                     />
                   </TableCell>
                   <TableCell>
@@ -235,7 +247,7 @@ export function ProductsPageClient({
                         className="w-10 h-10 object-cover rounded"
                       />
                     ) : (
-                      <div className="w-10 h-10 bg-gray-100 rounded flex items-center justify-center text-gray-400 text-[10px] text-center leading-tight">
+                      <div className="w-10 h-10 bg-muted rounded flex items-center justify-center text-muted-foreground text-[10px] text-center leading-tight">
                         No image
                       </div>
                     )}
@@ -244,7 +256,7 @@ export function ProductsPageClient({
                     <div className="font-bold">
                       {typeof product.name === 'object' ? (product.name?.he || product.name?.en || 'Unnamed') : product.name}
                     </div>
-                    <div className="text-sm text-gray-500 truncate max-w-xs">
+                    <div className="text-sm text-muted-foreground truncate max-w-xs">
                       {typeof product.description === 'object' ? (product.description?.he || product.description?.en || '') : (product.description || '')}
                     </div>
                   </TableCell>
@@ -252,17 +264,15 @@ export function ProductsPageClient({
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{stock}</span>
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${stockLevelClass[level]}`}>
+                      <Badge variant="outline" className={stockLevelClass[level]}>
                         {stockLevelLabel[level]}
-                      </span>
+                      </Badge>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                      product.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                    }`}>
+                    <Badge variant={product.is_active ? 'success' : 'secondary'}>
                       {product.is_active ? 'Active' : 'Inactive'}
-                    </span>
+                    </Badge>
                   </TableCell>
                   <TableCell className="text-right">
                     <Link

@@ -115,11 +115,11 @@ export function StripeCardForm({ clientSecret, publishableKey, checkPaid, onSucc
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div ref={cardMountRef} className="border rounded-lg px-3 py-3 bg-white" />
+      <div ref={cardMountRef} className="border border-input rounded-lg px-3 py-3 bg-card transition-shadow focus-within:ring-2 focus-within:ring-ring" />
       <button
         type="submit"
         disabled={!ready || submitting}
-        className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 disabled:opacity-70"
+        className="w-full bg-primary text-primary-foreground py-3 rounded-xl font-bold transition-all duration-150 hover:bg-primary/90 active:scale-[0.98] disabled:opacity-70"
       >
         {confirming ? 'Confirming payment...' : submitting ? 'Processing...' : 'Pay with Card'}
       </button>

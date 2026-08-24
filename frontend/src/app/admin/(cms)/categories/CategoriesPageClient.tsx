@@ -88,10 +88,10 @@ export function CategoriesPageClient({ initialCategories }: { initialCategories:
 
   return (
     <div className="max-w-5xl">
-      <h1 className="text-3xl font-bold mb-8 text-gray-900">Categories</h1>
+      <h1 className="font-heading text-3xl font-bold mb-8 text-foreground">Categories</h1>
 
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
-        <h2 className="text-xl font-bold mb-4">Add New Category</h2>
+      <div className="bg-card p-6 rounded-xl shadow-sm border border-border mb-8">
+        <h2 className="text-xl font-bold mb-4 text-foreground">Add New Category</h2>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -129,7 +129,7 @@ export function CategoriesPageClient({ initialCategories }: { initialCategories:
         </Form>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
@@ -141,13 +141,13 @@ export function CategoriesPageClient({ initialCategories }: { initialCategories:
           <TableBody>
             {categories.length === 0 && (
               <TableRow>
-                <TableCell colSpan={3} className="text-center text-gray-500 py-8">
+                <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
                   No categories found.
                 </TableCell>
               </TableRow>
             )}
             {categories.map((cat) => (
-              <TableRow key={cat.id}>
+              <TableRow key={cat.id} className="hover:bg-muted/50 transition-colors">
                 <TableCell className="font-medium">
                   {typeof cat.name === 'object' ? (cat.name?.he || cat.name?.en || 'Unnamed') : cat.name}
                 </TableCell>

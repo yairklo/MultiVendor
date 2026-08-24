@@ -11,12 +11,18 @@ export function AdminNavLink({ href, children }: { href: string; children: React
   return (
     <Link
       href={href}
-      className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
+      className={`group relative flex items-center space-x-3 rounded-lg py-2 pr-3 pl-4 transition-colors duration-150 ${
         isActive
-          ? 'bg-blue-50 text-blue-700 font-medium'
-          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+          ? 'bg-primary/10 font-medium text-primary'
+          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
       }`}
     >
+      <span
+        className={`absolute inset-y-1 left-0 w-1 rounded-full bg-primary transition-transform duration-200 ${
+          isActive ? 'scale-y-100' : 'scale-y-0'
+        }`}
+        aria-hidden="true"
+      />
       {children}
     </Link>
   )

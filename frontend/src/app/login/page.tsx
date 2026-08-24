@@ -37,50 +37,73 @@ export default function CustomerLoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4 text-gray-900">
-      <div className="max-w-md w-full bg-white p-8 rounded-2xl shadow-lg border border-gray-100">
-        <h1 className="text-3xl font-bold text-center mb-8 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-          Customer Login
-        </h1>
-        
-        {error && (
-          <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg text-sm">
-            {error}
-          </div>
-        )}
+    <div className="min-h-screen grid grid-cols-1 md:grid-cols-2 text-foreground">
+      <div className="relative hidden md:flex flex-col justify-between overflow-hidden bg-primary p-10 text-primary-foreground">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-20"
+          style={{
+            backgroundImage:
+              'radial-gradient(circle at 20% 20%, white 0, transparent 45%), radial-gradient(circle at 80% 70%, white 0, transparent 40%)',
+          }}
+        />
+        <div className="relative z-10 text-xl font-bold font-heading">MultiVendor</div>
+        <div className="relative z-10 space-y-3">
+          <h2 className="text-3xl font-bold font-heading leading-tight">
+            Welcome back to your marketplace.
+          </h2>
+          <p className="max-w-sm text-primary-foreground/80">
+            Sign in to track orders, manage your account, and pick up where you left off.
+          </p>
+        </div>
+        <div className="relative z-10 text-xs text-primary-foreground/60">
+          &copy; {new Date().getFullYear()} MultiVendor
+        </div>
+      </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium mb-2">Email Address</label>
-            <input
-              type="email"
-              required
-              className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-600 outline-none transition-all"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="customer@example.com"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Password</label>
-            <input
-              type="password"
-              required
-              className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-600 outline-none transition-all"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              placeholder="••••••••"
-            />
-          </div>
-          
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 active:scale-[0.98] transition-all disabled:opacity-70"
-          >
-            {loading ? 'Authenticating...' : 'Sign In'}
-          </button>
-        </form>
+      <div className="flex items-center justify-center bg-background p-4 md:p-10">
+        <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-lg animate-in fade-in-0 zoom-in-95 duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]">
+          <h1 className="text-2xl font-bold mb-1 text-foreground font-heading">Customer Login</h1>
+          <p className="mb-8 text-sm text-muted-foreground">Sign in to continue to your account.</p>
+
+          {error && (
+            <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium mb-2 text-foreground">Email Address</label>
+              <input
+                type="email"
+                required
+                className="w-full px-4 py-3 rounded-lg border border-input focus:ring-2 focus:ring-ring outline-none transition-shadow"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="customer@example.com"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2 text-foreground">Password</label>
+              <input
+                type="password"
+                required
+                className="w-full px-4 py-3 rounded-lg border border-input focus:ring-2 focus:ring-ring outline-none transition-shadow"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="••••••••"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-primary text-primary-foreground py-3 rounded-lg font-bold transition-all duration-150 hover:bg-primary/90 active:scale-[0.98] disabled:opacity-70"
+            >
+              {loading ? 'Authenticating...' : 'Sign In'}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   )

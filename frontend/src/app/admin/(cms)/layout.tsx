@@ -43,30 +43,30 @@ function NavLinks() {
  */
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      <aside className="w-64 bg-white border-r border-gray-200 flex-col hidden md:flex">
-        <div className="h-16 flex items-center px-6 border-b border-gray-200">
-          <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+    <div className="flex min-h-screen bg-background">
+      <aside className="hidden w-64 flex-col border-r border-sidebar-border bg-sidebar md:flex">
+        <div className="flex h-16 items-center border-b border-sidebar-border px-6">
+          <h1 className="font-heading text-xl font-bold bg-gradient-to-r from-primary to-[oklch(0.62_0.19_300)] bg-clip-text text-transparent">
             Tenant CMS
           </h1>
         </div>
         <NavLinks />
-        <div className="p-4 border-t border-gray-200">
-          <AdminLogoutButton className="w-full flex items-center space-x-3 px-3 py-2 text-red-600 rounded-lg hover:bg-red-50 transition-colors">
+        <div className="border-t border-sidebar-border p-4">
+          <AdminLogoutButton className="flex w-full items-center space-x-3 rounded-lg px-3 py-2 text-destructive transition-colors duration-150 hover:bg-destructive/10">
             <LogOut className="w-5 h-5" strokeWidth={2} />
             <span>Logout</span>
           </AdminLogoutButton>
         </div>
       </aside>
 
-      <main className="flex-1 flex flex-col h-screen overflow-hidden">
+      <main className="flex h-screen flex-1 flex-col overflow-hidden">
         <AdminMobileNav
           navContent={<NavLinks />}
           logoutButtonCompact={
-            <AdminLogoutButton className="text-sm text-red-600 font-medium">Logout</AdminLogoutButton>
+            <AdminLogoutButton className="text-sm font-medium text-destructive">Logout</AdminLogoutButton>
           }
           logoutButtonDrawer={
-            <AdminLogoutButton className="w-full flex items-center space-x-3 px-3 py-2 text-red-600 rounded-lg hover:bg-red-50 transition-colors">
+            <AdminLogoutButton className="flex w-full items-center space-x-3 rounded-lg px-3 py-2 text-destructive transition-colors duration-150 hover:bg-destructive/10">
               <LogOut className="w-5 h-5" strokeWidth={2} />
               <span>Logout</span>
             </AdminLogoutButton>
