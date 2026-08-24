@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { apiClient } from '@/lib/api/apiClient'
-import { getActiveCart, cartTokenHeaders } from '@/lib/cart'
+import { getActiveCart } from '@/lib/cart'
 import { useCart } from '@/context/CartContext'
 import { useOrders } from '@/hooks/useOrders'
 import { useToast } from '@/context/ToastContext'
@@ -18,7 +18,7 @@ const shippingOptions = [
 export default function CheckoutPage() {
   const { cart, loading, clear } = useCart()
   const { formatCurrency } = useCurrency()
-  const { payOrder, cancelOrder } = useOrders()
+  const { payOrder, cancelOrder, fetchOrder } = useOrders()
   const { showToast } = useToast()
   const [error, setError] = useState<string>('')
   const [submitting, setSubmitting] = useState(false)
@@ -100,7 +100,6 @@ export default function CheckoutPage() {
 
       const order = await apiClient(`/api/v1/store/${activeCart.tenantSlug}/cart/checkout`, {
         method: 'POST',
-        headers: cartTokenHeaders(),
         body: JSON.stringify(payload),
       })
 
@@ -209,6 +208,10 @@ export default function CheckoutPage() {
             <StripeCardForm
               clientSecret={stripePayment.clientSecret}
               publishableKey={stripePayment.publishableKey}
+              checkPaid={async () => {
+                const refreshed = await fetchOrder(payingOrder.id)
+                return refreshed.status === 'processing' || refreshed.status === 'completed'
+              }}
               onSuccess={() => setPaymentDone(true)}
               onError={(message) => setError(message)}
             />

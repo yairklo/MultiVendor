@@ -8,6 +8,7 @@ import { getActiveMarketplaceCart } from '@/lib/marketplace-cart'
 import { useMarketplaceCart } from '@/context/MarketplaceCartContext'
 import { useCurrency } from '@/hooks/useCurrency'
 import { orderStatusClass, orderStatusLabel } from '@/lib/orderStatus'
+import { StripeCardForm } from '@/components/checkout/StripeCardForm'
 
 interface SubOrder {
   id: number
@@ -23,6 +24,7 @@ interface MasterOrder {
   master_order_number: string
   total_amount: number
   sub_orders: SubOrder[]
+  payment?: { provider: string; client_secret: string; publishable_key: string | null } | null
 }
 
 /**
@@ -45,6 +47,7 @@ export default function MarketplaceCheckoutPage() {
   const [masterOrder, setMasterOrder] = useState<MasterOrder | null>(null)
   const [paymentDone, setPaymentDone] = useState(false)
   const [payBusy, setPayBusy] = useState(false)
+  const [stripePayment, setStripePayment] = useState<{ clientSecret: string; publishableKey: string } | null>(null)
   const [vendorNames, setVendorNames] = useState<Record<number, string>>({})
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
@@ -99,7 +102,18 @@ export default function MarketplaceCheckoutPage() {
     try {
       const updated = await apiClient(`/api/v1/marketplace/orders/${masterOrder.id}/pay`, { method: 'POST' })
       setMasterOrder(updated)
-      setPaymentDone(true)
+      if (updated?.payment?.client_secret) {
+        // Real gateway (e.g. Stripe): sub-orders stay "awaiting payment"
+        // server-side until the shared webhook confirms them -- this just
+        // switches to the card form that completes the payment client-side.
+        setStripePayment({
+          clientSecret: updated.payment.client_secret,
+          publishableKey: updated.payment.publishable_key,
+        })
+      } else {
+        // Mock gateway: /pay already marked every sub-order paid synchronously.
+        setPaymentDone(true)
+      }
     } catch (e: any) {
       setError(e.message || 'Payment failed.')
     } finally {
@@ -181,10 +195,12 @@ export default function MarketplaceCheckoutPage() {
             <p className="text-gray-600 mt-1">
               Total: <span className="font-bold">{formatCurrency(Number(masterOrder.total_amount))}</span>
             </p>
-            <p className="text-sm text-amber-700 mt-2">
-              This is a development environment — payment is simulated. Unpaid orders are automatically
-              cancelled and their stock released if left pending too long.
-            </p>
+            {!stripePayment && (
+              <p className="text-sm text-amber-700 mt-2">
+                This is a development environment — payment is simulated. Unpaid orders are automatically
+                cancelled and their stock released if left pending too long.
+              </p>
+            )}
           </div>
           <div data-testid="master-order-sub-orders" className="space-y-2">
             {masterOrder.sub_orders.map(so => (
@@ -197,13 +213,27 @@ export default function MarketplaceCheckoutPage() {
               </div>
             ))}
           </div>
-          <button
-            onClick={handlePay}
-            disabled={payBusy}
-            className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 disabled:opacity-70"
-          >
-            {payBusy ? 'Processing...' : 'Pay Now'}
-          </button>
+          {stripePayment ? (
+            <StripeCardForm
+              clientSecret={stripePayment.clientSecret}
+              publishableKey={stripePayment.publishableKey}
+              checkPaid={async () => {
+                const refreshed: MasterOrder = await apiClient(`/api/v1/marketplace/orders/${masterOrder.id}`)
+                setMasterOrder(refreshed)
+                return refreshed.sub_orders.every(so => so.status === 'processing' || so.status === 'completed')
+              }}
+              onSuccess={() => setPaymentDone(true)}
+              onError={(message) => setError(message)}
+            />
+          ) : (
+            <button
+              onClick={handlePay}
+              disabled={payBusy}
+              className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 disabled:opacity-70"
+            >
+              {payBusy ? 'Processing...' : 'Pay Now'}
+            </button>
+          )}
         </div>
       </div>
     )

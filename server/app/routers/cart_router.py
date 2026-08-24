@@ -1,7 +1,9 @@
-from fastapi import APIRouter, Depends, status, Path, Header
+from fastapi import APIRouter, Depends, status, Path, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 from uuid import UUID
+from app.core.config import settings
+from app.core.cart_token import GUEST_CART_TTL_SECONDS
 from app.db.session import get_db
 from app.deps import get_current_tenant, get_optional_user, get_tenant_customer
 from app.models.user import User
@@ -11,9 +13,8 @@ from app.schemas.order_schemas import (
 )
 from app.services.checkout_service import (
     add_to_cart_service, get_cart_service, remove_from_cart_service,
-    update_cart_item_service, checkout_service, validate_coupon_service
+    update_cart_item_service, checkout_service, validate_coupon_service, CartCookieAction
 )
-from fastapi import Request
 from app.core.limiter import limiter
 
 cart_router = APIRouter(
@@ -21,6 +22,31 @@ cart_router = APIRouter(
     tags=["Cart & Checkout"],
     dependencies=[Depends(get_current_tenant)],
 )
+
+# A guest cart's capability token lives in an HttpOnly cookie -- never in a
+# response body or a header the frontend has to read and store itself,
+# which is exactly what would let a stray XSS payload exfiltrate it (see
+# app/services/checkout_service.CartCookieAction). Secure is gated on
+# APP_ENV rather than always-on because this is also what local dev over
+# plain http runs on; browsers silently refuse to set a Secure cookie over
+# http, which would break the guest cart flow entirely in dev.
+CART_TOKEN_COOKIE = "cart_token"
+
+
+def _apply_cart_cookie(response: Response, action: CartCookieAction) -> None:
+    if action.mint_token:
+        response.set_cookie(
+            key=CART_TOKEN_COOKIE,
+            value=action.mint_token,
+            max_age=GUEST_CART_TTL_SECONDS,
+            httponly=True,
+            secure=settings.APP_ENV == "production",
+            samesite="lax",
+            path="/",
+        )
+    elif action.clear:
+        response.delete_cookie(key=CART_TOKEN_COOKIE, path="/")
+
 
 @cart_router.post(
     "/cart/{cart_id}/items",
@@ -36,17 +62,24 @@ cart_router = APIRouter(
 )
 async def add_to_cart(
     req: AddToCartRequest,
+    request: Request,
+    response: Response,
     tenant_slug: str = Path(...),
     cart_id: UUID = Path(...),
     user: Optional[User] = Depends(get_optional_user),
     db: AsyncSession = Depends(get_db),
-    x_cart_token: Optional[str] = Header(None, alias="X-Cart-Token"),
 ):
     user_id = user.id if user else None
-    return await add_to_cart_service(tenant_slug, cart_id, req, user_id, db, cart_token=x_cart_token)
+    cookie_action = CartCookieAction()
+    result = await add_to_cart_service(
+        tenant_slug, cart_id, req, user_id, db,
+        cart_token=request.cookies.get(CART_TOKEN_COOKIE), cookie_action=cookie_action,
+    )
+    _apply_cart_cookie(response, cookie_action)
+    return result
 
 @cart_router.get(
-    "/cart/{cart_id}", 
+    "/cart/{cart_id}",
     response_model=CartResponse,
     summary="View Cart Details",
     description="Retrieves the full cart details including subtotal and all item variants populated with their latest snapshot pricing.",
@@ -55,13 +88,20 @@ async def add_to_cart(
     }
 )
 async def get_cart(
+    request: Request,
+    response: Response,
     tenant_slug: str = Path(...),
     cart_id: UUID = Path(...),
     user: Optional[User] = Depends(get_optional_user),
     db: AsyncSession = Depends(get_db),
-    x_cart_token: Optional[str] = Header(None, alias="X-Cart-Token"),
 ):
-    return await get_cart_service(tenant_slug, cart_id, user.id if user else None, db, cart_token=x_cart_token)
+    cookie_action = CartCookieAction()
+    result = await get_cart_service(
+        tenant_slug, cart_id, user.id if user else None, db,
+        cart_token=request.cookies.get(CART_TOKEN_COOKIE), cookie_action=cookie_action,
+    )
+    _apply_cart_cookie(response, cookie_action)
+    return result
 
 @cart_router.delete(
     "/cart/{cart_id}/items/{item_id}",
@@ -74,14 +114,21 @@ async def get_cart(
     }
 )
 async def remove_from_cart(
+    request: Request,
+    response: Response,
     tenant_slug: str = Path(...),
     cart_id: UUID = Path(...),
     item_id: int = Path(...),
     user: Optional[User] = Depends(get_optional_user),
     db: AsyncSession = Depends(get_db),
-    x_cart_token: Optional[str] = Header(None, alias="X-Cart-Token"),
 ):
-    return await remove_from_cart_service(tenant_slug, cart_id, item_id, user.id if user else None, db, cart_token=x_cart_token)
+    cookie_action = CartCookieAction()
+    result = await remove_from_cart_service(
+        tenant_slug, cart_id, item_id, user.id if user else None, db,
+        cart_token=request.cookies.get(CART_TOKEN_COOKIE), cookie_action=cookie_action,
+    )
+    _apply_cart_cookie(response, cookie_action)
+    return result
 
 @cart_router.patch(
     "/cart/{cart_id}/items/{item_id}",
@@ -96,14 +143,21 @@ async def remove_from_cart(
 )
 async def update_cart_item(
     req: UpdateCartItemRequest,
+    request: Request,
+    response: Response,
     tenant_slug: str = Path(...),
     cart_id: UUID = Path(...),
     item_id: int = Path(...),
     user: Optional[User] = Depends(get_optional_user),
     db: AsyncSession = Depends(get_db),
-    x_cart_token: Optional[str] = Header(None, alias="X-Cart-Token"),
 ):
-    return await update_cart_item_service(tenant_slug, cart_id, item_id, req.quantity, user.id if user else None, db, cart_token=x_cart_token)
+    cookie_action = CartCookieAction()
+    result = await update_cart_item_service(
+        tenant_slug, cart_id, item_id, req.quantity, user.id if user else None, db,
+        cart_token=request.cookies.get(CART_TOKEN_COOKIE), cookie_action=cookie_action,
+    )
+    _apply_cart_cookie(response, cookie_action)
+    return result
 
 @cart_router.post(
     "/coupons/validate",
@@ -123,8 +177,8 @@ async def validate_coupon(
     return await validate_coupon_service(tenant_slug, coupon_code, db)
 
 @cart_router.post(
-    "/cart/checkout", 
-    response_model=OrderResponse, 
+    "/cart/checkout",
+    response_model=OrderResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Process Checkout (Concurrency Safe)",
     description="Processes the cart into a finalized Order. Employs **Redis Distributed Locks** (`lock:tenant:variant`) to serialize requests and absolutely prevent overselling of limited inventory. Includes coupon application and stock deduction.",
@@ -137,10 +191,16 @@ async def validate_coupon(
 @limiter.limit("20/minute")
 async def checkout(
     request: Request,
+    response: Response,
     req: CheckoutRequest,
     tenant_slug: str = Path(...),
     user: User = Depends(get_tenant_customer),
     db: AsyncSession = Depends(get_db),
-    x_cart_token: Optional[str] = Header(None, alias="X-Cart-Token"),
 ):
-    return await checkout_service(tenant_slug, req, user.id, db, cart_token=x_cart_token)
+    cookie_action = CartCookieAction()
+    result = await checkout_service(
+        tenant_slug, req, user.id, db,
+        cart_token=request.cookies.get(CART_TOKEN_COOKIE), cookie_action=cookie_action,
+    )
+    _apply_cart_cookie(response, cookie_action)
+    return result

@@ -1,6 +1,7 @@
 import asyncio
 import uuid
 import json
+from dataclasses import dataclass
 from decimal import Decimal
 from typing import Optional
 from uuid import UUID
@@ -21,6 +22,22 @@ from app.schemas.order_schemas import (
 )
 from datetime import datetime, timezone
 
+
+@dataclass
+class CartCookieAction:
+    """
+    Out-parameter the router reads after a service call to decide what to do
+    with the `cart_token` HttpOnly cookie -- kept separate from the JSON
+    response body on purpose, since the whole point of the cookie is that
+    JS (and therefore anything reading response.json()) never sees the
+    token at all. mint_token is set when a brand new guest cart was just
+    created; clear is set when a guest cart was just claimed by a login (the
+    cookie has nothing left to protect once the cart belongs to the account).
+    """
+    mint_token: Optional[str] = None
+    clear: bool = False
+
+
 def _resolve_product_name(name) -> str:
     if isinstance(name, dict):
         return name.get('en') or next(iter(name.values()), '')
@@ -34,7 +51,8 @@ async def _resolve_tenant_id(tenant_slug: str, db: AsyncSession) -> int:
     return tenant_id
 
 def _assert_cart_ownership(
-    cart: Cart, user_id: Optional[int], cart_token: Optional[str], *, claim: bool = False
+    cart: Cart, user_id: Optional[int], cart_token: Optional[str], *,
+    claim: bool = False, cookie_action: Optional[CartCookieAction] = None,
 ) -> None:
     if cart.user_id is not None:
         # Claimed cart: ownership is the authenticated user, full stop. The
@@ -52,10 +70,12 @@ def _assert_cart_ownership(
 
     if claim and user_id is not None:
         cart.user_id = user_id
+        if cookie_action is not None:
+            cookie_action.clear = True
 
 async def add_to_cart_service(
     tenant_slug: str, cart_id: UUID, req: AddToCartRequest, user_id: Optional[int], db: AsyncSession,
-    cart_token: Optional[str] = None,
+    cart_token: Optional[str] = None, cookie_action: Optional[CartCookieAction] = None,
 ):
     tenant_id = await _resolve_tenant_id(tenant_slug, db)
 
@@ -68,15 +88,14 @@ async def add_to_cart_service(
         if foreign.scalar_one_or_none():
             raise HTTPException(status_code=404, detail="Cart not found")
 
-    minted_token = None
     if not cart:
         cart = Cart(id=str(cart_id), tenant_id=tenant_id, user_id=user_id)
         db.add(cart)
         await db.flush()
-        if user_id is None:
-            minted_token = issue_guest_cart_token(str(cart_id))
+        if user_id is None and cookie_action is not None:
+            cookie_action.mint_token = issue_guest_cart_token(str(cart_id))
     else:
-        _assert_cart_ownership(cart, user_id, cart_token, claim=True)
+        _assert_cart_ownership(cart, user_id, cart_token, claim=True, cookie_action=cookie_action)
 
     variant_result = await db.execute(
         select(ProductVariant)
@@ -109,11 +128,11 @@ async def add_to_cart_service(
         db.add(item)
 
     await db.commit()
-    return {"status": "ok", "cart_token": minted_token}
+    return {"status": "ok"}
 
 async def get_cart_service(
     tenant_slug: str, cart_id: UUID, user_id: Optional[int], db: AsyncSession,
-    cart_token: Optional[str] = None,
+    cart_token: Optional[str] = None, cookie_action: Optional[CartCookieAction] = None,
 ) -> CartResponse:
     tenant_id = await _resolve_tenant_id(tenant_slug, db)
 
@@ -135,7 +154,7 @@ async def get_cart_service(
             raise HTTPException(status_code=404, detail="Cart not found")
         return CartResponse(cart_id=cart_id, tenant_id=tenant_id, items=[], subtotal=Decimal("0.00"))
 
-    _assert_cart_ownership(cart, user_id, cart_token, claim=True)
+    _assert_cart_ownership(cart, user_id, cart_token, claim=True, cookie_action=cookie_action)
     if user_id is not None:
         # A viewed guest cart claimed above needs the ownership change persisted --
         # this is the "touch the cart after login and it's now yours" path.
@@ -178,14 +197,14 @@ async def get_cart_service(
 
 async def remove_from_cart_service(
     tenant_slug: str, cart_id: UUID, item_id: int, user_id: Optional[int], db: AsyncSession,
-    cart_token: Optional[str] = None,
+    cart_token: Optional[str] = None, cookie_action: Optional[CartCookieAction] = None,
 ):
     tenant_id = await _resolve_tenant_id(tenant_slug, db)
     cart_result = await db.execute(select(Cart).where(Cart.id == str(cart_id), Cart.tenant_id == tenant_id))
     cart = cart_result.scalar_one_or_none()
     if not cart:
         raise HTTPException(status_code=404, detail="Item not found")
-    _assert_cart_ownership(cart, user_id, cart_token, claim=True)
+    _assert_cart_ownership(cart, user_id, cart_token, claim=True, cookie_action=cookie_action)
 
     item_result = await db.execute(
         select(CartItem).join(Cart).where(Cart.id == str(cart_id), Cart.tenant_id == tenant_id, CartItem.id == item_id)
@@ -200,14 +219,14 @@ async def remove_from_cart_service(
 
 async def update_cart_item_service(
     tenant_slug: str, cart_id: UUID, item_id: int, quantity: int, user_id: Optional[int], db: AsyncSession,
-    cart_token: Optional[str] = None,
+    cart_token: Optional[str] = None, cookie_action: Optional[CartCookieAction] = None,
 ):
     tenant_id = await _resolve_tenant_id(tenant_slug, db)
     cart_result = await db.execute(select(Cart).where(Cart.id == str(cart_id), Cart.tenant_id == tenant_id))
     cart = cart_result.scalar_one_or_none()
     if not cart:
         raise HTTPException(status_code=404, detail="Item not found")
-    _assert_cart_ownership(cart, user_id, cart_token, claim=True)
+    _assert_cart_ownership(cart, user_id, cart_token, claim=True, cookie_action=cookie_action)
 
     item_result = await db.execute(
         select(CartItem).join(Cart).where(Cart.id == str(cart_id), Cart.tenant_id == tenant_id, CartItem.id == item_id)
@@ -252,7 +271,7 @@ async def validate_coupon_service(tenant_slug: str, coupon_code: str, db: AsyncS
 
 async def checkout_service(
     tenant_slug: str, req: CheckoutRequest, user_id: int, db: AsyncSession,
-    cart_token: Optional[str] = None,
+    cart_token: Optional[str] = None, cookie_action: Optional[CartCookieAction] = None,
 ) -> OrderResponse:
     tenant_id = await _resolve_tenant_id(tenant_slug, db)
 
@@ -266,7 +285,7 @@ async def checkout_service(
     if not cart or not cart.items:
         raise HTTPException(status_code=400, detail="Cart is empty or not found")
 
-    _assert_cart_ownership(cart, user_id, cart_token, claim=True)
+    _assert_cart_ownership(cart, user_id, cart_token, claim=True, cookie_action=cookie_action)
 
     # Analyze order type and gather variants to lock
     is_entirely_digital = True

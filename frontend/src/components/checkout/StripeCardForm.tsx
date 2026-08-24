@@ -14,9 +14,23 @@ function getStripe(publishableKey: string): Promise<Stripe | null> {
   return stripePromiseCache.get(publishableKey)!
 }
 
+const POLL_INTERVAL_MS = 2000
+const POLL_TIMEOUT_MS = 30000
+
+function sleep(ms: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms))
+}
+
 interface StripeCardFormProps {
   clientSecret: string
   publishableKey: string
+  // Stripe confirming the card on the CLIENT side is not the same thing as
+  // this app's order being paid -- that only happens once the Stripe
+  // webhook has verified the event server-side and flipped the order's
+  // status. This polls the caller's own "is it processing yet?" check
+  // rather than trusting confirmCardPayment's result alone, which is what
+  // onSuccess is gated on.
+  checkPaid: () => Promise<boolean>
   onSuccess: () => void
   onError: (message: string) => void
 }
@@ -25,12 +39,13 @@ interface StripeCardFormProps {
 // @stripe/react-stripe-js) -- this is the one place in the app that needs
 // Stripe at all, so a single mounted CardElement is simpler than adding a
 // whole <Elements> provider tree for one form.
-export function StripeCardForm({ clientSecret, publishableKey, onSuccess, onError }: StripeCardFormProps) {
+export function StripeCardForm({ clientSecret, publishableKey, checkPaid, onSuccess, onError }: StripeCardFormProps) {
   const cardMountRef = useRef<HTMLDivElement>(null)
   const stripeRef = useRef<Stripe | null>(null)
   const cardElementRef = useRef<StripeCardElement | null>(null)
   const [ready, setReady] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [confirming, setConfirming] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -66,15 +81,35 @@ export function StripeCardForm({ clientSecret, publishableKey, onSuccess, onErro
         onError(result.error.message || 'Payment failed.')
         return
       }
-      if (result.paymentIntent?.status === 'succeeded' || result.paymentIntent?.status === 'processing') {
+      if (result.paymentIntent?.status !== 'succeeded' && result.paymentIntent?.status !== 'processing') {
+        onError('Payment was not completed.')
+        return
+      }
+
+      // Stripe accepted the card -- now wait for OUR webhook to have
+      // actually verified it and flipped the order server-side before
+      // telling the caller it's safe to treat this as paid.
+      setConfirming(true)
+      const deadline = Date.now() + POLL_TIMEOUT_MS
+      let paid = false
+      while (Date.now() < deadline) {
+        if (await checkPaid()) {
+          paid = true
+          break
+        }
+        await sleep(POLL_INTERVAL_MS)
+      }
+
+      if (paid) {
         onSuccess()
       } else {
-        onError('Payment was not completed.')
+        onError('Payment is still being confirmed. Check My Orders shortly -- it can take a moment to finalize.')
       }
     } catch (err) {
       onError(err instanceof Error ? err.message : 'Payment failed.')
     } finally {
       setSubmitting(false)
+      setConfirming(false)
     }
   }
 
@@ -86,7 +121,7 @@ export function StripeCardForm({ clientSecret, publishableKey, onSuccess, onErro
         disabled={!ready || submitting}
         className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 disabled:opacity-70"
       >
-        {submitting ? 'Processing...' : 'Pay with Card'}
+        {confirming ? 'Confirming payment...' : submitting ? 'Processing...' : 'Pay with Card'}
       </button>
     </form>
   )

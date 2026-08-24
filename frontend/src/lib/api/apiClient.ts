@@ -25,7 +25,10 @@ export const apiClient = async (url: string, options: RequestInit = {}) => {
   const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
   const fullUrl = url.startsWith('/') ? `${apiBase}${url}` : url
 
-  const response = await fetch(fullUrl, { ...options, headers })
+  // Needed for the guest-cart HttpOnly cookie (cart_token) to be sent/received
+  // on this cross-origin (but same-site, see frontend/.env.local) call --
+  // without it the browser drops Set-Cookie from the response entirely.
+  const response = await fetch(fullUrl, { ...options, headers, credentials: 'include' })
 
   // Only treat a 401 as a session expiry if we actually sent a token — an
   // anonymous request (e.g. a failed login attempt) getting a 401 is not a

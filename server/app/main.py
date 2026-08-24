@@ -54,9 +54,12 @@ openapi_tags = [
 from fastapi.middleware.cors import CORSMiddleware
 
 async def _checkout_cleanup_loop():
-    # Dev-only mock payment flow: orders left in "pending_payment" (the
-    # customer never clicked Pay, or walked away) are periodically expired
-    # and their reserved stock released. See app/services/tasks.py.
+    # Orders left in "pending_payment" (the customer never clicked Pay, or
+    # walked away) are periodically expired and their reserved stock
+    # released. In mock mode that's a short (15min) timeout; in stripe mode
+    # an order with an open PaymentIntent gets a much longer grace window
+    # and is only expired after that PaymentIntent is explicitly canceled
+    # first. See app/services/tasks.py.
     while True:
         try:
             async with AsyncSessionLocal() as session:

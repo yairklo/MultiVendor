@@ -1,3 +1,4 @@
+import logging
 import math
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,7 +13,10 @@ from app.models.catalog import ProductVariant, Product, ProductBundleItem
 from app.schemas.order_schemas import PaginatedOrderResponse, OrderResponse, OrderItemResponse, PaymentIntentInfo
 from app.schemas.auth_schemas import CustomerSummaryResponse
 from app.db.tenant_context import platform_plane
-from app.services.payments import get_payment_provider
+from app.services.payments import get_payment_provider, get_or_create_payment_intent
+from app.services.payments.base import amount_matches
+
+logger = logging.getLogger(__name__)
 
 PAID_ORDER_STATUSES = ('processing', 'completed')
 
@@ -294,20 +298,24 @@ async def pay_order_service(
         await db.refresh(order)
         return _order_to_response(order)
 
-    # Real gateway: start a payment and hand the frontend what it needs to
-    # complete it (e.g. Stripe Elements + confirmPayment). The order stays
-    # 'pending_payment' -- only a verified webhook (see payments_router.py)
-    # is allowed to move it to 'processing'.
+    # Real gateway: start (or, on a retried call, reuse) a payment and hand
+    # the frontend what it needs to complete it (e.g. Stripe Elements +
+    # confirmPayment). The order stays 'pending_payment' -- only a verified
+    # webhook (see payments_router.py) is allowed to move it to 'processing'.
     provider = get_payment_provider()
-    intent = await provider.create_payment_intent(
+    intent = await get_or_create_payment_intent(
+        provider,
+        existing_provider_ref=order.payment_intent_id,
         amount=order.total_amount,
         currency=settings.STRIPE_CURRENCY,
         reference=order.order_number,
         metadata={"order_id": str(order.id), "tenant_id": str(order.tenant_id)},
+        idempotency_key=f"order:{order.id}",
     )
-    order.payment_intent_id = intent.provider_ref
-    await db.commit()
-    await db.refresh(order)
+    if order.payment_intent_id != intent.provider_ref:
+        order.payment_intent_id = intent.provider_ref
+        await db.commit()
+        await db.refresh(order)
 
     response = _order_to_response(order)
     response.payment = PaymentIntentInfo(
@@ -319,20 +327,47 @@ async def pay_order_service(
 
 
 @platform_plane
-async def mark_order_paid_by_payment_intent(provider_ref: str, db: AsyncSession) -> bool:
+async def mark_order_paid_by_payment_intent(
+    provider_ref: str, amount: int, currency: str, db: AsyncSession
+) -> bool:
     """
     Called only from the payments webhook (payments_router.py) after its
     signature has verified -- this is the one place a real gateway payment
-    actually turns into 'processing'. Returns False for a provider_ref that
-    matches no order/master_order (an unrelated event, or a stale retry),
-    which the webhook treats as a no-op rather than an error.
+    actually turns into 'processing'. `amount`/`currency` are what the
+    *provider* reports the payment as (from the verified event, not
+    anything client-supplied); they're cross-checked against the order's own
+    total before anything is marked paid, so a webhook can never move an
+    order to 'processing' for less than it's actually owed. Returns False
+    for a provider_ref that matches no order/master_order (an unrelated
+    event, or a stale retry), which the webhook treats as a no-op rather
+    than an error.
     """
     result = await db.execute(select(Order).where(Order.payment_intent_id == provider_ref))
     order = result.scalar_one_or_none()
     if order:
+        if not amount_matches(order.total_amount, amount, currency, settings.STRIPE_CURRENCY):
+            logger.error(
+                "payment_intent %s amount/currency mismatch for order %s: "
+                "event reported %s %s, order total is %s %s -- not marking paid",
+                provider_ref, order.id, amount, currency, order.total_amount, settings.STRIPE_CURRENCY,
+            )
+            return False
         if order.status == 'pending_payment':
             order.status = 'processing'
             await db.commit()
+        elif order.status == 'expired':
+            # cleanup_abandoned_checkouts already canceled this order's
+            # PaymentIntent before expiring it and releasing its stock -- a
+            # succeeded event landing anyway (the cancel raced a
+            # near-simultaneous confirmation) must NOT silently flip it to
+            # 'processing': that stock may already be sold to someone else.
+            # Surfaced as an error log for manual reconciliation/refund
+            # rather than auto-refunding, which needs its own review.
+            logger.error(
+                "payment_intent %s succeeded for already-expired order %s -- "
+                "stock was released, needs manual reconciliation/refund",
+                provider_ref, order.id,
+            )
         return True
 
     result = await db.execute(select(MasterOrder).where(MasterOrder.payment_intent_id == provider_ref))
@@ -340,11 +375,28 @@ async def mark_order_paid_by_payment_intent(provider_ref: str, db: AsyncSession)
     if not master_order:
         return False
 
+    if not amount_matches(master_order.total_amount, amount, currency, settings.STRIPE_CURRENCY):
+        logger.error(
+            "payment_intent %s amount/currency mismatch for master_order %s: "
+            "event reported %s %s, master total is %s %s -- not marking paid",
+            provider_ref, master_order.id, amount, currency, master_order.total_amount, settings.STRIPE_CURRENCY,
+        )
+        return False
+
     sub_orders_result = await db.execute(select(Order).where(Order.master_order_id == master_order.id))
+    any_updated = False
     for sub_order in sub_orders_result.scalars().all():
         if sub_order.status == 'pending_payment':
             sub_order.status = 'processing'
-    await db.commit()
+            any_updated = True
+        elif sub_order.status == 'expired':
+            logger.error(
+                "payment_intent %s succeeded for master_order %s but sub-order %s is already "
+                "expired -- stock was released, needs manual reconciliation/refund",
+                provider_ref, master_order.id, sub_order.id,
+            )
+    if any_updated:
+        await db.commit()
     return True
 
 async def get_customer_insights_service(tenant_slug: str, db: AsyncSession, top_n: int = 5) -> dict:

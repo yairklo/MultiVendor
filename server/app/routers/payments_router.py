@@ -42,6 +42,6 @@ async def stripe_webhook(
         raise HTTPException(status_code=400, detail="Invalid webhook signature")
 
     if event.succeeded:
-        await mark_order_paid_by_payment_intent(event.provider_ref, db)
+        await mark_order_paid_by_payment_intent(event.provider_ref, event.amount, event.currency, db)
 
     return {"status": "ok"}

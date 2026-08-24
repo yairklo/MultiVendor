@@ -141,7 +141,6 @@ class CouponResponse(BaseModel):
 
 class StatusResponse(BaseModel):
     status: str = "ok"
-    cart_token: Optional[str] = None
 
 class OrderStatusUpdateResponse(BaseModel):
     status: str

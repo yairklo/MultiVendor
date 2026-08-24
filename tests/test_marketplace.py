@@ -22,6 +22,37 @@ async def test_global_customer_login_works_across_store_scopes(async_client: Asy
         assert resp.status_code == 200
 
 @pytest.mark.asyncio
+async def test_marketplace_cart_requires_capability_token_after_creation(async_client: AsyncClient, seed_tokens):
+    # Same capability-token model as the single-store cart (see
+    # test_tenant_isolation_rls.py::test_guest_cart_requires_capability_token_after_creation)
+    # -- cart_id is a client-generated UUID with no secrecy of its own, so
+    # the bare id must never be enough to read a marketplace cart that
+    # already has items in it, even for the authenticated checkout call.
+    cart_id = str(uuid.uuid4())
+    added = await async_client.post(f"/api/v1/marketplace/cart/{cart_id}/items", json={"variant_id": 1, "quantity": 1})
+    assert added.status_code == 201
+    token = async_client.cookies.get("marketplace_cart_token")
+    assert token
+
+    async_client.cookies.clear()
+    no_token = await async_client.get(f"/api/v1/marketplace/cart/{cart_id}")
+    assert no_token.status_code == 404
+
+    headers = {"Authorization": seed_tokens["customer_a"]}
+    checkout_without_token = await async_client.post(
+        "/api/v1/marketplace/checkout",
+        json={"cart_id": cart_id, "shipping_address": {"city": "Tel Aviv"}, "payment_token": str(uuid.uuid4())},
+        headers=headers,
+    )
+    assert checkout_without_token.status_code == 404
+
+    async_client.cookies.set("marketplace_cart_token", token)
+    with_token = await async_client.get(f"/api/v1/marketplace/cart/{cart_id}")
+    assert with_token.status_code == 200
+    assert with_token.json()["items"][0]["variant_id"] == 1
+
+
+@pytest.mark.asyncio
 async def test_marketplace_product_visibility_rules(async_client: AsyncClient):
     # tenant-a has show_all_products_in_marketplace=TRUE (seeded), so its
     # product 1 is visible even without its own flag set. tenant-b has it
