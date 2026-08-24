@@ -1,0 +1,1 @@
+- For UI/UX and animation tasks, follow guidelines in `./UI_UX_SKILL.md`

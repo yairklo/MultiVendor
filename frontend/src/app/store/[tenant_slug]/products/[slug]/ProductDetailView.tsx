@@ -91,9 +91,11 @@ export function ProductDetailView({
   return (
     <div className="p-4 bg-gray-50 min-h-screen text-gray-900">
       <div className="max-w-4xl mx-auto">
-        <Link href={`/store/${tenantSlug}`} className="text-blue-600 hover:underline">&larr; Back to store</Link>
+        <Link href={`/store/${tenantSlug}`} className="inline-flex items-center text-blue-600 transition-colors hover:text-blue-700 hover:underline">
+          &larr; Back to store
+        </Link>
 
-        <div className="mt-4 bg-white rounded-xl shadow-md border border-gray-100 p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="mt-4 bg-white rounded-xl shadow-sm border border-gray-100 p-6 grid grid-cols-1 md:grid-cols-2 gap-8 transition-shadow duration-300 hover:shadow-md">
           <div>
             {images.length > 0 ? (
               <img src={resolveImageUrl(images[0])} alt={name} className="w-full h-80 object-cover rounded-lg" />
@@ -104,7 +106,7 @@ export function ProductDetailView({
             )}
           </div>
 
-          <div>
+          <div className="flex flex-col">
             <h1 className={`text-2xl font-bold mb-2 ${theme.headingFont}`}>{name}</h1>
             {product.review_count > 0 && (
               <div className="flex items-center gap-2 mb-2">
@@ -115,7 +117,7 @@ export function ProductDetailView({
               </div>
             )}
             <p className="text-xl text-gray-700 mb-4">{formatCurrency(product.base_price)}</p>
-            {description && <p className="text-gray-600 mb-4">{description}</p>}
+            {description && <p className="text-gray-600 mb-4 leading-relaxed">{description}</p>}
 
             {stockKnown && (
               <p className={`text-sm mb-4 ${outOfStock ? 'text-red-600 font-medium' : 'text-gray-400'}`}>
@@ -129,7 +131,7 @@ export function ProductDetailView({
                   type="button"
                   aria-label="Decrease quantity"
                   onClick={() => setQuantity(q => clampQuantity(q - 1))}
-                  className="w-8 h-8 border rounded-lg text-gray-700 hover:bg-gray-100"
+                  className="w-8 h-8 border rounded-lg text-gray-700 transition-colors hover:bg-gray-100 active:scale-95"
                 >
                   &minus;
                 </button>
@@ -146,7 +148,7 @@ export function ProductDetailView({
                   type="button"
                   aria-label="Increase quantity"
                   onClick={() => setQuantity(q => clampQuantity(q + 1))}
-                  className="w-8 h-8 border rounded-lg text-gray-700 hover:bg-gray-100"
+                  className="w-8 h-8 border rounded-lg text-gray-700 transition-colors hover:bg-gray-100 active:scale-95"
                 >
                   +
                 </button>
@@ -156,21 +158,27 @@ export function ProductDetailView({
             <button
               onClick={handleAddToCart}
               disabled={outOfStock || adding}
-              className={`w-full px-4 py-3 font-medium active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${theme.primaryButtonClass}`}
+              className={`mt-auto w-full px-4 py-3 font-medium transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${theme.primaryButtonClass}`}
             >
               {outOfStock ? 'Out of stock' : adding ? 'Adding...' : 'Add to Cart'}
             </button>
           </div>
         </div>
 
-        <div className="mt-6 bg-white rounded-xl shadow-md border border-gray-100 p-6">
+        <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <h2 className="text-xl font-bold mb-4">Reviews</h2>
 
           {getCookie('token') ? (
             <form onSubmit={handleSubmitReview} className="mb-6 pb-6 border-b space-y-3">
               <div className="flex items-center gap-1">
                 {[1, 2, 3, 4, 5].map(n => (
-                  <button key={n} type="button" onClick={() => setReviewRating(n)} aria-label={`Rate ${n} stars`}>
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setReviewRating(n)}
+                    aria-label={`Rate ${n} stars`}
+                    className="transition-transform hover:scale-110"
+                  >
                     <Star
                       width={22}
                       height={22}
@@ -183,20 +191,20 @@ export function ProductDetailView({
                 value={reviewComment}
                 onChange={e => setReviewComment(e.target.value)}
                 placeholder="Share your thoughts about this product..."
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 outline-none"
+                className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 outline-none transition-shadow"
                 rows={3}
               />
               <button
                 type="submit"
                 disabled={submittingReview}
-                className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50"
+                className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium transition-colors duration-150 hover:bg-gray-800 active:scale-[0.98] disabled:opacity-50"
               >
                 {submittingReview ? 'Submitting...' : 'Submit Review'}
               </button>
             </form>
           ) : (
             <p className="text-sm text-gray-500 mb-6 pb-6 border-b">
-              <Link href="/login" className="text-blue-600 hover:underline">Sign in</Link> to write a review.
+              <Link href="/login" className="text-blue-600 transition-colors hover:text-blue-700 hover:underline">Sign in</Link> to write a review.
             </p>
           )}
 

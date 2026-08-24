@@ -31,7 +31,7 @@ function ColorField({
   const swatchValue = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(value) ? value : fallback
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-xs font-semibold text-gray-700">{label}</label>
+      <label className="text-xs font-semibold text-foreground">{label}</label>
       <div className="flex items-center gap-2">
         <input
           type="color"
@@ -58,7 +58,7 @@ function FontFields({
   return (
     <>
       <div className="flex flex-col gap-1">
-        <label className="text-xs font-semibold text-gray-700">Font</label>
+        <label className="text-xs font-semibold text-foreground">Font</label>
         <select
           className="rounded-md border p-2 text-sm"
           value={settings.font_family ?? ''}
@@ -70,7 +70,7 @@ function FontFields({
         </select>
       </div>
       <div className="flex flex-col gap-1">
-        <label className="text-xs font-semibold text-gray-700">Heading Size</label>
+        <label className="text-xs font-semibold text-foreground">Heading Size</label>
         <select
           className="rounded-md border p-2 text-sm"
           value={settings.font_size ?? ''}
@@ -93,14 +93,14 @@ function LanguageTabs({
 }: { languages: string[]; active: string; onChange: (lang: 'en' | 'he') => void }) {
   if (languages.length <= 1) return null
   return (
-    <div className="mb-1 flex gap-1 rounded-md bg-gray-100 p-1">
+    <div className="mb-1 flex gap-1 rounded-md bg-muted p-1">
       {languages.map((l) => (
         <button
           key={l}
           type="button"
           onClick={() => onChange(l as 'en' | 'he')}
           className={`flex-1 rounded px-2 py-1 text-xs font-semibold uppercase transition-colors ${
-            active === l ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            active === l ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
           }`}
         >
           {l}
@@ -147,7 +147,7 @@ function LocalizedInput({
   }
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-xs font-semibold text-gray-700">{label}</label>
+      <label className="text-xs font-semibold text-foreground">{label}</label>
       {multiline ? <textarea rows={3} {...commonProps} /> : <input type="text" {...commonProps} />}
     </div>
   )
@@ -196,7 +196,7 @@ export function SectionPropertiesEditor({
                 />
                 <div className="flex gap-3">
                   <div className="flex flex-1 flex-col gap-1">
-                    <label className="text-xs font-semibold text-gray-700">Size</label>
+                    <label className="text-xs font-semibold text-foreground">Size</label>
                     <select
                       className="rounded-md border p-2 text-sm"
                       value={section.settings.size ?? 'medium'}
@@ -208,7 +208,7 @@ export function SectionPropertiesEditor({
                     </select>
                   </div>
                   <div className="flex flex-1 flex-col gap-1">
-                    <label className="text-xs font-semibold text-gray-700">Alignment</label>
+                    <label className="text-xs font-semibold text-foreground">Alignment</label>
                     <select
                       className="rounded-md border p-2 text-sm"
                       value={section.settings.alignment ?? 'center'}
@@ -259,7 +259,7 @@ export function SectionPropertiesEditor({
           <>
             {section.type === 'grid_container' && (
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-gray-700">Columns</label>
+                <label className="text-xs font-semibold text-foreground">Columns</label>
                 <select
                   className="rounded-md border p-2 text-sm"
                   value={section.settings.columns ?? 3}
@@ -272,10 +272,10 @@ export function SectionPropertiesEditor({
               </div>
             )}
             {section.type === 'two_column_layout' && (
-              <p className="text-xs text-gray-500">Drag the divider between the two columns on the canvas to resize them.</p>
+              <p className="text-xs text-muted-foreground">Drag the divider between the two columns on the canvas to resize them.</p>
             )}
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold text-gray-700">Design Variant</label>
+              <label className="text-xs font-semibold text-foreground">Design Variant</label>
               <select
                 className="rounded-md border p-2 text-sm"
                 value={section.settings.design_variant ?? 'neutral'}
@@ -301,7 +301,7 @@ export function SectionPropertiesEditor({
               onChange={(v) => handleSettingChange('title', v)}
             />
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold text-gray-700">Columns</label>
+              <label className="text-xs font-semibold text-foreground">Columns</label>
               <input
                 type="number"
                 min={2}
@@ -323,7 +323,7 @@ export function SectionPropertiesEditor({
               lang={editingLang} supportedLanguages={supportedLanguages}
               onChange={(v) => handleSettingChange('title', v)}
             />
-            <label className="flex items-center gap-2 text-sm text-gray-700">
+            <label className="flex items-center gap-2 text-sm text-foreground">
               <input
                 type="checkbox"
                 checked={!!section.settings.autoplay}
@@ -345,7 +345,7 @@ export function SectionPropertiesEditor({
               onChange={(v) => handleSettingChange('title', v)}
             />
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold text-gray-700">Layout</label>
+              <label className="text-xs font-semibold text-foreground">Layout</label>
               <select
                 className="rounded-md border p-2 text-sm"
                 value={section.settings.layout ?? 'grid'}
@@ -356,7 +356,7 @@ export function SectionPropertiesEditor({
               </select>
             </div>
             <div className="flex flex-col gap-2">
-              <label className="text-xs font-semibold text-gray-700">Image URLs</label>
+              <label className="text-xs font-semibold text-foreground">Image URLs</label>
               {images.map((url, i) => (
                 <div key={i} className="flex gap-2">
                   <input
@@ -372,7 +372,7 @@ export function SectionPropertiesEditor({
                   <button
                     type="button"
                     onClick={() => handleItemsChange('images', images.filter((_, idx) => idx !== i))}
-                    className="rounded-md border p-2 text-gray-400 hover:text-red-600"
+                    className="rounded-md border p-2 text-muted-foreground hover:text-destructive"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -381,7 +381,7 @@ export function SectionPropertiesEditor({
               <button
                 type="button"
                 onClick={() => handleItemsChange('images', [...images, ''])}
-                className="flex items-center justify-center gap-1 rounded-md border border-dashed p-2 text-xs text-gray-500 hover:border-gray-400"
+                className="flex items-center justify-center gap-1 rounded-md border border-dashed p-2 text-xs text-muted-foreground hover:border-muted-foreground"
               >
                 <Plus className="h-3.5 w-3.5" /> Add image URL
               </button>
@@ -402,11 +402,11 @@ export function SectionPropertiesEditor({
               {buttons.map((button, i) => (
                 <div key={i} className="flex flex-col gap-2 rounded-md border p-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-gray-500">Button {i + 1}</span>
+                    <span className="text-xs font-semibold text-muted-foreground">Button {i + 1}</span>
                     <button
                       type="button"
                       onClick={() => handleItemsChange('buttons', buttons.filter((_, idx) => idx !== i))}
-                      className="text-gray-400 hover:text-red-600"
+                      className="text-muted-foreground hover:text-destructive"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
@@ -426,7 +426,7 @@ export function SectionPropertiesEditor({
                     <option value="secondary">Secondary</option>
                     <option value="outline">Outline</option>
                   </select>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-muted-foreground">
                     Action target ({button.actionType ?? 'not set'}) — edit via Ask AI below.
                   </p>
                 </div>
@@ -439,7 +439,7 @@ export function SectionPropertiesEditor({
                     { label: {}, variant: 'primary', actionType: 'NAVIGATE', actionPayload: { href: '/shop' } },
                   ])
                 }
-                className="flex items-center justify-center gap-1 rounded-md border border-dashed p-2 text-xs text-gray-500 hover:border-gray-400"
+                className="flex items-center justify-center gap-1 rounded-md border border-dashed p-2 text-xs text-muted-foreground hover:border-muted-foreground"
               >
                 <Plus className="h-3.5 w-3.5" /> Add button
               </button>
@@ -466,11 +466,11 @@ export function SectionPropertiesEditor({
               {items.map((item, i) => (
                 <div key={i} className="flex flex-col gap-2 rounded-md border p-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-gray-500">Testimonial {i + 1}</span>
+                    <span className="text-xs font-semibold text-muted-foreground">Testimonial {i + 1}</span>
                     <button
                       type="button"
                       onClick={() => handleItemsChange('items', items.filter((_, idx) => idx !== i))}
-                      className="text-gray-400 hover:text-red-600"
+                      className="text-muted-foreground hover:text-destructive"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
@@ -483,7 +483,7 @@ export function SectionPropertiesEditor({
               <button
                 type="button"
                 onClick={() => handleItemsChange('items', [...items, { quote: {}, author: {}, role: {} }])}
-                className="flex items-center justify-center gap-1 rounded-md border border-dashed p-2 text-xs text-gray-500 hover:border-gray-400"
+                className="flex items-center justify-center gap-1 rounded-md border border-dashed p-2 text-xs text-muted-foreground hover:border-muted-foreground"
               >
                 <Plus className="h-3.5 w-3.5" /> Add testimonial
               </button>
@@ -510,11 +510,11 @@ export function SectionPropertiesEditor({
               {items.map((item, i) => (
                 <div key={i} className="flex flex-col gap-2 rounded-md border p-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-gray-500">Highlight {i + 1}</span>
+                    <span className="text-xs font-semibold text-muted-foreground">Highlight {i + 1}</span>
                     <button
                       type="button"
                       onClick={() => handleItemsChange('items', items.filter((_, idx) => idx !== i))}
-                      className="text-gray-400 hover:text-red-600"
+                      className="text-muted-foreground hover:text-destructive"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
@@ -535,7 +535,7 @@ export function SectionPropertiesEditor({
               <button
                 type="button"
                 onClick={() => handleItemsChange('items', [...items, { icon: 'Sparkles', title: {}, text: {} }])}
-                className="flex items-center justify-center gap-1 rounded-md border border-dashed p-2 text-xs text-gray-500 hover:border-gray-400"
+                className="flex items-center justify-center gap-1 rounded-md border border-dashed p-2 text-xs text-muted-foreground hover:border-muted-foreground"
               >
                 <Plus className="h-3.5 w-3.5" /> Add highlight
               </button>
@@ -574,7 +574,7 @@ export function SectionPropertiesEditor({
               onChange={(v) => handleSettingChange('title', v)}
             />
             <div className="flex flex-col gap-2">
-              <label className="text-xs font-semibold text-gray-700">Columns</label>
+              <label className="text-xs font-semibold text-foreground">Columns</label>
               {headers.map((header, c) => (
                 <div key={c} className="flex gap-2">
                   <div className="flex-1">
@@ -586,7 +586,7 @@ export function SectionPropertiesEditor({
                       onChange={(v) => setHeaderCell(c, v)}
                     />
                   </div>
-                  <button type="button" onClick={() => removeColumn(c)} className="mt-5 h-fit rounded-md border p-2 text-gray-400 hover:text-red-600">
+                  <button type="button" onClick={() => removeColumn(c)} className="mt-5 h-fit rounded-md border p-2 text-muted-foreground hover:text-destructive">
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
@@ -594,18 +594,18 @@ export function SectionPropertiesEditor({
               <button
                 type="button"
                 onClick={addColumn}
-                className="flex items-center justify-center gap-1 rounded-md border border-dashed p-2 text-xs text-gray-500 hover:border-gray-400"
+                className="flex items-center justify-center gap-1 rounded-md border border-dashed p-2 text-xs text-muted-foreground hover:border-muted-foreground"
               >
                 <Plus className="h-3.5 w-3.5" /> Add column
               </button>
             </div>
             <div className="flex flex-col gap-2">
-              <label className="text-xs font-semibold text-gray-700">Rows</label>
+              <label className="text-xs font-semibold text-foreground">Rows</label>
               {rows.map((row, r) => (
                 <div key={r} className="flex flex-col gap-1 rounded-md border p-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-400">Row {r + 1}</span>
-                    <button type="button" onClick={() => removeRow(r)} className="text-gray-400 hover:text-red-600">
+                    <span className="text-xs text-muted-foreground">Row {r + 1}</span>
+                    <button type="button" onClick={() => removeRow(r)} className="text-muted-foreground hover:text-destructive">
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
@@ -625,7 +625,7 @@ export function SectionPropertiesEditor({
                 type="button"
                 onClick={addRow}
                 disabled={headers.length === 0}
-                className="flex items-center justify-center gap-1 rounded-md border border-dashed p-2 text-xs text-gray-500 hover:border-gray-400 disabled:opacity-50"
+                className="flex items-center justify-center gap-1 rounded-md border border-dashed p-2 text-xs text-muted-foreground hover:border-muted-foreground disabled:opacity-50"
               >
                 <Plus className="h-3.5 w-3.5" /> Add row
               </button>
@@ -634,33 +634,33 @@ export function SectionPropertiesEditor({
         )
       }
       default:
-        return <div className="text-sm text-gray-500">Manual editing for {section.type} is coming soon. Use Ask AI below.</div>
+        return <div className="text-sm text-muted-foreground">Manual editing for {section.type} is coming soon. Use Ask AI below.</div>
     }
   }
 
   return (
-    <div className="flex h-full flex-col border-l border-gray-200 bg-white">
+    <div className="flex h-full flex-col border-l border-border bg-card">
       <div className="flex items-center justify-between border-b px-4 py-3">
-        <h3 className="font-semibold text-gray-800">Edit {section.type.replace('_', ' ')}</h3>
-        <button onClick={onClose} className="text-gray-400 hover:text-gray-600">×</button>
+        <h3 className="font-semibold text-foreground">Edit {section.type.replace('_', ' ')}</h3>
+        <button onClick={onClose} className="text-muted-foreground transition-colors hover:text-foreground">×</button>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {renderFields()}
 
-        <hr className="my-4 border-gray-200" />
+        <hr className="my-4 border-border" />
 
-        <div className="flex flex-col gap-2 rounded-lg border border-indigo-100 bg-indigo-50 p-4">
-          <div className="flex items-center gap-2 text-indigo-700">
+        <div className="flex flex-col gap-2 rounded-lg border border-primary/20 bg-primary/5 p-4">
+          <div className="flex items-center gap-2 text-primary">
             <Sparkles className="h-4 w-4" />
             <h4 className="text-sm font-semibold">Ask AI to Edit</h4>
           </div>
-          <p className="text-xs text-indigo-600/80">Tell the AI what you want to change about this specific section.</p>
+          <p className="text-xs text-primary/80">Tell the AI what you want to change about this specific section.</p>
           <div className="mt-2 flex gap-2">
             <input
               type="text"
               placeholder="e.g. Make it more professional..."
-              className="flex-1 rounded-md border border-indigo-200 px-3 py-1.5 text-sm"
+              className="flex-1 rounded-md border border-primary/30 px-3 py-1.5 text-sm"
               value={aiPrompt}
               onChange={(e) => setAiPrompt(e.target.value)}
               onKeyDown={(e) => {
@@ -677,7 +677,7 @@ export function SectionPropertiesEditor({
                   setAiPrompt('')
                 }
               }}
-              className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700"
+              className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
             >
               Send
             </button>

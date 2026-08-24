@@ -31,7 +31,7 @@ export function TableSection({ section, themeStyle }: { section: Section; themeS
             </thead>
             <tbody className="divide-y divide-gray-100">
               {rows.map((row, i) => (
-                <tr key={i}>
+                <tr key={i} className="transition-colors hover:bg-gray-50">
                   {headers.map((_, j) => (
                     <td key={j} className="px-4 py-2 text-gray-600">
                       {resolveI18nText(row?.[j], lang)}

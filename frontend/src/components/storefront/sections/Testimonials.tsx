@@ -24,7 +24,7 @@ export function Testimonials({ section, themeStyle }: { section: Section; themeS
           {items.map((item, i) => {
             const role = resolveI18nText(item.role, lang)
             return (
-              <figure key={i} className="flex flex-col gap-3 rounded-xl border border-current/10 bg-current/[0.03] p-5">
+              <figure key={i} className="flex flex-col gap-3 rounded-xl border border-current/10 bg-current/[0.03] p-5 transition-shadow duration-300 hover:shadow-md">
                 <Quote className="h-5 w-5 text-current/40" strokeWidth={1.75} />
                 <blockquote className="flex-1 text-sm italic text-current/80">&ldquo;{resolveI18nText(item.quote, lang)}&rdquo;</blockquote>
                 <figcaption className="text-sm font-semibold">

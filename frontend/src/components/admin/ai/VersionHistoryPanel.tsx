@@ -35,34 +35,34 @@ export function VersionHistoryPanel({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
+        className="flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted"
       >
         <History className="h-4 w-4" />
         History
         {versions.length > 0 && (
-          <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-xs font-semibold text-gray-500">
+          <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-semibold text-muted-foreground">
             {versions.length}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 z-20 mt-2 w-80 rounded-xl border border-gray-100 bg-white p-2 shadow-lg">
-          <div className="px-2 py-1 text-xs font-semibold uppercase tracking-wide text-gray-400">
+        <div className="absolute right-0 z-20 mt-2 w-80 rounded-xl border border-border bg-card p-2 shadow-lg">
+          <div className="px-2 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Version History
           </div>
-          <div className="px-2 pb-2 text-xs text-gray-500">
+          <div className="px-2 pb-2 text-xs text-muted-foreground">
             Last published: {publishedAt ? timeAgo(publishedAt) : 'never'}
           </div>
           {versions.length === 0 ? (
-            <div className="px-2 py-3 text-sm text-gray-400">No edits to this page yet.</div>
+            <div className="px-2 py-3 text-sm text-muted-foreground">No edits to this page yet.</div>
           ) : (
             <ul className="max-h-72 overflow-y-auto">
               {versions.map((v) => (
-                <li key={v.id} className="flex items-center justify-between gap-2 rounded-lg px-2 py-2 hover:bg-gray-50">
+                <li key={v.id} className="flex items-center justify-between gap-2 rounded-lg px-2 py-2 transition-colors hover:bg-muted">
                   <div className="min-w-0">
-                    <div className="truncate text-sm font-medium text-gray-900">{v.title}</div>
-                    <div className="text-xs text-gray-400">
+                    <div className="truncate text-sm font-medium text-foreground">{v.title}</div>
+                    <div className="text-xs text-muted-foreground">
                       Saved {timeAgo(v.created_at)} · {v.section_count} sections
                     </div>
                   </div>
@@ -70,7 +70,7 @@ export function VersionHistoryPanel({
                     type="button"
                     disabled={revertingId === v.id}
                     onClick={() => onRevert(v.id)}
-                    className="flex shrink-0 items-center gap-1 rounded-lg border px-2 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-100 disabled:opacity-50"
+                    className="flex shrink-0 items-center gap-1 rounded-lg border px-2 py-1 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted disabled:opacity-50"
                   >
                     <RotateCcw className="h-3 w-3" />
                     {revertingId === v.id ? 'Reverting…' : 'Revert'}

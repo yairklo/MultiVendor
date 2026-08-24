@@ -34,10 +34,10 @@ function SortableSectionCard({
   }
   return (
     <div ref={setNodeRef} style={style} className="relative group">
-      <div className="absolute -right-3 -top-3 z-20 flex items-center gap-1 rounded-md bg-white/90 p-1 shadow-sm backdrop-blur border border-gray-200">
+      <div className="absolute -right-3 -top-3 z-20 flex items-center gap-1 rounded-md bg-card/90 p-1 shadow-sm backdrop-blur border border-border">
         <button
           type="button"
-          className="cursor-grab p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 active:cursor-grabbing rounded"
+          className="cursor-grab p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:cursor-grabbing rounded"
           {...attributes}
           {...listeners}
           aria-label="Drag to reorder"
@@ -46,7 +46,7 @@ function SortableSectionCard({
         </button>
         <button
           type="button"
-          className="p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 rounded"
+          className="p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground rounded"
           onClick={() => onEdit(id)}
           aria-label="Edit Properties"
         >
@@ -55,7 +55,7 @@ function SortableSectionCard({
         {onMergeNext && (
           <button
             type="button"
-            className="p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 rounded"
+            className="p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground rounded"
             onClick={onMergeNext}
             aria-label="Place next to the section below"
             title="Place next to the section below"
@@ -66,7 +66,7 @@ function SortableSectionCard({
         {onUngroup && (
           <button
             type="button"
-            className="p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 rounded"
+            className="p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground rounded"
             onClick={onUngroup}
             aria-label="Split columns back into separate sections"
             title="Split columns back into separate sections"
@@ -137,7 +137,7 @@ function DraggableSectionList({
 
   if (sections.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-gray-300 p-4 text-center text-sm text-gray-400">
+      <div className="rounded-lg border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
         {emptyLabel ?? 'No sections yet.'}
       </div>
     )
@@ -248,7 +248,7 @@ function TwoColumnLayoutEditor({
           onMouseDown={startDrag}
           aria-label="Drag to resize columns"
         >
-          <div className="h-10 w-1 rounded-full bg-gray-400" />
+          <div className="h-10 w-1 rounded-full bg-muted-foreground" />
         </div>
         <div>
           <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-current/60">Right</div>
@@ -288,7 +288,7 @@ export function DraggablePageEditor({
   const { lang } = useStorefrontTheme()
 
   if (!page) {
-    return <div className="p-8 text-center text-gray-400">Loading page…</div>
+    return <div className="p-8 text-center text-muted-foreground">Loading page…</div>
   }
 
   // Find the currently edited section recursively
@@ -355,13 +355,13 @@ export function DraggablePageEditor({
     <div className="flex w-full" dir="ltr">
       <div className="flex-1 px-4" dir={lang === 'he' ? 'rtl' : 'ltr'}>
         <div className="flex flex-col gap-3">
-          <div className="sticky top-0 z-30 flex items-center justify-between bg-gray-50/95 py-2 backdrop-blur">
-            <p className="text-xs text-gray-400">Use the toolbar on each section to reorder or edit.</p>
+          <div className="sticky top-0 z-30 flex items-center justify-between bg-muted/95 py-2 backdrop-blur">
+            <p className="text-xs text-muted-foreground">Use the toolbar on each section to reorder or edit.</p>
             <button
               type="button"
               onClick={onSave}
               disabled={saving}
-              className="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-gray-800 disabled:opacity-50"
+              className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
             >
               {saving ? 'Saving…' : 'Save Layout'}
             </button>
@@ -381,7 +381,7 @@ export function DraggablePageEditor({
       </div>
       
       {editingSection && (
-        <div className="w-[350px] shrink-0 border-l border-gray-200">
+        <div className="w-[350px] shrink-0 border-l border-border">
           <SectionPropertiesEditor
             section={editingSection}
             onChange={handleSectionPatch}

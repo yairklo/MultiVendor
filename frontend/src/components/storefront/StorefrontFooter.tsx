@@ -17,17 +17,17 @@ export function StorefrontFooter({ tenantSlug, storeName }: { tenantSlug: string
         <div>
           <h4 className="mb-2 text-sm font-semibold uppercase tracking-wide opacity-70">Shop</h4>
           <ul className="space-y-1 text-sm">
-            <li><Link href={`/store/${tenantSlug}`} className="hover:underline">Home</Link></li>
-            <li><Link href={`/store/${tenantSlug}/shop`} className="hover:underline">Shop</Link></li>
-            <li><Link href={`/store/${tenantSlug}/pages/about`} className="hover:underline">About</Link></li>
-            <li><Link href={`/store/${tenantSlug}/pages/contact`} className="hover:underline">Contact</Link></li>
+            <li><Link href={`/store/${tenantSlug}`} className="transition-opacity hover:opacity-80 hover:underline">Home</Link></li>
+            <li><Link href={`/store/${tenantSlug}/shop`} className="transition-opacity hover:opacity-80 hover:underline">Shop</Link></li>
+            <li><Link href={`/store/${tenantSlug}/pages/about`} className="transition-opacity hover:opacity-80 hover:underline">About</Link></li>
+            <li><Link href={`/store/${tenantSlug}/pages/contact`} className="transition-opacity hover:opacity-80 hover:underline">Contact</Link></li>
           </ul>
         </div>
         <div>
           <h4 className="mb-2 text-sm font-semibold uppercase tracking-wide opacity-70">Support</h4>
           <ul className="space-y-1 text-sm">
-            <li><Link href="/account/orders" className="hover:underline">My Orders</Link></li>
-            <li><Link href={`/store/${tenantSlug}/pages/contact`} className="hover:underline">Get in touch</Link></li>
+            <li><Link href="/account/orders" className="transition-opacity hover:opacity-80 hover:underline">My Orders</Link></li>
+            <li><Link href={`/store/${tenantSlug}/pages/contact`} className="transition-opacity hover:opacity-80 hover:underline">Get in touch</Link></li>
           </ul>
         </div>
       </div>

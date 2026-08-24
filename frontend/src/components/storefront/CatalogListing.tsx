@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Search } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { motion, useReducedMotion } from 'motion/react'
 import { apiClient } from '@/lib/api/apiClient'
 import { ProductCard } from './ProductCard'
 import { PageRenderer } from './PageRenderer'
@@ -14,6 +15,16 @@ import { DispatchedAction, StorePageSchema } from '@/lib/ai/types'
 import { useStorefrontTheme } from '@/context/StorefrontThemeContext'
 
 const PAGE_SIZE = 12
+
+const gridContainerVariants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.05 } },
+}
+
+const gridItemVariants = {
+  hidden: { opacity: 0, y: 16 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.16, 1, 0.3, 1] as const } },
+}
 
 type Lang = 'en' | 'he'
 
@@ -56,6 +67,7 @@ export function CatalogListing({
   const [categoryId, setCategoryId] = useState('')
   const { lang, setLang } = useStorefrontTheme()
   const t = strings[lang]
+  const prefersReducedMotion = useReducedMotion()
 
   function handleAiAction(action: DispatchedAction) {
     if (action.actionType === 'NAVIGATE') {
@@ -184,14 +196,24 @@ export function CatalogListing({
         <PageRenderer page={aiPage!} tenantSlug={tenantSlug} onAction={handleAiAction} />
       ) : (
         <>
-          <div data-testid="product-grid" className="grid grid-cols-1 gap-6 md:grid-cols-3 lg:grid-cols-4">
+          <motion.div
+            data-testid="product-grid"
+            className="grid grid-cols-1 gap-6 md:grid-cols-3 lg:grid-cols-4"
+            variants={prefersReducedMotion ? undefined : gridContainerVariants}
+            initial={prefersReducedMotion ? undefined : 'hidden'}
+            animate={prefersReducedMotion ? undefined : 'show'}
+          >
             {productsLoading
               ? Array.from({ length: 8 }, (_, i) => <ProductCardSkeleton key={i} />)
-              : products.map((p) => <ProductCard key={p.id} product={p} tenantSlug={tenantSlug} lang={lang} />)}
+              : products.map((p) => (
+                  <motion.div key={p.id} variants={prefersReducedMotion ? undefined : gridItemVariants}>
+                    <ProductCard product={p} tenantSlug={tenantSlug} lang={lang} />
+                  </motion.div>
+                ))}
             {!productsLoading && products.length === 0 && (
               <div className="col-span-full py-12 text-center text-gray-500">{t.noProducts}</div>
             )}
-          </div>
+          </motion.div>
 
           {meta && meta.total_pages > 1 && (
             <div className="mt-6 rounded-lg bg-white shadow-sm">

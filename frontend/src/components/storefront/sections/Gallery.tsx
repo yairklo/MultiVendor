@@ -34,7 +34,7 @@ export function Gallery({ section, themeStyle }: { section: Section; themeStyle:
               key={i}
               src={url}
               alt=""
-              className="aspect-square w-40 flex-none rounded-xl object-cover shadow-sm md:w-56"
+              className="aspect-square w-40 flex-none rounded-xl object-cover shadow-sm transition-transform duration-300 hover:scale-[1.02] md:w-56"
             />
           ))}
         </div>
@@ -42,7 +42,7 @@ export function Gallery({ section, themeStyle }: { section: Section; themeStyle:
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           {images.map((url, i) => (
             // eslint-disable-next-line @next/next/no-img-element
-            <img key={i} src={url} alt="" className="aspect-square w-full rounded-xl object-cover shadow-sm" />
+            <img key={i} src={url} alt="" className="aspect-square w-full rounded-xl object-cover shadow-sm transition-transform duration-300 hover:scale-[1.02]" />
           ))}
         </div>
       )}

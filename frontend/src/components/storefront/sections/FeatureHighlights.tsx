@@ -34,7 +34,7 @@ export function FeatureHighlights({ section, themeStyle }: { section: Section; t
             const text = resolveI18nText(item.text, lang)
             return (
               <div key={i} className="flex flex-col items-center gap-2 text-center">
-                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-current/5">
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-current/5 transition-colors duration-200 hover:bg-current/10">
                   <Icon className="h-6 w-6" strokeWidth={1.75} />
                 </span>
                 <h3 className="font-semibold">{resolveI18nText(item.title, lang)}</h3>
