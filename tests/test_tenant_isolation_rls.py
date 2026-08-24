@@ -91,6 +91,12 @@ async def test_cannot_add_store_a_product_to_store_b_cart(async_client: AsyncCli
         json={"variant_id": 2, "quantity": 1},
     )
     assert add_b.status_code == 201
+    # The cart's capability token arrives as a Set-Cookie on add_b and is
+    # carried automatically by this same client on the next call (httpx's
+    # cookie jar) -- so a 404 below can only be about the cross-tenant
+    # variant, not about the ownership guard guest carts require (see
+    # test_guest_cart_requires_capability_token_after_creation).
+    assert async_client.cookies.get("cart_token")
 
     cross = await async_client.post(
         f"/api/v1/store/tenant-b/cart/{cart_id}/items",
@@ -132,6 +138,76 @@ async def test_disabled_user_token_is_rejected_on_optional_cart_routes(async_cli
     assert response.status_code == 401
 
 @pytest.mark.asyncio
+async def test_guest_cart_requires_capability_token_after_creation(async_client: AsyncClient):
+    # Cart.id is a client-generated UUID with no secrecy of its own.
+    # Creating a cart is fine with just the id (nobody to impersonate yet),
+    # but *reading it back* must require the capability token minted at
+    # creation (delivered as an HttpOnly cart_token cookie, never in the
+    # response body or a header) -- the bare UUID alone must never be enough.
+    cart_id = "dddddddd-dddd-dddd-dddd-dddddddddddd"
+    created = await async_client.post(
+        f"/api/v1/store/tenant-a/cart/{cart_id}/items",
+        json={"variant_id": 1, "quantity": 1},
+    )
+    assert created.status_code == 201
+    assert "cart_token" not in created.json()  # never in the JSON body
+    token = async_client.cookies.get("cart_token")
+    assert token
+
+    # Bare UUID, no cookie at all: knowing the id alone must not be enough.
+    async_client.cookies.clear()
+    no_token = await async_client.get(f"/api/v1/store/tenant-a/cart/{cart_id}")
+    assert no_token.status_code == 404
+
+    # Well-formed (unexpired exp + hex signature) but not one the server
+    # ever issued -- must fail the HMAC comparison, not just parsing.
+    async_client.cookies.set("cart_token", "9999999999." + "0" * 64)
+    wrong_token = await async_client.get(f"/api/v1/store/tenant-a/cart/{cart_id}")
+    assert wrong_token.status_code == 404
+
+    async_client.cookies.set("cart_token", token)
+    with_token = await async_client.get(f"/api/v1/store/tenant-a/cart/{cart_id}")
+    assert with_token.status_code == 200
+    assert with_token.json()["items"][0]["variant_id"] == 1
+
+@pytest.mark.asyncio
+async def test_guest_cart_is_claimed_on_login_and_then_ignores_the_token(async_client: AsyncClient, seed_tokens):
+    cart_id = "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"
+    created = await async_client.post(
+        f"/api/v1/store/tenant-a/cart/{cart_id}/items",
+        json={"variant_id": 1, "quantity": 1},
+    )
+    token = async_client.cookies.get("cart_token")
+
+    # Touching the cart while authenticated (the capability cookie still
+    # required, since it's not claimed yet, and carried automatically by
+    # this same client) is what claims it for the user.
+    claim = await async_client.get(
+        f"/api/v1/store/tenant-a/cart/{cart_id}",
+        headers={"Authorization": seed_tokens["customer_a"]},
+    )
+    assert claim.status_code == 200
+    # Claiming has nothing left for the cookie to protect -- the server clears it.
+    assert async_client.cookies.get("cart_token") is None
+
+    # Now claimed: the owning user's session alone is enough, no token needed.
+    still_owned = await async_client.get(
+        f"/api/v1/store/tenant-a/cart/{cart_id}",
+        headers={"Authorization": seed_tokens["customer_a"]},
+    )
+    assert still_owned.status_code == 200
+
+    # But it's a different global user's own auth now, so the old capability
+    # token (explicitly replayed here, since the client's jar no longer has
+    # it after being cleared above) can't be used by anyone else to get back in.
+    async_client.cookies.set("cart_token", token)
+    other_user = await async_client.get(
+        f"/api/v1/store/tenant-a/cart/{cart_id}",
+        headers={"Authorization": seed_tokens["tenant_admin_a"]},
+    )
+    assert other_user.status_code == 404
+
+@pytest.mark.asyncio
 async def test_customer_orders_can_be_filtered_by_tenant_slug(async_client: AsyncClient, seed_tokens):
     headers = {"Authorization": seed_tokens["customer_a"]}
     all_orders = await async_client.get("/api/v1/customer/orders", headers=headers)
@@ -142,3 +218,20 @@ async def test_customer_orders_can_be_filtered_by_tenant_slug(async_client: Asyn
     store_b = await async_client.get("/api/v1/customer/orders?tenant_slug=tenant-b", headers=headers)
     assert store_b.status_code == 200
     assert store_b.json()["data"] == []
+
+@pytest.mark.asyncio
+async def test_customer_order_detail_rejects_wrong_store_context(async_client: AsyncClient, seed_tokens):
+    # Order 1 (seeded) belongs to the global customer (user id 4) at
+    # tenant-a. Owning it is not enough once a caller narrows to a specific
+    # store's context: user_id ownership alone must not let it leak across
+    # a store boundary the caller explicitly asked to stay within.
+    headers = {"Authorization": seed_tokens["customer_a"]}
+
+    same_store = await async_client.get("/api/v1/customer/orders/1?tenant_slug=tenant-a", headers=headers)
+    assert same_store.status_code == 200
+
+    wrong_store = await async_client.get("/api/v1/customer/orders/1?tenant_slug=tenant-b", headers=headers)
+    assert wrong_store.status_code == 404
+
+    global_view = await async_client.get("/api/v1/customer/orders/1", headers=headers)
+    assert global_view.status_code == 200

@@ -205,14 +205,14 @@ async def execute_tool(
 
         # --- Storefront templates -------------------------------------------
         if tool_name == "list_storefront_templates":
-            metas = await store_page_service.list_storefront_templates_service()
+            metas = await store_page_service.list_storefront_templates_service(db)
             return ToolExecutionResult(tool_name, list(metas), False)
 
         if tool_name == "apply_storefront_template":
             template_key = raw_input.get("template_key")
             if not template_key:
                 raise ValueError("template_key is required")
-            template = get_storefront_template(template_key)
+            template = await get_storefront_template(template_key, db)
             if not template:
                 raise ValueError(f"Unknown storefront template: {template_key}")
             summary = (

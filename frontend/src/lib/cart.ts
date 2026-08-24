@@ -62,6 +62,13 @@ export function clearCart() {
   window.localStorage.removeItem(CART_STORAGE_KEY)
 }
 
+// The guest cart's capability token (proving we're the party an unclaimed
+// cart was created for) lives entirely in a `cart_token` HttpOnly cookie
+// the backend sets/clears itself (see server/app/routers/cart_router.py) --
+// this file never reads, stores, or forwards it. apiClient sends
+// credentials: 'include' so the browser attaches that cookie automatically;
+// JS (and therefore XSS) never has access to the value at all.
+
 export async function addItemToCart(tenantSlug: string, variantId: number, quantity = 1) {
   const cart = getOrCreateCart(tenantSlug)
   await apiClient(`/api/v1/store/${tenantSlug}/cart/${cart.cartId}/items`, {

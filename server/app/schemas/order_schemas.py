@@ -61,6 +61,17 @@ class CheckoutRequest(BaseModel):
         }
     })
 
+class PaymentIntentInfo(BaseModel):
+    # What the frontend needs to complete payment client-side (e.g. mount
+    # Stripe Elements and call stripe.confirmPayment). Only present when
+    # PAYMENT_PROVIDER is a real gateway and the order is still awaiting that
+    # confirmation -- absent entirely in mock mode, where /pay already
+    # marked the order paid synchronously.
+    provider: str
+    client_secret: str
+    publishable_key: Optional[str] = None
+
+
 class OrderItemResponse(BaseModel):
     id: int
     variant_id: Optional[int]
@@ -87,6 +98,7 @@ class OrderResponse(BaseModel):
     shipping_info: Optional[Dict[str, Any]] = None
     created_at: datetime
     items: List[OrderItemResponse]
+    payment: Optional[PaymentIntentInfo] = None
     model_config = ConfigDict(json_schema_extra={
         "example": {
             "id": 999,

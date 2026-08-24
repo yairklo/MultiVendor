@@ -8,11 +8,15 @@ async def test_cart_lifecycle_guest_and_authenticated(async_client: AsyncClient,
     payload = {"variant_id": 1, "quantity": 2}
     response = await async_client.post(f"/api/v1/store/tenant-a/cart/{cart_id}/items", json=payload)
     assert response.status_code == 201
-    
+    # A guest cart's capability token (delivered as an HttpOnly cart_token
+    # cookie) is required for every subsequent read/write of it -- the id
+    # alone is not proof of ownership. httpx's cookie jar carries it
+    # automatically on the calls below within this same client.
+
     response = await async_client.get(f"/api/v1/store/tenant-a/cart/{cart_id}")
     assert response.status_code == 200
     assert "subtotal" in response.json()
-    
+
     response = await async_client.delete(f"/api/v1/store/tenant-a/cart/{cart_id}/items/1")
     assert response.status_code == 200
 
@@ -37,9 +41,9 @@ async def test_add_to_cart_quantity_validation(async_client: AsyncClient, seed_t
     ("BELOW_MIN", 400)
 ])
 async def test_coupon_validation(async_client: AsyncClient, seed_tokens, coupon_code, expected_status):
-    headers = {"Authorization": seed_tokens["customer_a"]}
     cart_id = str(uuid.uuid4())
     await async_client.post(f"/api/v1/store/tenant-a/cart/{cart_id}/items", json={"variant_id": 1, "quantity": 1})
+    headers = {"Authorization": seed_tokens["customer_a"]}
     payload = {
         "cart_id": cart_id,
         "coupon_code": coupon_code,
@@ -47,7 +51,7 @@ async def test_coupon_validation(async_client: AsyncClient, seed_tokens, coupon_
         "payment_token": str(uuid.uuid4())
     }
     response = await async_client.post(f"/api/v1/store/tenant-a/cart/checkout", json=payload, headers=headers)
-    assert response.status_code in (201, 400, 422, 404) 
+    assert response.status_code in (201, 400, 422, 404)
 
 @pytest.mark.asyncio
 async def test_checkout_invalid_uuid(async_client: AsyncClient, seed_tokens):
@@ -104,6 +108,9 @@ async def test_update_cart_item_not_found(async_client: AsyncClient, seed_tokens
 async def test_checkout_success_creates_order_and_snapshot(async_client: AsyncClient, seed_tokens):
     headers = {"Authorization": seed_tokens["customer_a"]}
     cart_id = str(uuid.uuid4())
+    # Cart is added to anonymously, so it's still an unclaimed guest cart --
+    # claiming it at checkout requires the capability cookie minted above,
+    # which httpx carries automatically on the checkout call below.
     await async_client.post(f"/api/v1/store/tenant-a/cart/{cart_id}/items", json={"variant_id": 1, "quantity": 1})
     payload = {
         "cart_id": cart_id,

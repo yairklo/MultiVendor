@@ -1,15 +1,24 @@
 import { describe, it, expect } from 'vitest'
 import { NextRequest } from 'next/server'
+import crypto from 'crypto'
 import { proxy } from '../proxy'
 
-function makeJwt(payload: Record<string, unknown>) {
-  const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url')
+// Must match the secret vitest.setup.ts sets before this file is imported.
+const TEST_SECRET = 'test-jwt-secret-for-vitest'
+
+function makeJwt(payload: Record<string, unknown>, opts: { alg?: string; secret?: string } = {}) {
+  const header = Buffer.from(JSON.stringify({ alg: opts.alg ?? 'HS256', typ: 'JWT' })).toString('base64url')
   const body = Buffer.from(JSON.stringify({
     exp: Math.floor(Date.now() / 1000) + 3600,
     typ: 'access',
     ...payload,
   })).toString('base64url')
-  return `${header}.${body}.sig`
+  const signingInput = `${header}.${body}`
+  const signature = crypto
+    .createHmac('sha256', opts.secret ?? TEST_SECRET)
+    .update(signingInput)
+    .digest('base64url')
+  return `${signingInput}.${signature}`
 }
 
 function makeRequest(pathname: string, token?: string) {
@@ -49,6 +58,26 @@ describe('proxy middleware', () => {
     expect(res.headers.get('location')).toContain('/admin/login')
     const cleared = res.headers.getSetCookie?.() ?? []
     expect(cleared.some((c) => c.startsWith('token='))).toBe(true)
+  })
+
+  it('rejects a token with a forged payload (valid shape, wrong signature) on /admin', () => {
+    // Same structure as a real token, but the signature was never produced
+    // by the backend's secret -- this is what decode-without-verify used to
+    // let straight through.
+    const forged = makeJwt({ role: 'user', store_role: 'tenant_admin' }, { secret: 'not-the-real-secret' })
+    const res = proxy(makeRequest('/admin/dashboard', forged))
+    expect(res.headers.get('location')).toContain('/admin/login')
+  })
+
+  it('rejects an alg-confusion token (alg: none) on /admin', () => {
+    const forged = makeJwt({ role: 'user', store_role: 'tenant_admin' }, { alg: 'none' })
+    const res = proxy(makeRequest('/admin/dashboard', forged))
+    expect(res.headers.get('location')).toContain('/admin/login')
+  })
+
+  it('accepts a genuinely signed tenant_admin token on /admin', () => {
+    const res = proxy(makeRequest('/admin/dashboard', makeJwt({ role: 'user', store_role: 'tenant_admin' })))
+    expect(res.headers.get('location')).toBeNull()
   })
 
   it('redirects unauthenticated /super-admin requests', () => {

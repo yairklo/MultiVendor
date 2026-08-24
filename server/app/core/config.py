@@ -31,6 +31,18 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str | None = None
     GEMINI_MODEL: str = "gemini-3.5-flash"
 
+    # "mock" (default) keeps the existing dev-only instant-pay behavior with
+    # zero external calls. "stripe" routes /pay through a real PaymentIntent
+    # and only marks an order paid once the Stripe webhook confirms it -- see
+    # app/services/payments/. Secret keys stay server-side only;
+    # STRIPE_PUBLISHABLE_KEY is the one Stripe key that's meant to be public
+    # (the frontend needs it to mount Stripe Elements).
+    PAYMENT_PROVIDER: str = "mock"
+    STRIPE_SECRET_KEY: str | None = None
+    STRIPE_PUBLISHABLE_KEY: str | None = None
+    STRIPE_WEBHOOK_SECRET: str | None = None
+    STRIPE_CURRENCY: str = "ils"
+
     model_config = SettingsConfigDict(env_file=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), ".env"), env_file_encoding="utf-8", extra="ignore")
 
 settings = Settings()

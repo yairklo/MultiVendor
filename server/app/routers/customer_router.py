@@ -55,10 +55,11 @@ async def list_orders(
 )
 async def get_order(
     order_id: int = Path(...),
+    tenant_slug: str | None = Query(None, description="When set, 404s if the order does not belong to this store."),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    return await get_customer_order_service(current_user.id, order_id, db)
+    return await get_customer_order_service(current_user.id, order_id, db, tenant_slug=tenant_slug)
 
 @customer_router.delete(
     "/orders/{order_id}",
@@ -72,25 +73,27 @@ async def get_order(
 )
 async def cancel_order(
     order_id: int = Path(...),
+    tenant_slug: str | None = Query(None, description="When set, 404s if the order does not belong to this store."),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    return await cancel_customer_order_service(current_user.id, order_id, db)
+    return await cancel_customer_order_service(current_user.id, order_id, db, tenant_slug=tenant_slug)
 
 @customer_router.post(
     "/orders/{order_id}/pay",
     response_model=OrderResponse,
-    summary="Pay for an Order (Mock)",
-    description="Development-only mock payment gateway: immediately marks an order awaiting payment as paid ('processing'). Real payment processing is not implemented.",
+    summary="Pay for an Order",
+    description="Starts payment for an order awaiting payment. With PAYMENT_PROVIDER=mock (default), this immediately marks the order paid ('processing'). With PAYMENT_PROVIDER=stripe, it starts a PaymentIntent and returns a client_secret; the order only moves to 'processing' once the Stripe webhook confirms it.",
     responses={
-        200: {"description": "Payment successful, order is now processing."},
+        200: {"description": "Mock: payment successful, order is now processing. Stripe: PaymentIntent started, response includes `payment.client_secret`."},
         400: {"description": "Order is not awaiting payment."},
         404: {"description": "Order not found."}
     }
 )
 async def pay_order(
     order_id: int = Path(...),
+    tenant_slug: str | None = Query(None, description="When set, 404s if the order does not belong to this store."),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    return await pay_order_service(current_user.id, order_id, db)
+    return await pay_order_service(current_user.id, order_id, db, tenant_slug=tenant_slug)

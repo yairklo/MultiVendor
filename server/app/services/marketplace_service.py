@@ -7,6 +7,8 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
+from app.core.config import settings
+from app.core.cart_token import issue_guest_cart_token, verify_guest_cart_token
 from app.db.session import redis_client
 from app.db.tenant_context import platform_plane
 from app.models.tenant import Tenant
@@ -17,7 +19,9 @@ from app.schemas.marketplace_schemas import (
     MarketplaceAddToCartRequest, MarketplaceCartResponse, MarketplaceCartItemResponse,
     MarketplaceCheckoutRequest, MasterOrderResponse,
 )
-from app.schemas.order_schemas import OrderResponse, OrderItemResponse
+from app.schemas.order_schemas import OrderResponse, OrderItemResponse, PaymentIntentInfo
+from app.services.checkout_service import CartCookieAction
+from app.services.payments import get_payment_provider, get_or_create_payment_intent
 
 # Flat platform cut of each vendor's sub-order subtotal. A fixed constant
 # rather than a per-tenant/per-plan rate table -- good enough for the MVP
@@ -36,8 +40,38 @@ def _round2(value: Decimal) -> Decimal:
     return value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
+async def _marketplace_cart_has_items(cart_id: str, db: AsyncSession) -> bool:
+    result = await db.execute(select(MarketplaceCartItem.id).where(MarketplaceCartItem.cart_id == cart_id).limit(1))
+    return result.scalar_one_or_none() is not None
+
+
+async def _verify_marketplace_cart_token_if_nonempty(cart_id: str, cart_token: Optional[str], db: AsyncSession) -> bool:
+    """
+    Same capability-token model as the single-store cart (see
+    checkout_service._assert_cart_ownership), adapted to the fact that a
+    marketplace cart has no parent Cart row and no user_id column to claim
+    onto -- it's purely anonymous until the authenticated checkout call
+    consumes it, so there's nothing to "claim" on login, only to protect
+    while it's being built. Creating a brand new cart_id (nothing to
+    protect yet) needs no token; any cart_id that already has items does.
+    Returns whether the cart currently has any items.
+    """
+    has_items = await _marketplace_cart_has_items(cart_id, db)
+    if has_items and (not cart_token or not verify_guest_cart_token(cart_token, cart_id)):
+        raise HTTPException(status_code=404, detail="Cart not found")
+    return has_items
+
+
 @platform_plane
-async def add_to_marketplace_cart_service(cart_id: UUID, req: MarketplaceAddToCartRequest, db: AsyncSession):
+async def add_to_marketplace_cart_service(
+    cart_id: UUID, req: MarketplaceAddToCartRequest, db: AsyncSession,
+    cart_token: Optional[str] = None, cookie_action: Optional[CartCookieAction] = None,
+):
+    cart_id_str = str(cart_id)
+    has_items = await _verify_marketplace_cart_token_if_nonempty(cart_id_str, cart_token, db)
+    if not has_items and cookie_action is not None:
+        cookie_action.mint_token = issue_guest_cart_token(cart_id_str)
+
     variant_result = await db.execute(
         select(ProductVariant)
         .join(Product)
@@ -77,11 +111,16 @@ async def add_to_marketplace_cart_service(cart_id: UUID, req: MarketplaceAddToCa
 
 
 @platform_plane
-async def get_marketplace_cart_service(cart_id: UUID, db: AsyncSession) -> MarketplaceCartResponse:
+async def get_marketplace_cart_service(
+    cart_id: UUID, db: AsyncSession, cart_token: Optional[str] = None
+) -> MarketplaceCartResponse:
+    cart_id_str = str(cart_id)
+    await _verify_marketplace_cart_token_if_nonempty(cart_id_str, cart_token, db)
+
     result = await db.execute(
         select(MarketplaceCartItem, Tenant)
         .join(Tenant, Tenant.id == MarketplaceCartItem.tenant_id)
-        .where(MarketplaceCartItem.cart_id == str(cart_id))
+        .where(MarketplaceCartItem.cart_id == cart_id_str)
         .options(
             selectinload(MarketplaceCartItem.variant).selectinload(ProductVariant.product).selectinload(Product.images)
         )
@@ -123,9 +162,14 @@ async def get_marketplace_cart_service(cart_id: UUID, db: AsyncSession) -> Marke
 
 
 @platform_plane
-async def remove_from_marketplace_cart_service(cart_id: UUID, item_id: int, db: AsyncSession):
+async def remove_from_marketplace_cart_service(
+    cart_id: UUID, item_id: int, db: AsyncSession, cart_token: Optional[str] = None
+):
+    cart_id_str = str(cart_id)
+    await _verify_marketplace_cart_token_if_nonempty(cart_id_str, cart_token, db)
+
     item_result = await db.execute(
-        select(MarketplaceCartItem).where(MarketplaceCartItem.cart_id == str(cart_id), MarketplaceCartItem.id == item_id)
+        select(MarketplaceCartItem).where(MarketplaceCartItem.cart_id == cart_id_str, MarketplaceCartItem.id == item_id)
     )
     item = item_result.scalar_one_or_none()
     if not item:
@@ -137,9 +181,14 @@ async def remove_from_marketplace_cart_service(cart_id: UUID, item_id: int, db: 
 
 
 @platform_plane
-async def update_marketplace_cart_item_service(cart_id: UUID, item_id: int, quantity: int, db: AsyncSession):
+async def update_marketplace_cart_item_service(
+    cart_id: UUID, item_id: int, quantity: int, db: AsyncSession, cart_token: Optional[str] = None
+):
+    cart_id_str = str(cart_id)
+    await _verify_marketplace_cart_token_if_nonempty(cart_id_str, cart_token, db)
+
     item_result = await db.execute(
-        select(MarketplaceCartItem).where(MarketplaceCartItem.cart_id == str(cart_id), MarketplaceCartItem.id == item_id)
+        select(MarketplaceCartItem).where(MarketplaceCartItem.cart_id == cart_id_str, MarketplaceCartItem.id == item_id)
     )
     item = item_result.scalar_one_or_none()
     if not item:
@@ -202,11 +251,11 @@ async def get_master_order_service(master_order_id: int, user_id: int, db: Async
 
 @platform_plane
 async def pay_master_order_service(master_order_id: int, user_id: int, db: AsyncSession) -> MasterOrderResponse:
-    # Mock payment gateway, same as the single-store pay_order_service -- but
-    # pays every vendor's sub-order under this master order in one call/one
-    # commit, rather than making the frontend loop N separate pay requests
-    # (which could fail partway through and leave some vendors paid and
-    # others not, for what the shopper experienced as a single purchase).
+    # Pays every vendor's sub-order under this master order in one call/one
+    # commit (mock) or behind one shared PaymentIntent (real gateway) --
+    # rather than making the frontend loop N separate pay requests (which
+    # could fail partway through and leave some vendors paid and others not,
+    # for what the shopper experienced as a single purchase).
     master_result = await db.execute(
         select(MasterOrder).where(MasterOrder.id == master_order_id, MasterOrder.user_id == user_id)
     )
@@ -223,10 +272,34 @@ async def pay_master_order_service(master_order_id: int, user_id: int, db: Async
     if not any(o.status == 'pending_payment' for o in sub_orders):
         raise HTTPException(status_code=400, detail="Order is not awaiting payment")
 
-    for order in sub_orders:
-        if order.status == 'pending_payment':
-            order.status = 'processing'
-    await db.commit()
+    payment_info = None
+    if settings.PAYMENT_PROVIDER == "mock":
+        for order in sub_orders:
+            if order.status == 'pending_payment':
+                order.status = 'processing'
+        await db.commit()
+    else:
+        # Real gateway: one PaymentIntent for the whole multi-vendor cart,
+        # reused on a retried call rather than creating a second one.
+        # Sub-orders stay 'pending_payment' until the webhook confirms it.
+        provider = get_payment_provider()
+        intent = await get_or_create_payment_intent(
+            provider,
+            existing_provider_ref=master_order.payment_intent_id,
+            amount=master_order.total_amount,
+            currency=settings.STRIPE_CURRENCY,
+            reference=master_order.master_order_number,
+            metadata={"master_order_id": str(master_order.id)},
+            idempotency_key=f"master:{master_order.id}",
+        )
+        if master_order.payment_intent_id != intent.provider_ref:
+            master_order.payment_intent_id = intent.provider_ref
+            await db.commit()
+        payment_info = PaymentIntentInfo(
+            provider=settings.PAYMENT_PROVIDER,
+            client_secret=intent.client_secret,
+            publishable_key=intent.publishable_key,
+        )
 
     return MasterOrderResponse(
         id=master_order.id,
@@ -234,11 +307,14 @@ async def pay_master_order_service(master_order_id: int, user_id: int, db: Async
         total_amount=master_order.total_amount,
         created_at=master_order.created_at,
         sub_orders=[_order_to_response(order, order.items) for order in sub_orders],
+        payment=payment_info,
     )
 
 
 @platform_plane
-async def marketplace_checkout_service(req: MarketplaceCheckoutRequest, user_id: int, db: AsyncSession) -> MasterOrderResponse:
+async def marketplace_checkout_service(
+    req: MarketplaceCheckoutRequest, user_id: int, db: AsyncSession, cart_token: Optional[str] = None
+) -> MasterOrderResponse:
     cart_id = str(req.cart_id)
     result = await db.execute(
         select(MarketplaceCartItem)
@@ -248,6 +324,14 @@ async def marketplace_checkout_service(req: MarketplaceCheckoutRequest, user_id:
     cart_items = result.scalars().all()
     if not cart_items:
         raise HTTPException(status_code=400, detail="Marketplace cart is empty or not found")
+
+    # The cart is anonymous until this moment (no user_id column to have
+    # claimed onto earlier -- see _verify_marketplace_cart_token_if_nonempty),
+    # so checking out someone else's cart_id without proving you're the
+    # party who built it must fail here, the same as any other guest-cart
+    # mutation would.
+    if not cart_token or not verify_guest_cart_token(cart_token, cart_id):
+        raise HTTPException(status_code=404, detail="Cart not found")
 
     # Group by vendor: this is the actual "order splitting" -- one sub-order
     # per tenant_id, all children of a single master order below.

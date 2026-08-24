@@ -8,6 +8,7 @@ import { useOrders } from '@/hooks/useOrders'
 import { useToast } from '@/context/ToastContext'
 import { useCurrency } from '@/hooks/useCurrency'
 import { useRouter } from 'next/navigation'
+import { StripeCardForm } from '@/components/checkout/StripeCardForm'
 
 const shippingOptions = [
   { id: 1, name: 'Standard Shipping (3-5 days)', price: 5 },
@@ -17,13 +18,14 @@ const shippingOptions = [
 export default function CheckoutPage() {
   const { cart, loading, clear } = useCart()
   const { formatCurrency } = useCurrency()
-  const { payOrder, cancelOrder } = useOrders()
+  const { payOrder, cancelOrder, fetchOrder } = useOrders()
   const { showToast } = useToast()
   const [error, setError] = useState<string>('')
   const [submitting, setSubmitting] = useState(false)
   const [payingOrder, setPayingOrder] = useState<any>(null)
   const [paymentDone, setPaymentDone] = useState(false)
   const [payBusy, setPayBusy] = useState(false)
+  const [stripePayment, setStripePayment] = useState<{ clientSecret: string; publishableKey: string } | null>(null)
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [address, setAddress] = useState('')
@@ -119,8 +121,19 @@ export default function CheckoutPage() {
     setPayBusy(true)
     setError('')
     try {
-      await payOrder(payingOrder.id)
-      setPaymentDone(true)
+      const result = await payOrder(payingOrder.id)
+      if (result?.payment?.client_secret) {
+        // Real gateway (e.g. Stripe): the order stays "awaiting payment"
+        // server-side until its webhook confirms it -- this just switches
+        // to the card form that completes the payment client-side.
+        setStripePayment({
+          clientSecret: result.payment.client_secret,
+          publishableKey: result.payment.publishable_key,
+        })
+      } else {
+        // Mock gateway: /pay already marked the order paid synchronously.
+        setPaymentDone(true)
+      }
     } catch (e: any) {
       setError(e.message || 'Payment failed.')
     } finally {
@@ -184,19 +197,35 @@ export default function CheckoutPage() {
             <p className="text-gray-600 mt-1">
               Total: <span className="font-bold">{formatCurrency(Number(payingOrder.total_amount))}</span>
             </p>
-            <p className="text-sm text-amber-700 mt-2">
-              This is a development environment — payment is simulated. Unpaid orders are automatically
-              cancelled and their stock released if left pending too long.
-            </p>
+            {!stripePayment && (
+              <p className="text-sm text-amber-700 mt-2">
+                This is a development environment — payment is simulated. Unpaid orders are automatically
+                cancelled and their stock released if left pending too long.
+              </p>
+            )}
           </div>
+          {stripePayment && (
+            <StripeCardForm
+              clientSecret={stripePayment.clientSecret}
+              publishableKey={stripePayment.publishableKey}
+              checkPaid={async () => {
+                const refreshed = await fetchOrder(payingOrder.id)
+                return refreshed.status === 'processing' || refreshed.status === 'completed'
+              }}
+              onSuccess={() => setPaymentDone(true)}
+              onError={(message) => setError(message)}
+            />
+          )}
           <div className="flex gap-3">
-            <button
-              onClick={handlePay}
-              disabled={payBusy}
-              className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 disabled:opacity-70"
-            >
-              {payBusy ? 'Processing...' : 'Pay Now'}
-            </button>
+            {!stripePayment && (
+              <button
+                onClick={handlePay}
+                disabled={payBusy}
+                className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 disabled:opacity-70"
+              >
+                {payBusy ? 'Processing...' : 'Pay Now'}
+              </button>
+            )}
             <button
               onClick={handleCancelPending}
               disabled={payBusy}

@@ -57,6 +57,10 @@ class MasterOrder(Base):
     user_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     master_order_number = Column(String(50), nullable=False, unique=True)
     total_amount = Column(Numeric(10, 2), nullable=False)
+    # One payment covers every sub-order under this master order -- set when
+    # PAYMENT_PROVIDER=stripe creates a single PaymentIntent for the whole
+    # multi-vendor checkout; the webhook resolves back to this row by it.
+    payment_intent_id = Column(String(255), nullable=True, unique=True)
     created_at = Column(DateTime, default=func.now())
 
     sub_orders = relationship("Order", back_populates="master_order")
@@ -83,6 +87,10 @@ class Order(TenantScoped, Base):
     status = Column(Enum('pending', 'pending_payment', 'processing', 'completed', 'cancelled', 'expired'), default='pending')
     order_type = Column(Enum('physical', 'digital'), default='physical')
     shipping_json = Column(JSON, nullable=True)
+    # Set when PAYMENT_PROVIDER=stripe creates a PaymentIntent for this
+    # (single-store) order; NULL for mock-mode orders and for marketplace
+    # sub-orders, which are paid via MasterOrder.payment_intent_id instead.
+    payment_intent_id = Column(String(255), nullable=True, unique=True)
     created_at = Column(DateTime, default=func.now())
 
     items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
