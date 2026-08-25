@@ -1,0 +1,66 @@
+israel-shipping-sdk — Third-Party Research Provenance Notice
+==============================================================
+
+This project is licensed under the MIT License (see LICENSE). This NOTICE
+documents where the HFD provider's wire protocol came from, since HFD
+publishes no public API documentation of its own.
+
+HFD provider (src/israel_shipping_sdk/providers/hfd.py)
+---------------------------------------------------------
+
+The endpoint URLs, HTTP methods, authentication scheme, JSON field names,
+and error-response shapes implemented in `providers/hfd.py` were determined
+by inspecting the source code of:
+
+    Plugin:   hfd-epost-integration
+    Version:  2.21
+    License:  GPLv2 or later
+    Author:   HFD (per the plugin's own Author URI, https://www.hfd.co.il)
+    Source:   https://downloads.wordpress.org/plugin/hfd-epost-integration.zip
+              (official WordPress.org plugin repository)
+
+Files consulted: class/Helper/Hfd/Api.php, class/Helper/Spot.php,
+class/Admin.php, class/Setting.php, class/App.php.
+
+What was extracted and what was not
+------------------------------------
+
+What was extracted is limited to interoperability facts: endpoint URLs,
+HTTP verbs, JSON field names, status/error response shapes, and the
+delivery-method-to-field-value mapping table HFD's own plugin uses. These
+are functional facts about how to speak to HFD's API, not creative
+expression.
+
+No PHP source code, algorithm structure, comments, or variable-naming
+choices from the plugin were copied, translated, or adapted into this
+project. `providers/hfd.py` is written from scratch in idiomatic async
+Python (pydantic models, httpx, a Strategy-pattern provider interface)
+against the documented wire shapes — a different language, a different
+architecture, and independent code, produced by reading the plugin only to
+learn *what HFD's server expects on the wire*, not *how the plugin's PHP is
+written*.
+
+On license compatibility
+--------------------------
+
+This project's position is that documenting and reimplementing a wire
+protocol for interoperability purposes — without copying source code — is
+the same category of activity third-party API clients across the industry
+are routinely built on, and does not carry the GPLv2 plugin's license
+obligations forward into this independently-written, MIT-licensed
+implementation. This is our stated rationale, not a legal opinion; a
+maintainer taking this project further (in particular, toward wider
+redistribution or commercial use) should have this reviewed by counsel
+before relying on it, since the authors of this NOTICE are not lawyers.
+
+Full spec, including exact endpoint tables and field mappings with their
+provenance, is documented in the project's technical specification
+(Section A.2).
+
+Gov.il address data (src/israel_shipping_sdk/data/cities.json)
+------------------------------------------------------------------
+
+The bundled settlements fallback list was fetched from data.gov.il's public
+CKAN API (dataset "citiesandsettelments", resource_id
+8f714b6f-c35c-4b40-a0e7-547b675eee0e), which is published as Israeli
+government open data. 1,310 records fetched and verified live.

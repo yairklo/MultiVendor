@@ -1,0 +1,35 @@
+[
+  {
+    "spotId": "8842",
+    "spotName": "כל בו שוסטר",
+    "spotType": "locker",
+    "city": "תל אביב יפו",
+    "street": "אבן גבירול",
+    "houseNo": "48",
+    "spotAddress": "אבן גבירול 48, תל אביב יפו",
+    "latitude": 32.0817,
+    "longitude": 34.7767,
+    "spotRemarks": "",
+    "spotDistanceText": "0.4 ק\"מ",
+    "sortingCode": "TLV-014",
+    "openingHours": [
+      { "day": "א", "trading": true, "open": "08:00", "close": "20:00" },
+      { "day": "ש", "trading": false }
+    ]
+  },
+  {
+    "spotId": "9910",
+    "spotName": "מינימרקט הכרמל",
+    "spotType": "store",
+    "city": "חיפה",
+    "street": "הרצל",
+    "houseNo": "12",
+    "spotAddress": "הרצל 12, חיפה",
+    "latitude": 32.794,
+    "longitude": 34.9896,
+    "spotRemarks": "כניסה מהחצר האחורית",
+    "spotDistanceText": "1.1 ק\"מ",
+    "sortingCode": "HFA-002",
+    "openingHours": []
+  }
+]

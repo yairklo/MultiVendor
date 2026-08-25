@@ -63,6 +63,33 @@ CREATE TABLE tenant_billing_logs (
     FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+-- One row per (tenant, courier) a vendor has connected -- see
+-- app/services/shipping_service.py and app/core/crypto.py. credentials_encrypted
+-- is a Fernet-encrypted JSON blob whose shape depends on `provider`, kept as one
+-- encrypted column rather than provider-specific plaintext columns so a third
+-- courier never needs a schema migration for its own credential shape.
+-- sender_* is the pickup address every courier shipment needs as its "from"
+-- -- there is nowhere else in this schema with a store phone/address at
+-- all, and a courier account is issued against one pickup location, so this
+-- is the correct scope for it rather than a new platform-wide concept.
+CREATE TABLE tenant_shipping_configs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    tenant_id INT NOT NULL,
+    provider ENUM('hfd', 'lionwheel') NOT NULL,
+    credentials_encrypted TEXT NOT NULL,
+    sender_name VARCHAR(255) NOT NULL,
+    sender_phone VARCHAR(20) NOT NULL,
+    sender_city VARCHAR(100) NOT NULL,
+    sender_street VARCHAR(255) NOT NULL,
+    sender_house_number VARCHAR(20) NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    is_default BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+    CONSTRAINT uq_tenant_shipping_provider UNIQUE (tenant_id, provider)
+) ENGINE=InnoDB;
+
 -- ================================================================================
 -- 2. USERS & SECURITY LAYER
 -- ================================================================================
@@ -295,13 +322,23 @@ CREATE TABLE orders (
     -- 0.00 for a normal single-store order).
     platform_commission DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
     vendor_net_payout DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
-    status ENUM('pending', 'pending_payment', 'processing', 'completed', 'cancelled', 'expired') DEFAULT 'pending',
+    -- 'shipped' sits between 'processing' and 'completed': set once a
+    -- courier has actually accepted the shipment (tracking_number
+    -- populated), not just when the vendor clicks "Fulfill" -- see
+    -- app/services/shipping_service.py.
+    status ENUM('pending', 'pending_payment', 'processing', 'shipped', 'completed', 'cancelled', 'expired') DEFAULT 'pending',
     order_type ENUM('physical', 'digital') DEFAULT 'physical',
     shipping_json JSON NULL,
     -- Set when PAYMENT_PROVIDER=stripe creates a PaymentIntent for this
     -- (single-store) order; NULL for mock-mode orders and for marketplace
     -- sub-orders, which use master_orders.payment_intent_id instead.
     payment_intent_id VARCHAR(255) NULL UNIQUE,
+    -- Populated by fulfill_order_service after a successful
+    -- israel_shipping_sdk create_shipment call; all NULL until fulfilled.
+    tracking_number VARCHAR(255) NULL,
+    shipping_label_url VARCHAR(512) NULL,
+    shipping_provider ENUM('hfd', 'lionwheel') NULL,
+    shipped_at TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,

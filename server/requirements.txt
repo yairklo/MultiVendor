@@ -22,3 +22,13 @@ pillow==11.3.0
 
 # Payments (real Stripe integration behind PAYMENT_PROVIDER=stripe; mock is the default)
 stripe==11.6.0
+
+# Shipping (Israeli courier integration; see app/services/shipping_service.py).
+# israel-shipping-sdk is vendored into this monorepo at packages/israel-shipping-sdk
+# (its own standalone project, with its own tests/CI) -- installed editable so
+# local development picks up changes without a rebuild. No package registry is
+# set up for it yet; if that changes, replace this line with a pinned version
+# from that registry instead of the local path.
+cryptography==46.0.0
+-e ../packages/israel-shipping-sdk
+respx==0.23.1  # test-only: mocks the courier HTTP calls in tests/test_shipping.py
