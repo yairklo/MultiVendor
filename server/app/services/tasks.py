@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy import select
 from app.models.order import Order, OrderItem, Cart, MasterOrder
-from app.models.catalog import ProductVariant
+from app.models.catalog import ProductVariant, tracks_inventory
 from app.db.session import redis_client
 from app.db.tenant_context import platform_plane
 from app.core.cart_token import GUEST_CART_TTL_SECONDS
@@ -95,9 +95,13 @@ async def _expire_orders(orders: list[Order], db: AsyncSession) -> None:
         items = items_res.scalars().all()
         for item in items:
             if item.variant_id:
-                variant_res = await db.execute(select(ProductVariant).where(ProductVariant.id == item.variant_id))
+                variant_res = await db.execute(
+                    select(ProductVariant)
+                    .options(selectinload(ProductVariant.product))
+                    .where(ProductVariant.id == item.variant_id)
+                )
                 variant = variant_res.scalar_one_or_none()
-                if variant:
+                if variant and tracks_inventory(variant.product):
                     variant.stock_quantity += item.quantity
 
     if orders:

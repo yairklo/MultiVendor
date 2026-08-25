@@ -2,6 +2,10 @@ export interface StockVariant {
   stock_quantity?: number
 }
 
+export function isDigitalProduct(product?: { product_type?: string } | null): boolean {
+  return product?.product_type === 'digital'
+}
+
 export const LOW_STOCK_THRESHOLD = 5
 
 // Products/variants predating stock tracking (or test fixtures) may omit

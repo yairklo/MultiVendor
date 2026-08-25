@@ -86,6 +86,7 @@ describe('CheckoutPage', () => {
     renderCheckout()
     expect(await screen.findByTestId('item-summary')).toBeInTheDocument()
     expect(screen.queryByTestId('shipping-address-fields')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('shipping-methods')).not.toBeInTheDocument()
   })
 
   it('submits checkout, then completes the mock payment step', async () => {
@@ -93,6 +94,10 @@ describe('CheckoutPage', () => {
     renderCheckout()
 
     await screen.findByTestId('item-summary')
+    await user.type(screen.getByLabelText(/full name/i), 'Ada Lovelace')
+    await user.type(screen.getByLabelText(/^phone$/i), '0500000000')
+    await user.type(screen.getByLabelText(/^city$/i), 'Tel Aviv')
+    await user.type(screen.getByLabelText(/street & house number/i), '1 Rothschild')
     const submitButton = screen.getByRole('button', { name: /place order/i })
     await user.click(submitButton)
 

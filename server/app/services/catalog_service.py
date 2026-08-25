@@ -75,7 +75,7 @@ def _build_product_response(p: "Product", review_stats: dict[int, tuple[float, i
         is_active=p.is_active,
         show_in_marketplace=p.show_in_marketplace,
         product_type=p.product_type,
-        digital_file_url=p.digital_file_url,
+        digital_file_url=None,
         download_limit=p.download_limit,
         is_bundle=p.is_bundle,
         variants=[ProductVariantSchema.model_validate(v) for v in p.variants],
@@ -223,7 +223,7 @@ async def create_product_service(tenant_slug: str, req: ProductCreateRequest, db
         is_active=req.is_active,
         show_in_marketplace=req.show_in_marketplace,
         product_type=req.product_type,
-        digital_file_url=req.digital_file_url,
+        digital_file_url=req.digital_file_url if req.product_type == 'digital' else None,
         download_limit=req.download_limit,
         is_bundle=req.is_bundle
     )
@@ -238,7 +238,7 @@ async def create_product_service(tenant_slug: str, req: ProductCreateRequest, db
             sku=v.sku,
             attributes_json=v.attributes_json,
             price_override=v.price_override,
-            stock_quantity=v.stock_quantity
+            stock_quantity=0 if req.product_type == 'digital' else v.stock_quantity
         )
         db.add(variant)
         variants.append(variant)
@@ -347,6 +347,13 @@ async def update_product_service(tenant_slug: str, product_id: int, req: Product
     for field, value in update_fields.items():
         setattr(product, field, value)
 
+    if product.product_type == 'digital':
+        for variant in product.variants:
+            variant.stock_quantity = 0
+    else:
+        product.digital_file_url = None
+        product.download_limit = None
+
     if req.images is not None:
         # Full replace, matching create_product_service's shape (first URL
         # is primary) -- the edit form only ever submits one image_url today,
@@ -449,7 +456,9 @@ async def update_product_variant_service(tenant_slug: str, variant_id: int, req:
         raise HTTPException(status_code=404, detail="Tenant not found")
 
     variant_result = await db.execute(
-        select(ProductVariant).where(ProductVariant.id == variant_id, ProductVariant.tenant_id == tenant_id)
+        select(ProductVariant)
+        .options(selectinload(ProductVariant.product))
+        .where(ProductVariant.id == variant_id, ProductVariant.tenant_id == tenant_id)
     )
     variant = variant_result.scalar_one_or_none()
     if not variant:
@@ -458,7 +467,7 @@ async def update_product_variant_service(tenant_slug: str, variant_id: int, req:
     variant.sku = req.sku
     variant.attributes_json = req.attributes_json
     variant.price_override = req.price_override
-    variant.stock_quantity = req.stock_quantity
+    variant.stock_quantity = 0 if variant.product.product_type == 'digital' else req.stock_quantity
 
     await db.commit()
     await db.refresh(variant)
@@ -671,7 +680,11 @@ async def get_inventory_health_service(tenant_slug: str, db: AsyncSession) -> In
     result = await db.execute(
         select(ProductVariant, Product)
         .join(Product, Product.id == ProductVariant.product_id)
-        .where(ProductVariant.tenant_id == tenant_id, Product.is_active == True)
+        .where(
+            ProductVariant.tenant_id == tenant_id,
+            Product.is_active == True,
+            Product.product_type != 'digital',
+        )
         .order_by(ProductVariant.stock_quantity.asc())
     )
 

@@ -1,4 +1,5 @@
 import pytest
+import uuid
 from httpx import AsyncClient
 from app.models.catalog import Product, ProductVariant, ProductBundleItem
 from app.models.tenant import Tenant
@@ -200,3 +201,171 @@ async def test_v2_bundle_checkout_deducts_components(async_client: AsyncClient, 
     cv = comp_var.scalar_one()
     # Started with 10, deducted 2 * 2 = 4. Remaining: 6.
     assert cv.stock_quantity == 6
+
+
+@pytest.mark.asyncio
+async def test_digital_product_with_zero_stock_can_be_purchased(async_client: AsyncClient, seed_tokens, db_session):
+    headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+    prod_resp = await async_client.post(
+        "/api/v1/admin/store/tenant-a/products",
+        headers=headers,
+        json={
+            "name": {"en": "Zero-stock ebook", "he": "ספר בלי מלאי"},
+            "slug": "zero-stock-ebook",
+            "base_price": 9.99,
+            "product_type": "digital",
+            "variants": [{"sku": "EBK-ZERO", "stock_quantity": 0}],
+            "images": [],
+        },
+    )
+    assert prod_resp.status_code == 201
+    var_id = prod_resp.json()["variants"][0]["id"]
+    assert prod_resp.json()["variants"][0]["stock_quantity"] == 0
+
+    cust_headers = {"Authorization": seed_tokens["customer_a"]}
+    cart_id = str(uuid.uuid4())
+    add_resp = await async_client.post(
+        f"/api/v1/store/tenant-a/cart/{cart_id}/items",
+        headers=cust_headers,
+        json={"variant_id": var_id, "quantity": 3},
+    )
+    assert add_resp.status_code == 201
+
+    checkout_resp = await async_client.post(
+        "/api/v1/store/tenant-a/cart/checkout",
+        headers=cust_headers,
+        json={"cart_id": cart_id, "payment_token": str(uuid.uuid4())},
+    )
+    assert checkout_resp.status_code == 201
+    assert checkout_resp.json()["order_type"] == "digital"
+    assert float(checkout_resp.json()["shipping_fee"]) == 0
+
+    stock_after = await db_session.execute(select(ProductVariant).where(ProductVariant.id == var_id))
+    assert stock_after.scalar_one().stock_quantity == 0
+
+
+@pytest.mark.asyncio
+async def test_digital_download_url_hidden_until_paid(async_client: AsyncClient, seed_tokens):
+    headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+    file_url = "https://files.example.com/ebook.pdf"
+    prod_resp = await async_client.post(
+        "/api/v1/admin/store/tenant-a/products",
+        headers=headers,
+        json={
+            "name": {"en": "Paid ebook", "he": "ספר בתשלום"},
+            "slug": "paid-ebook-file",
+            "base_price": 7.50,
+            "product_type": "digital",
+            "digital_file_url": file_url,
+            "variants": [{"sku": "EBK-FILE", "stock_quantity": 0}],
+            "images": [],
+        },
+    )
+    assert prod_resp.status_code == 201
+    data = prod_resp.json()
+    assert data["digital_file_url"] == file_url
+    var_id = data["variants"][0]["id"]
+
+    public = await async_client.get("/api/v1/store/tenant-a/products/paid-ebook-file")
+    assert public.status_code == 200
+    assert public.json().get("digital_file_url") in (None, "")
+
+    cust_headers = {"Authorization": seed_tokens["customer_a"]}
+    cart_id = str(uuid.uuid4())
+    add_resp = await async_client.post(
+        f"/api/v1/store/tenant-a/cart/{cart_id}/items",
+        headers=cust_headers,
+        json={"variant_id": var_id, "quantity": 1},
+    )
+    assert add_resp.status_code == 201
+
+    checkout_resp = await async_client.post(
+        "/api/v1/store/tenant-a/cart/checkout",
+        headers=cust_headers,
+        json={"cart_id": cart_id, "payment_token": str(uuid.uuid4())},
+    )
+    assert checkout_resp.status_code == 201
+    order = checkout_resp.json()
+    assert all(not item.get("download_url") for item in order["items"])
+
+    pay_resp = await async_client.post(
+        f"/api/v1/customer/orders/{order['id']}/pay",
+        headers=cust_headers,
+    )
+    assert pay_resp.status_code == 200
+    paid_items = pay_resp.json()["items"]
+    assert paid_items[0]["download_url"] == file_url
+
+    listed = await async_client.get("/api/v1/customer/orders", headers=cust_headers)
+    assert listed.status_code == 200
+    matching = next(o for o in listed.json()["data"] if o["id"] == order["id"])
+    assert matching["items"][0]["download_url"] == file_url
+
+
+@pytest.mark.asyncio
+async def test_digital_file_url_rejects_javascript_scheme(async_client: AsyncClient, seed_tokens):
+    headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+    resp = await async_client.post(
+        "/api/v1/admin/store/tenant-a/products",
+        headers=headers,
+        json={
+            "name": {"en": "Bad url ebook", "he": "ספר עם קישור רע"},
+            "slug": "bad-url-ebook",
+            "base_price": 5.00,
+            "product_type": "digital",
+            "digital_file_url": "javascript:alert(1)",
+            "variants": [{"sku": "EBK-BAD", "stock_quantity": 0}],
+            "images": [],
+        },
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_physical_product_with_zero_stock_cannot_be_added_to_cart(async_client: AsyncClient, seed_tokens):
+    headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+    prod_resp = await async_client.post(
+        "/api/v1/admin/store/tenant-a/products",
+        headers=headers,
+        json={
+            "name": {"en": "Sold out mug", "he": "ספל שאזל"},
+            "slug": "sold-out-mug",
+            "base_price": 12.0,
+            "product_type": "physical",
+            "variants": [{"sku": "MUG-OOS", "stock_quantity": 0}],
+            "images": [],
+        },
+    )
+    assert prod_resp.status_code == 201
+    var_id = prod_resp.json()["variants"][0]["id"]
+
+    add_resp = await async_client.post(
+        f"/api/v1/store/tenant-a/cart/{str(uuid.uuid4())}/items",
+        json={"variant_id": var_id, "quantity": 1},
+    )
+    assert add_resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_digital_product_is_excluded_from_inventory_health(async_client: AsyncClient, seed_tokens, db_session):
+    from app.services.catalog_service import get_inventory_health_service
+
+    headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+    prod_resp = await async_client.post(
+        "/api/v1/admin/store/tenant-a/products",
+        headers=headers,
+        json={
+            "name": {"en": "Digital zero stock", "he": "דיגיטלי בלי מלאי"},
+            "slug": "digital-zero-health",
+            "base_price": 8.00,
+            "product_type": "digital",
+            "variants": [{"sku": "EBK-HEALTH-0", "stock_quantity": 0}],
+            "images": [],
+        },
+    )
+    assert prod_resp.status_code == 201
+
+    health = await get_inventory_health_service("tenant-a", db_session)
+    skus = [item.sku for item in (*health.out_of_stock, *health.low_stock)]
+    assert "EBK-HEALTH-0" not in skus
+

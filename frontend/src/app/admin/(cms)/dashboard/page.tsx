@@ -1,5 +1,5 @@
 import { adminApiClient, getServerTenantSlug } from '@/lib/api/serverApiClient'
-import { totalStock } from '@/lib/stock'
+import { totalStock, isDigitalProduct } from '@/lib/stock'
 import { DashboardClient } from './DashboardClient'
 
 export default async function Dashboard() {
@@ -19,7 +19,7 @@ export default async function Dashboard() {
   const products = productsRes.data || []
   const lowStockProducts = products
     .map((p: any) => ({ ...p, _stock: totalStock(p.variants) }))
-    .filter((p: any) => Number.isFinite(p._stock) && p._stock <= 10)
+    .filter((p: any) => !isDigitalProduct(p) && Number.isFinite(p._stock) && p._stock <= 10)
     .sort((a: any, b: any) => a._stock - b._stock)
     .slice(0, 5)
 

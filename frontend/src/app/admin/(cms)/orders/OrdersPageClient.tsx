@@ -91,13 +91,13 @@ export function OrdersPageClient({ initialOrders }: { initialOrders: any[] }) {
         </Button>
       </div>
 
-      <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
+      <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>{t('orders.orderId')}</TableHead>
               <TableHead>{t('orders.customer')}</TableHead>
-              <TableHead>{t('orders.total')}</TableHead>
+              <TableHead className="text-end">{t('orders.total')}</TableHead>
               <TableHead>{t('common.status')}</TableHead>
             </TableRow>
           </TableHeader>
@@ -116,7 +116,7 @@ export function OrdersPageClient({ initialOrders }: { initialOrders: any[] }) {
                     <div className="text-sm text-muted-foreground">{order.customer_email}</div>
                   )}
                 </TableCell>
-                <TableCell>{formatCurrency(Number(order.total_amount))}</TableCell>
+                <TableCell className="text-end tabular-nums">{formatCurrency(Number(order.total_amount))}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <Badge variant="outline" className={orderStatusClass[order.status] || 'bg-muted text-muted-foreground'}>

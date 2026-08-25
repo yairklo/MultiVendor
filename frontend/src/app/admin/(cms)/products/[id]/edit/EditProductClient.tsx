@@ -19,10 +19,12 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { ImageUploadField } from '@/components/upload/ImageUploadField'
+import { FileUploadField } from '@/components/upload/FileUploadField'
 import { resolveImageUrl } from '@/lib/media'
 import { useUiLocale } from '@/context/UiLocaleContext'
 import { useStorefrontTheme } from '@/context/StorefrontThemeContext'
 import { extraLanguageCodes, languageDisplayName } from '@/lib/languages'
+import { isValidDigitalFileUrl } from '@/lib/digitalFileUrl'
 
 const formSchema = z.object({
   name_en: z.string().min(2, { message: 'English name must be at least 2 characters.' }),
@@ -33,7 +35,9 @@ const formSchema = z.object({
   base_price: z.coerce.number().gt(0, 'Price must be positive'),
   category_id: z.coerce.number().optional().nullable(),
   stock_quantity: z.coerce.number().min(0, 'Quantity cannot be negative'),
-  is_active: z.boolean()
+  is_active: z.boolean(),
+  is_digital: z.boolean(),
+  digital_file_url: z.string().max(512).refine(isValidDigitalFileUrl, { message: 'Enter an http(s) URL or a path starting with /' }),
 })
 
 export function EditProductClient({
@@ -85,6 +89,8 @@ export function EditProductClient({
         base_price: values.base_price,
         category_id: values.category_id || undefined,
         is_active: values.is_active,
+        product_type: values.is_digital ? 'digital' : 'physical',
+        digital_file_url: values.is_digital ? (values.digital_file_url?.trim() || null) : null,
       }
 
       if (descriptionEn || descriptionHe || extraLangs.some((l) => extraDescs[l]?.trim())) {
@@ -110,7 +116,7 @@ export function EditProductClient({
           sku: variant.sku,
           attributes_json: variant.attributes_json ?? {},
           price_override: variant.price_override ?? null,
-          stock_quantity: values.stock_quantity,
+          stock_quantity: values.is_digital ? 0 : values.stock_quantity,
         })
       }
 
@@ -299,6 +305,7 @@ export function EditProductClient({
               />
             </div>
 
+            {!form.watch('is_digital') && (
             <FormField
               control={form.control}
               name="stock_quantity"
@@ -317,6 +324,49 @@ export function EditProductClient({
                 </FormItem>
               )}
             />
+            )}
+
+            <FormField
+              control={form.control}
+              name="is_digital"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                  <FormControl>
+                    <input
+                      id="is_digital"
+                      type="checkbox"
+                      checked={field.value}
+                      onChange={field.onChange}
+                      className="w-4 h-4 text-blue-600 rounded"
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel htmlFor="is_digital">{t('products.digitalProduct')}</FormLabel>
+                    <p className="text-sm text-muted-foreground">
+                      {t('products.digitalHint')}
+                    </p>
+                  </div>
+                </FormItem>
+              )}
+            />
+
+            {form.watch('is_digital') && (
+              <FormField
+                control={form.control}
+                name="digital_file_url"
+                render={({ field }) => (
+                  <FormItem>
+                    <FileUploadField
+                      value={field.value || ''}
+                      onChange={field.onChange}
+                      label={t('products.uploadFile')}
+                      hint={t('products.uploadFileHint')}
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <FormField
               control={form.control}

@@ -6,10 +6,10 @@ export function Skeleton({ className }: { className?: string }) {
 
 export function TableRowSkeleton({ columns }: { columns: number }) {
   return (
-    <tr className="border-b border-gray-50">
+    <tr>
       {Array.from({ length: columns }, (_, i) => (
-        <td key={i} className="p-4">
-          <Skeleton className="h-4 w-full max-w-[160px]" />
+        <td key={i} className="border-b border-border/70 px-4 py-3.5 first:ps-5 last:pe-5">
+          <Skeleton className="h-4 w-full max-w-[160px] bg-muted" />
         </td>
       ))}
     </tr>

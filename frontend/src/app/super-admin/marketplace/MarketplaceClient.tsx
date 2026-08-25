@@ -55,7 +55,7 @@ export function MarketplaceClient({ initialTenants }: { initialTenants: TenantAd
               <TableHead>Store</TableHead>
               <TableHead>Products</TableHead>
               <TableHead>Listing</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead className="text-end">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -85,7 +85,7 @@ export function MarketplaceClient({ initialTenants }: { initialTenants: TenantAd
                     {tenant.show_all_products_in_marketplace ? 'On marketplace' : 'Store only'}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-end whitespace-nowrap">
                   <Button
                     variant={tenant.show_all_products_in_marketplace ? 'outline' : 'default'}
                     size="sm"

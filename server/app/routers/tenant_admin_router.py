@@ -6,7 +6,7 @@ from app.db.session import get_db
 from app.deps import get_tenant_admin, get_current_tenant
 from app.models.user import User
 from app.models.tenant import Tenant, SubscriptionPlan
-from app.services.storage_service import save_image
+from app.services.storage_service import save_image, save_digital_file
 from app.schemas.upload_schemas import ImageUploadResponse
 from app.services.import_service import build_import_template, parse_products_excel, commit_products_import
 from app.schemas.import_schemas import ImportPreviewResponse, ImportCommitRequest, ImportSummaryResponse
@@ -77,6 +77,25 @@ async def upload_product_image(
     admin: User = Depends(get_tenant_admin),
 ):
     url = await save_image(file, tenant.id)
+    return ImageUploadResponse(url=url)
+
+@tenant_admin_router.post(
+    "/uploads/file",
+    response_model=ImageUploadResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Upload a Digital Product File",
+    description="Uploads a PDF, ZIP, EPUB, or Word file for a digital product. Returns a URL to store on the product as digital_file_url. Customers receive that link only after payment.",
+    responses={
+        201: {"description": "File uploaded successfully."},
+        400: {"description": "Unsupported type, empty file, or exceeds the 25MB limit."}
+    }
+)
+async def upload_digital_product_file(
+    file: UploadFile = File(...),
+    tenant: Tenant = Depends(get_current_tenant),
+    admin: User = Depends(get_tenant_admin),
+):
+    url = await save_digital_file(file, tenant.id)
     return ImageUploadResponse(url=url)
 
 # CATEGORIES

@@ -84,4 +84,23 @@ describe('ProductsPageClient', () => {
 
     expect(screen.getByText(/no image/i)).toBeInTheDocument()
   })
+
+  it('shows a digital badge instead of out-of-stock for a digital product with zero stock', () => {
+    render(
+      <ProductsPageClient
+        initialProducts={[{
+          ...baseProducts[0],
+          id: 9,
+          name: { en: 'Ebook', he: 'ספר' },
+          product_type: 'digital',
+          variants: [{ id: 200, stock_quantity: 0 }],
+        }]}
+        initialMeta={{ page: 1, page_size: 20, total: 1, total_pages: 1 }}
+      />
+    )
+
+    expect(screen.getByText('Ebook')).toBeInTheDocument()
+    expect(screen.getByText(/digital product/i)).toBeInTheDocument()
+    expect(screen.queryByText(/out of stock/i)).not.toBeInTheDocument()
+  })
 })

@@ -9,6 +9,7 @@ import { useToast } from '@/context/ToastContext'
 import { useCurrency } from '@/hooks/useCurrency'
 import { useRouter } from 'next/navigation'
 import { StripeCardForm } from '@/components/checkout/StripeCardForm'
+import { DigitalDownloads } from '@/components/orders/DigitalDownloads'
 import { useUiLocale } from '@/context/UiLocaleContext'
 
 export default function CheckoutPage() {
@@ -47,7 +48,7 @@ export default function CheckoutPage() {
       : Math.min(Number(appliedCoupon.discount_val), subtotal)
     : 0
   
-  const isDigitalOnly = !!cart && cart.items.length > 0 && cart.items.every(item => item.product_type !== 'physical')
+  const isDigitalOnly = !!cart && cart.items.length > 0 && cart.items.every(item => item.product_type === 'digital')
   const requiresShippingAddress = !!cart && cart.items.length > 0 && !isDigitalOnly
 
   const selectedShipping = shippingOptions.find(o => o.id === shippingMethodId)
@@ -141,6 +142,7 @@ export default function CheckoutPage() {
         })
       } else {
         // Mock gateway: /pay already marked the order paid synchronously.
+        setPayingOrder(result)
         setPaymentDone(true)
       }
     } catch (e: any) {
@@ -175,6 +177,11 @@ export default function CheckoutPage() {
         <div className="p-4 bg-green-50 text-green-700 rounded-xl border border-green-100 animate-in fade-in-0 zoom-in-95 duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]">
           {t('checkout.paymentSuccess', { number: payingOrder.order_number })}
         </div>
+        <DigitalDownloads
+          items={payingOrder.items}
+          heading={t('checkout.downloadsHeading')}
+          label={t('checkout.downloadFile')}
+        />
         <div className="mt-6 flex gap-4">
           <button
             onClick={() => router.push('/account/orders')}
@@ -220,7 +227,11 @@ export default function CheckoutPage() {
                 const refreshed = await fetchOrder(payingOrder.id)
                 return refreshed.status === 'processing' || refreshed.status === 'completed'
               }}
-              onSuccess={() => setPaymentDone(true)}
+              onSuccess={async () => {
+                const refreshed = await fetchOrder(payingOrder.id)
+                setPayingOrder(refreshed)
+                setPaymentDone(true)
+              }}
               onError={(message) => setError(message)}
             />
           )}
@@ -336,6 +347,7 @@ export default function CheckoutPage() {
             </div>
           )}
 
+          {requiresShippingAddress ? (
           <div data-testid="shipping-methods" className="bg-card p-6 rounded-xl shadow-sm border border-border">
             <h2 className="text-xl font-semibold mb-4 text-foreground">{t('checkout.shippingMethods')}</h2>
             <div className="space-y-3 text-foreground">
@@ -355,6 +367,13 @@ export default function CheckoutPage() {
               ))}
             </div>
           </div>
+          ) : (
+            cart && cart.items.length > 0 && (
+              <p className="rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
+                {t('checkout.digitalNoShipping')}
+              </p>
+            )
+          )}
         </div>
 
         <div className="space-y-6">

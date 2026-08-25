@@ -56,6 +56,8 @@ export default async function EditProductPage({
         category_id: product.category_id ?? null,
         stock_quantity: firstVariant?.stock_quantity ?? 0,
         is_active: product.is_active,
+        is_digital: product.product_type === 'digital',
+        digital_file_url: product.digital_file_url || '',
       }}
       initialExtraNames={pickExtraLangValues(product.name)}
       initialExtraDescs={pickExtraLangValues(product.description)}

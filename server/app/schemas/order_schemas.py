@@ -79,6 +79,7 @@ class OrderItemResponse(BaseModel):
     sku: str
     unit_price: Decimal
     quantity: int
+    download_url: Optional[str] = None
 
 class OrderResponse(BaseModel):
     id: int

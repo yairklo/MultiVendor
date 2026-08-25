@@ -62,7 +62,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
         </div>
       </aside>
 
-      <main className="flex h-screen flex-1 flex-col overflow-hidden">
+      <main className="flex h-screen min-w-0 flex-1 flex-col overflow-hidden">
         <AdminMobileNav
           title="Platform"
           navContent={<NavLinks />}
@@ -76,7 +76,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
             </AdminLogoutButton>
           }
         />
-        <div className="flex min-h-0 flex-1 flex-col overflow-auto p-6 md:p-8">{children}</div>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto p-6 md:p-8">{children}</div>
       </main>
     </div>
   )

@@ -208,7 +208,7 @@ export function TemplatesClient({ initialTemplates }: { initialTemplates: Storef
                 <TableHead>Template</TableHead>
                 <TableHead>Order</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="text-end">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -246,7 +246,7 @@ export function TemplatesClient({ initialTemplates }: { initialTemplates: Storef
                       {template.is_active ? 'Active' : 'Inactive'}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-end">
                     <div className="flex justify-end gap-2">
                       <Button variant="secondary" size="sm" onClick={() => openEdit(template)}>
                         Edit

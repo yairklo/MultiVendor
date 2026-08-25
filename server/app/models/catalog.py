@@ -48,6 +48,11 @@ class ProductVariant(TenantScoped, Base):
 
     product = relationship("Product", back_populates="variants")
 
+
+def tracks_inventory(product) -> bool:
+    """Digital goods are not limited by variant.stock_quantity."""
+    return getattr(product, "product_type", "physical") != "digital"
+
 class ProductImage(TenantScoped, Base):
     __tablename__ = "product_images"
     id = Column(BigInteger, primary_key=True, autoincrement=True)

@@ -13,7 +13,7 @@ from app.db.session import redis_client
 from app.db.tenant_context import unscoped
 from app.core.cart_token import issue_guest_cart_token, verify_guest_cart_token
 from app.models.tenant import Tenant
-from app.models.catalog import ProductVariant, Product, ProductBundleItem
+from app.models.catalog import ProductVariant, Product, ProductBundleItem, tracks_inventory
 from app.models.order import Cart, CartItem, Order, OrderItem, ShippingMethod
 from app.models.coupon import Coupon
 from app.schemas.order_schemas import (
@@ -31,6 +31,13 @@ from datetime import datetime, timezone
 # rather than a per-tenant/per-plan rate table -- good enough for the MVP
 # split; making it configurable per tenant is a natural next step.
 PLATFORM_COMMISSION_RATE = Decimal("0.10")
+
+
+def ensure_stock(variant: ProductVariant, quantity: int) -> None:
+    if not tracks_inventory(variant.product):
+        return
+    if variant.stock_quantity < quantity:
+        raise HTTPException(status_code=400, detail="Not enough stock")
 
 
 def round2(value: Decimal) -> Decimal:
@@ -114,6 +121,7 @@ async def add_to_cart_service(
     variant_result = await db.execute(
         select(ProductVariant)
         .join(Product)
+        .options(selectinload(ProductVariant.product))
         .where(
             ProductVariant.id == req.variant_id, 
             ProductVariant.tenant_id == tenant_id,
@@ -124,8 +132,7 @@ async def add_to_cart_service(
     if not variant:
         raise HTTPException(status_code=404, detail="Variant not found or product inactive")
 
-    if variant.stock_quantity < req.quantity:
-        raise HTTPException(status_code=400, detail="Not enough stock")
+    ensure_stock(variant, req.quantity)
 
     item_result = await db.execute(select(CartItem).where(CartItem.cart_id == str(cart_id), CartItem.variant_id == req.variant_id))
     item = item_result.scalar_one_or_none()
@@ -249,10 +256,14 @@ async def update_cart_item_service(
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
 
-    variant_result = await db.execute(select(ProductVariant).where(ProductVariant.id == item.variant_id))
+    variant_result = await db.execute(
+        select(ProductVariant)
+        .options(selectinload(ProductVariant.product))
+        .where(ProductVariant.id == item.variant_id)
+    )
     variant = variant_result.scalar_one_or_none()
-    if variant and variant.stock_quantity < quantity:
-        raise HTTPException(status_code=400, detail="Not enough stock")
+    if variant:
+        ensure_stock(variant, quantity)
 
     item.quantity = quantity
     await db.commit()
@@ -316,7 +327,7 @@ async def checkout_service(
             components = bundle_res.scalars().all()
             for comp in components:
                 variants_to_lock.append((comp.component_variant_id, item.quantity * comp.quantity))
-        else:
+        elif tracks_inventory(product):
             variants_to_lock.append((item.variant.id, item.quantity))
             
     if not is_entirely_digital and not req.shipping_address:
@@ -362,10 +373,16 @@ async def checkout_service(
         subtotal = Decimal("0.00")
         order_items_data = []
         
-        # Deduct consolidated stocks
+        # Deduct consolidated stocks (digital variants are never locked)
         for vid, qty in consolidated_locks.items():
-            variant_result = await db.execute(select(ProductVariant).where(ProductVariant.id == vid))
+            variant_result = await db.execute(
+                select(ProductVariant)
+                .options(selectinload(ProductVariant.product))
+                .where(ProductVariant.id == vid)
+            )
             variant = variant_result.scalar_one()
+            if not tracks_inventory(variant.product):
+                continue
             if variant.stock_quantity < qty:
                 raise HTTPException(status_code=400, detail=f"Not enough stock for variant {vid}")
             variant.stock_quantity -= qty

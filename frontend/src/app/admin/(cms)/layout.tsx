@@ -47,10 +47,10 @@ function NavLinks() {
  * layout ever runs, so there's no need to re-check auth client-side here.
  */
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const { t } = useUiLocale()
+  const { t, dir } = useUiLocale()
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div dir={dir} className="flex min-h-screen bg-background">
       <aside className="hidden w-64 flex-col border-e border-sidebar-border bg-sidebar md:flex">
         <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-6">
           <h1 className="font-heading text-xl font-bold bg-gradient-to-r from-primary to-[oklch(0.62_0.19_300)] bg-clip-text text-transparent">
@@ -67,7 +67,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       </aside>
 
-      <main className="flex h-screen flex-1 flex-col overflow-hidden">
+      <main className="flex h-screen min-w-0 flex-1 flex-col overflow-hidden">
         <AdminMobileNav
           navContent={<NavLinks />}
           logoutButtonCompact={
@@ -84,7 +84,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           }
         />
 
-        <div className="flex min-h-0 flex-1 flex-col overflow-auto p-6 md:p-8">{children}</div>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto p-6 md:p-8">{children}</div>
       </main>
     </div>
   )

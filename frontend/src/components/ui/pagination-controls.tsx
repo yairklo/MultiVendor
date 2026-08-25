@@ -13,8 +13,8 @@ export function PaginationControls({ meta, onPageChange }: { meta: PaginationMet
   if (!meta || meta.total_pages <= 1) return null
 
   return (
-    <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-      <span className="text-sm text-gray-500">
+    <div className="flex items-center justify-between border-t border-border bg-muted/30 px-5 py-3">
+      <span className="text-sm text-muted-foreground">
         {t('common.pagination', { total: meta.total, page: meta.page, pages: meta.total_pages })}
       </span>
       <div className="flex items-center gap-2">
@@ -22,17 +22,17 @@ export function PaginationControls({ meta, onPageChange }: { meta: PaginationMet
           onClick={() => onPageChange(meta.page - 1)}
           disabled={meta.page <= 1}
           aria-label={t('common.previousPage')}
-          className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+          className="rounded-lg border border-border p-2 text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
         >
-          <ChevronLeft className="w-4 h-4" />
+          <ChevronLeft className="h-4 w-4 rtl:rotate-180" />
         </button>
         <button
           onClick={() => onPageChange(meta.page + 1)}
           disabled={meta.page >= meta.total_pages}
           aria-label={t('common.nextPage')}
-          className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+          className="rounded-lg border border-border p-2 text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
         >
-          <ChevronRight className="w-4 h-4" />
+          <ChevronRight className="h-4 w-4 rtl:rotate-180" />
         </button>
       </div>
     </div>

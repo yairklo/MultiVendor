@@ -262,7 +262,7 @@ export function TenantsClient({
               <TableHead>Marketplace</TableHead>
               <TableHead>Payouts</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead className="text-end">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -318,7 +318,7 @@ export function TenantsClient({
                 <TableCell>
                   <Badge variant={statusVariant(tenant.status)}>{tenant.status}</Badge>
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-end">
                   <div className="flex justify-end gap-2">
                     {isUsableTenantSlug(tenant.slug) && (
                     <Link

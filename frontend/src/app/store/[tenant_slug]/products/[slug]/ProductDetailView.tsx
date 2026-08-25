@@ -6,13 +6,14 @@ import { getCookie } from 'cookies-next'
 import { apiClient, ApiError } from '@/lib/api/apiClient'
 import { useCart } from '@/context/CartContext'
 import { useToast } from '@/context/ToastContext'
-import { totalStock } from '@/lib/stock'
+import { totalStock, isDigitalProduct } from '@/lib/stock'
 import { StarRating } from '@/components/ui/star-rating'
 import { Star } from 'lucide-react'
 import { useStorefrontTheme } from '@/context/StorefrontThemeContext'
 import { useCurrency } from '@/hooks/useCurrency'
 import { resolveImageUrl } from '@/lib/media'
 import { resolveI18nText } from '@/lib/i18n-text'
+import { formatUiDate } from '@/lib/utils'
 
 const STRINGS = {
   en: {
@@ -20,6 +21,7 @@ const STRINGS = {
     noImage: 'No image',
     outOfStock: 'Out of stock',
     inStock: (n: number) => `${n} in stock`,
+    digitalDelivery: 'Digital product — delivered instantly, no shipping.',
     decreaseQuantity: 'Decrease quantity',
     increaseQuantity: 'Increase quantity',
     quantity: 'Quantity',
@@ -44,6 +46,7 @@ const STRINGS = {
     noImage: 'אין תמונה',
     outOfStock: 'אזל מהמלאי',
     inStock: (n: number) => `${n} במלאי`,
+    digitalDelivery: 'מוצר דיגיטלי — מסופק מיד, בלי משלוח.',
     decreaseQuantity: 'הקטנת כמות',
     increaseQuantity: 'הגדלת כמות',
     quantity: 'כמות',
@@ -118,7 +121,8 @@ export function ProductDetailView({
   }
 
   const stock = totalStock(product.variants)
-  const stockKnown = Number.isFinite(stock)
+  const digital = isDigitalProduct(product)
+  const stockKnown = !digital && Number.isFinite(stock)
   const outOfStock = stockKnown && stock <= 0
   const name = resolveI18nText(product.name, lang)
   const description = resolveI18nText(product.description, lang)
@@ -171,7 +175,9 @@ export function ProductDetailView({
             <p className="text-xl text-gray-700 mb-4">{formatCurrency(product.base_price)}</p>
             {description && <p className="text-gray-600 mb-4 leading-relaxed">{description}</p>}
 
-            {stockKnown && (
+            {digital ? (
+              <p className="text-sm mb-4 text-muted-foreground">{t.digitalDelivery}</p>
+            ) : stockKnown && (
               <p className={`text-sm mb-4 ${outOfStock ? 'text-red-600 font-medium' : 'text-gray-400'}`}>
                 {outOfStock ? t.outOfStock : t.inStock(stock)}
               </p>
@@ -274,7 +280,7 @@ export function ProductDetailView({
                     )}
                   </div>
                   {r.comment && <p className="text-gray-600 text-sm">{r.comment}</p>}
-                  <p className="text-xs text-gray-400 mt-1">{new Date(r.created_at).toLocaleDateString()}</p>
+                  <p className="text-xs text-gray-400 mt-1">{formatUiDate(r.created_at, lang === 'en' ? 'en' : 'he')}</p>
                 </div>
               ))}
             </div>

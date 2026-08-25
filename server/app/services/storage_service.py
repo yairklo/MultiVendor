@@ -1,4 +1,5 @@
 import io
+import re
 import uuid
 from pathlib import Path
 
@@ -10,6 +11,9 @@ from app.core.config import settings
 MAX_IMAGE_BYTES = 5 * 1024 * 1024
 ALLOWED_IMAGE_FORMATS = {"JPEG", "PNG", "WEBP", "GIF"}
 FORMAT_TO_EXT = {"JPEG": "jpg", "PNG": "png", "WEBP": "webp", "GIF": "gif"}
+
+MAX_DIGITAL_FILE_BYTES = 25 * 1024 * 1024
+ZIP_EXTS = {"zip", "epub", "docx"}
 
 
 async def save_image(file: UploadFile, tenant_id: int, subdir: str = "products") -> str:
@@ -43,6 +47,51 @@ async def save_image(file: UploadFile, tenant_id: int, subdir: str = "products")
     tenant_dir.mkdir(parents=True, exist_ok=True)
 
     filename = f"{uuid.uuid4().hex}.{ext}"
+    (tenant_dir / filename).write_bytes(raw)
+
+    return f"/uploads/{tenant_id}/{subdir}/{filename}"
+
+
+def _digital_file_ext(raw: bytes, original_name: str) -> str:
+    if raw.startswith(b"%PDF"):
+        return "pdf"
+    if raw.startswith((b"PK\x03\x04", b"PK\x05\x06", b"PK\x07\x08")):
+        given = Path(original_name or "").suffix.lower().lstrip(".")
+        if given in ZIP_EXTS:
+            return given
+        return "zip"
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="Unsupported file type. Upload a PDF, ZIP, EPUB, or Word document.",
+    )
+
+
+def _safe_stem(original_name: str) -> str:
+    stem = Path(original_name or "file").stem
+    cleaned = re.sub(r"[^a-zA-Z0-9._-]+", "-", stem).strip(".-")[:40]
+    return cleaned or "file"
+
+
+async def save_digital_file(file: UploadFile, tenant_id: int, subdir: str = "files") -> str:
+    """Persists a seller-uploaded digital good (PDF/ZIP/EPUB/DOCX) and returns
+    the public /uploads/... path. Magic-bytes, not the client filename, decide
+    the type — HTML/JS/executables are rejected.
+    """
+    raw = await file.read()
+    if not raw:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File is empty")
+    if len(raw) > MAX_DIGITAL_FILE_BYTES:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File exceeds 25MB limit")
+
+    head = raw[:64].lstrip().lower()
+    if head.startswith(b"<") or head.startswith(b"<!doctype") or raw.startswith(b"MZ"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unsupported file type")
+
+    ext = _digital_file_ext(raw, file.filename or "")
+    tenant_dir = Path(settings.UPLOAD_DIR) / str(tenant_id) / subdir
+    tenant_dir.mkdir(parents=True, exist_ok=True)
+
+    filename = f"{uuid.uuid4().hex}_{_safe_stem(file.filename or 'file')}.{ext}"
     (tenant_dir / filename).write_bytes(raw)
 
     return f"/uploads/{tenant_id}/{subdir}/{filename}"
