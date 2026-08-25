@@ -52,7 +52,7 @@ describe('TemplatesClient', () => {
     expect(screen.getByText('Lumen')).toBeInTheDocument()
     expect(screen.getByText('Built-in')).toBeInTheDocument()
     expect(screen.getByText('Inactive')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /tenants/i })).toHaveAttribute('href', '/super-admin')
+    expect(screen.getByRole('button', { name: 'New template' })).toBeInTheDocument()
   })
 
   it('deactivates a built-in template instead of deleting it', async () => {

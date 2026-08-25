@@ -16,6 +16,7 @@ import { useStorefrontTheme } from '@/context/StorefrontThemeContext'
 import { StorefrontLanguageSwitcher } from './StorefrontLanguageSwitcher'
 import { isRtlLang } from '@/lib/languages'
 import { resolveImageUrl } from '@/lib/media'
+import { isUsableTenantSlug } from '@/lib/tenantSlug'
 
 const PAGE_SIZE = 12
 
@@ -116,6 +117,7 @@ export function CatalogListing({
       skipInitialCategoriesFetch.current = false
       return
     }
+    if (!isUsableTenantSlug(tenantSlug)) return
     apiClient(`/api/v1/store/${tenantSlug}/categories`)
       .then(setCategories)
       .catch((e) => console.error('Failed to load categories:', e))
@@ -132,6 +134,10 @@ export function CatalogListing({
       return
     }
     if (showAiPage) return
+    if (!isUsableTenantSlug(tenantSlug)) {
+      setProductsLoading(false)
+      return
+    }
     setProductsLoading(true)
     const params = new URLSearchParams({ page: String(page), page_size: String(PAGE_SIZE) })
     if (debouncedSearch) params.set('q', debouncedSearch)

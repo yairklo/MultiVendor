@@ -4,9 +4,17 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import React from 'react'
 
-export function AdminNavLink({ href, children }: { href: string; children: React.ReactNode }) {
+export function AdminNavLink({
+  href,
+  children,
+  exact = false,
+}: {
+  href: string
+  children: React.ReactNode
+  exact?: boolean
+}) {
   const pathname = usePathname()
-  const isActive = pathname.startsWith(href)
+  const isActive = exact ? pathname === href : pathname === href || pathname.startsWith(`${href}/`)
 
   return (
     <Link

@@ -1,4 +1,5 @@
 import { apiClient } from '@/lib/api/apiClient'
+import { isUsableTenantSlug } from '@/lib/tenantSlug'
 
 const CART_STORAGE_KEY = 'mv_cart'
 
@@ -54,7 +55,13 @@ export function getOrCreateCart(tenantSlug: string): StoredCart {
 }
 
 export function getActiveCart(): StoredCart | null {
-  return readStoredCart()
+  const cart = readStoredCart()
+  if (!cart) return null
+  if (!isUsableTenantSlug(cart.tenantSlug) || !cart.cartId) {
+    clearCart()
+    return null
+  }
+  return cart
 }
 
 export function clearCart() {

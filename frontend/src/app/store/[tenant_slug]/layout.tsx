@@ -1,9 +1,11 @@
 import React from 'react'
 import { cookies } from 'next/headers'
+import { notFound } from 'next/navigation'
 import { StorefrontThemeProvider } from '@/context/StorefrontThemeContext'
 import { StorefrontHeader } from '@/components/storefront/StorefrontHeader'
 import { StorefrontFooter } from '@/components/storefront/StorefrontFooter'
 import { StorefrontBrandBackdrop } from '@/components/storefront/StorefrontBrandBackdrop'
+import { isUsableTenantSlug } from '@/lib/tenantSlug'
 
 function displayName(slug: string): string {
   return slug
@@ -27,6 +29,7 @@ export default async function StorefrontLayout({
   params: Promise<{ tenant_slug: string }>
 }) {
   const { tenant_slug: tenantSlug } = await params
+  if (!isUsableTenantSlug(tenantSlug)) notFound()
   const storeName = displayName(tenantSlug)
   const cookieStore = await cookies()
   const isLoggedIn = !!cookieStore.get('token')?.value

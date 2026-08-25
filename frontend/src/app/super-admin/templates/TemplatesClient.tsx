@@ -1,8 +1,7 @@
 'use client'
 
 import React, { useMemo, useState } from 'react'
-import Link from 'next/link'
-import { LayoutTemplate, Plus, ArrowLeft } from 'lucide-react'
+import { LayoutTemplate, Plus } from 'lucide-react'
 import { apiClient } from '@/lib/api/apiClient'
 import { useToast } from '@/context/ToastContext'
 import { Badge } from '@/components/ui/badge'
@@ -187,16 +186,9 @@ export function TemplatesClient({ initialTemplates }: { initialTemplates: Storef
   }
 
   return (
-    <div className="min-h-screen bg-muted/30 p-8 text-foreground">
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <Link
-            href="/super-admin"
-            className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-all duration-150 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Tenants
-          </Link>
           <h1 className="font-heading text-3xl font-bold tracking-tight">Storefront templates</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Catalog shown to sellers. Built-in Aurora, Atelier, and Nova can be turned off, not deleted.
