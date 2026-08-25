@@ -43,6 +43,14 @@ class Settings(BaseSettings):
     STRIPE_WEBHOOK_SECRET: str | None = None
     STRIPE_CURRENCY: str = "ils"
 
+    # Symmetric key (Fernet, url-safe base64, 32 bytes) encrypting per-tenant
+    # courier credentials (TenantShippingConfig.credentials_encrypted) at
+    # rest -- see app/core/crypto.py. Left unset by default: any attempt to
+    # actually encrypt/decrypt without it raises rather than silently storing
+    # plaintext. Generate one with:
+    #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    SHIPPING_CREDENTIALS_ENCRYPTION_KEY: str | None = None
+
     model_config = SettingsConfigDict(env_file=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), ".env"), env_file_encoding="utf-8", extra="ignore")
 
 settings = Settings()
