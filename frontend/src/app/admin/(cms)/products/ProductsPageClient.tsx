@@ -268,7 +268,7 @@ export function ProductsPageClient({
                     <div className="flex items-center gap-2 tabular-nums">
                       <span className="font-medium">{stock}</span>
                       <Badge variant="outline" className={stockLevelClass[level]}>
-                        <div className={`h-1.5 w-1.5 rounded-full mr-1.5 ${level === 'in_stock' ? 'bg-green-500' : level === 'low_stock' ? 'bg-yellow-500' : 'bg-red-500'}`} />
+                        <div className={`h-1.5 w-1.5 rounded-full mr-1.5 ${level === 'in' ? 'bg-green-500' : level === 'low' ? 'bg-yellow-500' : 'bg-red-500'}`} />
                         {t(`stock.${level}`)}
                       </Badge>
                     </div>
