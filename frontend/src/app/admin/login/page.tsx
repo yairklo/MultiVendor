@@ -147,6 +147,13 @@ export default function AdminLoginPage() {
                 {loading ? 'Authenticating...' : 'Sign In'}
               </button>
             </form>
+
+            <p className="mt-6 text-center text-sm text-muted-foreground">
+              Don&apos;t have a store yet?{' '}
+              <a href="/signup?as=seller" className="font-medium text-primary hover:underline">
+                Sign up
+              </a>
+            </p>
           </div>
         </div>
       </div>

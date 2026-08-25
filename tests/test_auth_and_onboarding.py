@@ -157,6 +157,64 @@ async def test_customer_email_uniqueness_is_global(async_client: AsyncClient, db
     assert response.status_code == 409
 
 @pytest.mark.asyncio
+async def test_register_customer_global_success(async_client: AsyncClient, db_session):
+    payload = {
+        "email": "marketplace-shopper@example.com",
+        "password": "securepassword",
+        "full_name": "Marketplace Shopper"
+    }
+    response = await async_client.post("/api/v1/auth/register", json=payload)
+    assert response.status_code == 201
+    data = response.json()
+    assert "access_token" in data
+    assert data["role"] == "user"
+    # Global signup has no store scope yet -- no membership was created.
+    assert data["store_role"] is None
+
+    # The account is immediately usable for a normal login, tenant_slug-free.
+    login = await async_client.post("/api/v1/auth/login", json={
+        "email": "marketplace-shopper@example.com",
+        "password": "securepassword",
+    })
+    assert login.status_code == 200
+
+@pytest.mark.asyncio
+async def test_register_customer_global_duplicate_email_conflict(async_client: AsyncClient, db_session):
+    # customer@gmail.com already exists globally in the seed data.
+    payload = {
+        "email": "customer@gmail.com",
+        "password": "securepassword",
+        "full_name": "Duplicate Shopper"
+    }
+    response = await async_client.post("/api/v1/auth/register", json=payload)
+    assert response.status_code == 409
+
+@pytest.mark.asyncio
+async def test_register_tenant_creates_default_settings(async_client: AsyncClient, db_session):
+    from sqlalchemy import select
+    from app.models.tenant import Tenant, TenantSettings
+
+    payload = {
+        "store_name": "Settings Check Store",
+        "store_slug": "settings-check-store",
+        "admin_email": "admin@settingscheck.com",
+        "admin_password": "securepassword123",
+        "admin_full_name": "Settings Checker",
+        "plan_code": "free"
+    }
+    response = await async_client.post("/api/v1/auth/register-tenant", json=payload)
+    assert response.status_code == 201
+
+    tenant = (await db_session.execute(
+        select(Tenant).where(Tenant.slug == "settings-check-store")
+    )).scalar_one()
+    settings = (await db_session.execute(
+        select(TenantSettings).where(TenantSettings.tenant_id == tenant.id)
+    )).scalar_one_or_none()
+    assert settings is not None
+    assert settings.currency == "ILS"
+
+@pytest.mark.asyncio
 async def test_get_me_profile_authenticated_vs_unauthenticated(async_client: AsyncClient, seed_tokens):
     response = await async_client.get("/api/v1/customer/me")
     assert response.status_code == 401

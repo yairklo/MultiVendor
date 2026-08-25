@@ -1,0 +1,6556 @@
+{
+  "source": "data.gov.il dataset citiesandsettelments, resource_id=8f714b6f-c35c-4b40-a0e7-547b675eee0e",
+  "fetched_record_count": 1310,
+  "cities": [
+    {
+      "city_code": 7,
+      "city_name_he": "שחר",
+      "city_name_en": "SHAHAR"
+    },
+    {
+      "city_code": 10,
+      "city_name_he": "תירוש",
+      "city_name_en": "TIROSH"
+    },
+    {
+      "city_code": 11,
+      "city_name_he": "ניר חן",
+      "city_name_en": "NIR HEN"
+    },
+    {
+      "city_code": 13,
+      "city_name_he": "חצבה",
+      "city_name_en": "HAZEVA"
+    },
+    {
+      "city_code": 15,
+      "city_name_he": "נועם",
+      "city_name_en": "NO'AM"
+    },
+    {
+      "city_code": 16,
+      "city_name_he": "בית ניר",
+      "city_name_en": "BET NIR"
+    },
+    {
+      "city_code": 18,
+      "city_name_he": "שדה משה",
+      "city_name_en": "SEDE MOSHE"
+    },
+    {
+      "city_code": 21,
+      "city_name_he": "באר אורה",
+      "city_name_en": "BE'ER ORA"
+    },
+    {
+      "city_code": 22,
+      "city_name_he": "מקווה ישראל",
+      "city_name_en": "MIQWE YISRA'EL"
+    },
+    {
+      "city_code": 23,
+      "city_name_he": "אמציה",
+      "city_name_en": "AMAZYA"
+    },
+    {
+      "city_code": 24,
+      "city_name_he": "לכיש",
+      "city_name_en": "LAKHISH"
+    },
+    {
+      "city_code": 26,
+      "city_name_he": "ראש פינה",
+      "city_name_en": "ROSH PINNA"
+    },
+    {
+      "city_code": 27,
+      "city_name_he": "שדות מיכה",
+      "city_name_en": "SEDOT MIKHA"
+    },
+    {
+      "city_code": 28,
+      "city_name_he": "מזכרת בתיה",
+      "city_name_en": "MAZKERET BATYA"
+    },
+    {
+      "city_code": 29,
+      "city_name_he": "יסוד המעלה",
+      "city_name_en": "YESUD HAMA'ALA"
+    },
+    {
+      "city_code": 31,
+      "city_name_he": "אופקים",
+      "city_name_en": "OFAQIM"
+    },
+    {
+      "city_code": 32,
+      "city_name_he": "עוצם",
+      "city_name_en": "OZEM"
+    },
+    {
+      "city_code": 33,
+      "city_name_he": "בת שלמה",
+      "city_name_en": "BAT SHELOMO"
+    },
+    {
+      "city_code": 35,
+      "city_name_he": "גדות",
+      "city_name_en": "GADOT"
+    },
+    {
+      "city_code": 36,
+      "city_name_he": "שדה דוד",
+      "city_name_en": "SEDE DAWID"
+    },
+    {
+      "city_code": 37,
+      "city_name_he": "איתן",
+      "city_name_en": "ETAN"
+    },
+    {
+      "city_code": 39,
+      "city_name_he": "גפן",
+      "city_name_en": "GEFEN"
+    },
+    {
+      "city_code": 41,
+      "city_name_he": "אליכין",
+      "city_name_en": "ELYAKHIN"
+    },
+    {
+      "city_code": 43,
+      "city_name_he": "מטולה",
+      "city_name_en": "METULA"
+    },
+    {
+      "city_code": 44,
+      "city_name_he": "זוהר",
+      "city_name_en": "ZOHAR"
+    },
+    {
+      "city_code": 46,
+      "city_name_he": "יבנאל",
+      "city_name_en": "YAVNE'EL"
+    },
+    {
+      "city_code": 47,
+      "city_name_he": "כפר תבור",
+      "city_name_en": "KEFAR TAVOR"
+    },
+    {
+      "city_code": 48,
+      "city_name_he": "מנחמיה",
+      "city_name_en": "MENAHEMYA"
+    },
+    {
+      "city_code": 49,
+      "city_name_he": "אילניה",
+      "city_name_en": "ILANIYYA"
+    },
+    {
+      "city_code": 52,
+      "city_name_he": "לוזית",
+      "city_name_en": "LUZIT"
+    },
+    {
+      "city_code": 53,
+      "city_name_he": "עתלית",
+      "city_name_en": "ATLIT"
+    },
+    {
+      "city_code": 55,
+      "city_name_he": "נוגה",
+      "city_name_en": "NOGAH"
+    },
+    {
+      "city_code": 57,
+      "city_name_he": "כנרת (קבוצה)",
+      "city_name_en": "KINNERET(QEVUZA)"
+    },
+    {
+      "city_code": 58,
+      "city_name_he": "מצפה",
+      "city_name_en": "MIZPA"
+    },
+    {
+      "city_code": 59,
+      "city_name_he": "נחושה",
+      "city_name_en": "NEHUSHA"
+    },
+    {
+      "city_code": 62,
+      "city_name_he": "דגניה א'",
+      "city_name_en": "DEGANYA ALEF"
+    },
+    {
+      "city_code": 63,
+      "city_name_he": "כנרת (מושבה)",
+      "city_name_en": "KINNERET(MOSHAVA)"
+    },
+    {
+      "city_code": 64,
+      "city_name_he": "יד רמבם",
+      "city_name_en": "YAD RAMBAM"
+    },
+    {
+      "city_code": 65,
+      "city_name_he": "מגדל",
+      "city_name_en": "MIGDAL"
+    },
+    {
+      "city_code": 66,
+      "city_name_he": "מרחביה (קיבוץ)",
+      "city_name_en": "MERHAVYA(QIBBUZ)"
+    },
+    {
+      "city_code": 67,
+      "city_name_he": "אור הנר",
+      "city_name_en": "OR HANER"
+    },
+    {
+      "city_code": 69,
+      "city_name_he": "ניר עוז",
+      "city_name_en": "NIR OZ"
+    },
+    {
+      "city_code": 70,
+      "city_name_he": "אשדוד",
+      "city_name_en": "ASHDOD"
+    },
+    {
+      "city_code": 71,
+      "city_name_he": "אשבול",
+      "city_name_en": "ESHBOL"
+    },
+    {
+      "city_code": 72,
+      "city_name_he": "גן שמואל",
+      "city_name_en": "GAN SHEMU'EL"
+    },
+    {
+      "city_code": 74,
+      "city_name_he": "עין הוד",
+      "city_name_en": "EN HOD"
+    },
+    {
+      "city_code": 76,
+      "city_name_he": "כפר גלעדי",
+      "city_name_en": "KEFAR GIL'ADI"
+    },
+    {
+      "city_code": 77,
+      "city_name_he": "איילת השחר",
+      "city_name_en": "AYYELET HASHAHAR"
+    },
+    {
+      "city_code": 78,
+      "city_name_he": "קרית ענבים",
+      "city_name_en": "QIRYAT ANAVIM"
+    },
+    {
+      "city_code": 79,
+      "city_name_he": "דגניה ב'",
+      "city_name_en": "DEGANYA BET"
+    },
+    {
+      "city_code": 80,
+      "city_name_he": "נהלל",
+      "city_name_en": "NAHALAL"
+    },
+    {
+      "city_code": 82,
+      "city_name_he": "עין חרוד (מאוחד)",
+      "city_name_en": "EN HAROD(ME'UHAD)"
+    },
+    {
+      "city_code": 84,
+      "city_name_he": "תל יוסף",
+      "city_name_en": "TEL YOSEF"
+    },
+    {
+      "city_code": 85,
+      "city_name_he": "כפר יחזקאל",
+      "city_name_en": "KEFAR YEHEZQEL"
+    },
+    {
+      "city_code": 86,
+      "city_name_he": "גבע",
+      "city_name_en": "GEVA"
+    },
+    {
+      "city_code": 88,
+      "city_name_he": "כרם בן שמן",
+      "city_name_en": "KEREM BEN SHEMEN"
+    },
+    {
+      "city_code": 89,
+      "city_name_he": "עין חרוד (איחוד)",
+      "city_name_en": "EN HAROD (IHUD)"
+    },
+    {
+      "city_code": 90,
+      "city_name_he": "חפצי-בה",
+      "city_name_en": "HEFZI-BAH"
+    },
+    {
+      "city_code": 92,
+      "city_name_he": "גיניגר",
+      "city_name_en": "GINNEGAR"
+    },
+    {
+      "city_code": 94,
+      "city_name_he": "בלפוריה",
+      "city_name_en": "BALFURIYYA"
+    },
+    {
+      "city_code": 95,
+      "city_name_he": "בית אלפא",
+      "city_name_en": "BET ALFA"
+    },
+    {
+      "city_code": 96,
+      "city_name_he": "יגור",
+      "city_name_en": "YAGUR"
+    },
+    {
+      "city_code": 97,
+      "city_name_he": "מרחביה (מושב)",
+      "city_name_en": "MERHAVYA(MOSHAV)"
+    },
+    {
+      "city_code": 98,
+      "city_name_he": "כפר מלל",
+      "city_name_en": "KEFAR MALAL"
+    },
+    {
+      "city_code": 99,
+      "city_name_he": "מצפה רמון",
+      "city_name_en": "MIZPE RAMON"
+    },
+    {
+      "city_code": 102,
+      "city_name_he": "מאיר שפיה",
+      "city_name_en": "ME'IR SHEFEYA"
+    },
+    {
+      "city_code": 103,
+      "city_name_he": "תל עדשים",
+      "city_name_en": "TEL ADASHIM"
+    },
+    {
+      "city_code": 104,
+      "city_name_he": "מזרע",
+      "city_name_en": "MIZRA"
+    },
+    {
+      "city_code": 106,
+      "city_name_he": "כפר גדעון",
+      "city_name_en": "KEFAR GID'ON"
+    },
+    {
+      "city_code": 107,
+      "city_name_he": "כפר סילבר",
+      "city_name_en": "KEFAR SILVER"
+    },
+    {
+      "city_code": 112,
+      "city_name_he": "כפר חסידים א'",
+      "city_name_en": "KEFAR HASIDIM ALEF"
+    },
+    {
+      "city_code": 113,
+      "city_name_he": "אדירים",
+      "city_name_en": "ADDIRIM"
+    },
+    {
+      "city_code": 115,
+      "city_name_he": "חופית",
+      "city_name_en": "HOFIT"
+    },
+    {
+      "city_code": 122,
+      "city_name_he": "רמת ישי",
+      "city_name_en": "RAMAT YISHAY"
+    },
+    {
+      "city_code": 126,
+      "city_name_he": "שריד",
+      "city_name_en": "SARID"
+    },
+    {
+      "city_code": 127,
+      "city_name_he": "רמת רחל",
+      "city_name_en": "RAMAT RAHEL"
+    },
+    {
+      "city_code": 128,
+      "city_name_he": "גת רימון",
+      "city_name_en": "GAT RIMMON"
+    },
+    {
+      "city_code": 130,
+      "city_name_he": "משמר העמק",
+      "city_name_en": "MISHMAR HAEMEQ"
+    },
+    {
+      "city_code": 132,
+      "city_name_he": "כפר ברוך",
+      "city_name_en": "KEFAR BARUKH"
+    },
+    {
+      "city_code": 133,
+      "city_name_he": "גבת",
+      "city_name_en": "GEVAT"
+    },
+    {
+      "city_code": 134,
+      "city_name_he": "יפעת",
+      "city_name_en": "YIF'AT"
+    },
+    {
+      "city_code": 135,
+      "city_name_he": "רמת דוד",
+      "city_name_en": "RAMAT DAWID"
+    },
+    {
+      "city_code": 139,
+      "city_name_he": "עין שמר",
+      "city_name_en": "EN SHEMER"
+    },
+    {
+      "city_code": 140,
+      "city_name_he": "כפר יהושע",
+      "city_name_en": "KEFAR YEHOSHUA"
+    },
+    {
+      "city_code": 141,
+      "city_name_he": "ברק",
+      "city_name_en": "BARAQ"
+    },
+    {
+      "city_code": 142,
+      "city_name_he": "שדה יעקב",
+      "city_name_en": "SEDE YA'AQOV"
+    },
+    {
+      "city_code": 143,
+      "city_name_he": "בית זרע",
+      "city_name_en": "BET ZERA"
+    },
+    {
+      "city_code": 144,
+      "city_name_he": "גן שלמה",
+      "city_name_en": "GAN SHELOMO"
+    },
+    {
+      "city_code": 145,
+      "city_name_he": "גדיש",
+      "city_name_en": "GADISH"
+    },
+    {
+      "city_code": 146,
+      "city_name_he": "דבורה",
+      "city_name_en": "DEVORA"
+    },
+    {
+      "city_code": 147,
+      "city_name_he": "גבעת ברנר",
+      "city_name_en": "GIV'AT BRENNER"
+    },
+    {
+      "city_code": 154,
+      "city_name_he": "תל מונד",
+      "city_name_en": "TEL MOND"
+    },
+    {
+      "city_code": 155,
+      "city_name_he": "באר טוביה",
+      "city_name_en": "BE'ER TUVEYA"
+    },
+    {
+      "city_code": 156,
+      "city_name_he": "עיינות",
+      "city_name_en": "AYANOT"
+    },
+    {
+      "city_code": 157,
+      "city_name_he": "עין ורד",
+      "city_name_en": "EN WERED"
+    },
+    {
+      "city_code": 158,
+      "city_name_he": "נען",
+      "city_name_en": "NA'AN"
+    },
+    {
+      "city_code": 159,
+      "city_name_he": "בית חנן",
+      "city_name_en": "BET HANAN"
+    },
+    {
+      "city_code": 160,
+      "city_name_he": "חולדה",
+      "city_name_en": "HULDA"
+    },
+    {
+      "city_code": 162,
+      "city_name_he": "חירות",
+      "city_name_en": "HERUT"
+    },
+    {
+      "city_code": 163,
+      "city_name_he": "תימורים",
+      "city_name_en": "TIMMORIM"
+    },
+    {
+      "city_code": 164,
+      "city_name_he": "מלאה",
+      "city_name_en": "MELE'A"
+    },
+    {
+      "city_code": 165,
+      "city_name_he": "ניר יפה",
+      "city_name_en": "NIR YAFE"
+    },
+    {
+      "city_code": 166,
+      "city_name_he": "גן יבנה",
+      "city_name_en": "GAN YAVNE"
+    },
+    {
+      "city_code": 167,
+      "city_name_he": "עין החורש",
+      "city_name_en": "EN HAHORESH"
+    },
+    {
+      "city_code": 168,
+      "city_name_he": "כפר יונה",
+      "city_name_en": "KEFAR YONA"
+    },
+    {
+      "city_code": 170,
+      "city_name_he": "כפר יעבץ",
+      "city_name_en": "KEFAR YA'BEZ"
+    },
+    {
+      "city_code": 171,
+      "city_name_he": "פרדסיה",
+      "city_name_en": "PARDESIYYA"
+    },
+    {
+      "city_code": 173,
+      "city_name_he": "גבעת חיים (מאוחד)",
+      "city_name_en": "GIV'AT HAYYIM(ME'UHA"
+    },
+    {
+      "city_code": 174,
+      "city_name_he": "נטעים",
+      "city_name_en": "NETA'IM"
+    },
+    {
+      "city_code": 175,
+      "city_name_he": "אביחיל",
+      "city_name_en": "AVIHAYIL"
+    },
+    {
+      "city_code": 176,
+      "city_name_he": "אפיקים",
+      "city_name_en": "AFIQIM"
+    },
+    {
+      "city_code": 177,
+      "city_name_he": "כפר בילו",
+      "city_name_en": "KEFAR BILU"
+    },
+    {
+      "city_code": 178,
+      "city_name_he": "רמת יוחנן",
+      "city_name_en": "RAMAT YOHANAN"
+    },
+    {
+      "city_code": 182,
+      "city_name_he": "אבן יהודה",
+      "city_name_en": "EVEN YEHUDA"
+    },
+    {
+      "city_code": 183,
+      "city_name_he": "ירקונה",
+      "city_name_en": "YARQONA"
+    },
+    {
+      "city_code": 184,
+      "city_name_he": "רמת הכובש",
+      "city_name_en": "RAMAT HAKOVESH"
+    },
+    {
+      "city_code": 186,
+      "city_name_he": "נעורים",
+      "city_name_en": "NE'URIM"
+    },
+    {
+      "city_code": 187,
+      "city_name_he": "כפר הס",
+      "city_name_en": "KEFAR HESS"
+    },
+    {
+      "city_code": 188,
+      "city_name_he": "אשדות יעקב (מאוחד)",
+      "city_name_en": "ASHDOT YA'AQOV(ME'UH"
+    },
+    {
+      "city_code": 189,
+      "city_name_he": "כפר פינס",
+      "city_name_en": "KEFAR PINES"
+    },
+    {
+      "city_code": 190,
+      "city_name_he": "כפר ויתקין",
+      "city_name_en": "KEFAR VITKIN"
+    },
+    {
+      "city_code": 191,
+      "city_name_he": "הדר עם",
+      "city_name_en": "HADAR AM"
+    },
+    {
+      "city_code": 192,
+      "city_name_he": "כפר החורש",
+      "city_name_en": "KEFAR HAHORESH"
+    },
+    {
+      "city_code": 193,
+      "city_name_he": "כפר חיים",
+      "city_name_en": "KEFAR HAYYIM"
+    },
+    {
+      "city_code": 194,
+      "city_name_he": "משמר השרון",
+      "city_name_en": "MISHMAR HASHARON"
+    },
+    {
+      "city_code": 195,
+      "city_name_he": "קדימה-צורן",
+      "city_name_en": "QADIMA-ZORAN"
+    },
+    {
+      "city_code": 196,
+      "city_name_he": "גיבתון",
+      "city_name_en": "GIBBETON"
+    },
+    {
+      "city_code": 197,
+      "city_name_he": "מעברות",
+      "city_name_en": "MA'BAROT"
+    },
+    {
+      "city_code": 198,
+      "city_name_he": "צופית",
+      "city_name_en": "ZOFIT"
+    },
+    {
+      "city_code": 199,
+      "city_name_he": "אשדות יעקב (איחוד)",
+      "city_name_en": "ASHDOT YA'AQOV(IHUD)"
+    },
+    {
+      "city_code": 200,
+      "city_name_he": "בית ינאי",
+      "city_name_en": "BET YANNAY"
+    },
+    {
+      "city_code": 202,
+      "city_name_he": "בית עובד",
+      "city_name_en": "BET OVED"
+    },
+    {
+      "city_code": 204,
+      "city_name_he": "אלישיב",
+      "city_name_en": "ELYASHIV"
+    },
+    {
+      "city_code": 205,
+      "city_name_he": "חגלה",
+      "city_name_en": "HOGLA"
+    },
+    {
+      "city_code": 206,
+      "city_name_he": "רמות השבים",
+      "city_name_en": "RAMOT HASHAVIM"
+    },
+    {
+      "city_code": 207,
+      "city_name_he": "גבעת חן",
+      "city_name_en": "GIV'AT HEN"
+    },
+    {
+      "city_code": 208,
+      "city_name_he": "מוצא עילית",
+      "city_name_en": "MOZA ILLIT"
+    },
+    {
+      "city_code": 212,
+      "city_name_he": "בית צבי",
+      "city_name_en": "BET ZEVI"
+    },
+    {
+      "city_code": 213,
+      "city_name_he": "משמרות",
+      "city_name_en": "MISHMAROT"
+    },
+    {
+      "city_code": 217,
+      "city_name_he": "כפר הראה",
+      "city_name_en": "KEFAR HARO'E"
+    },
+    {
+      "city_code": 218,
+      "city_name_he": "גני עם",
+      "city_name_en": "GANNE AM"
+    },
+    {
+      "city_code": 219,
+      "city_name_he": "חיבת ציון",
+      "city_name_en": "HIBBAT ZIYYON"
+    },
+    {
+      "city_code": 220,
+      "city_name_he": "כפר ביאליק",
+      "city_name_en": "KEFAR BIALIK"
+    },
+    {
+      "city_code": 223,
+      "city_name_he": "עין עירון",
+      "city_name_en": "EN IRON"
+    },
+    {
+      "city_code": 224,
+      "city_name_he": "שושנת העמקים",
+      "city_name_en": "SHOSHANNAT HAAMAQIM"
+    },
+    {
+      "city_code": 225,
+      "city_name_he": "גן השומרון",
+      "city_name_en": "GAN HASHOMERON"
+    },
+    {
+      "city_code": 229,
+      "city_name_he": "גני תקווה",
+      "city_name_en": "GANNE TIQWA"
+    },
+    {
+      "city_code": 230,
+      "city_name_he": "מעש",
+      "city_name_en": "MA'AS"
+    },
+    {
+      "city_code": 232,
+      "city_name_he": "שפיים",
+      "city_name_en": "SHEFAYIM"
+    },
+    {
+      "city_code": 233,
+      "city_name_he": "כפר ידידיה",
+      "city_name_en": "YEDIDYA"
+    },
+    {
+      "city_code": 234,
+      "city_name_he": "ביצרון",
+      "city_name_en": "BIZZARON"
+    },
+    {
+      "city_code": 235,
+      "city_name_he": "חבצלת השרון",
+      "city_name_en": "HAVAZZELET HASHARON"
+    },
+    {
+      "city_code": 237,
+      "city_name_he": "שער העמקים",
+      "city_name_en": "SHA'AR HAAMAQIM"
+    },
+    {
+      "city_code": 239,
+      "city_name_he": "גן חיים",
+      "city_name_en": "GAN HAYYIM"
+    },
+    {
+      "city_code": 240,
+      "city_name_he": "יקנעם עילית",
+      "city_name_en": "YOQNE'AM ILLIT"
+    },
+    {
+      "city_code": 241,
+      "city_name_he": "יקנעם (מושבה)",
+      "city_name_en": "YOQNE'AM(MOSHAVA)"
+    },
+    {
+      "city_code": 242,
+      "city_name_he": "בית השיטה",
+      "city_name_en": "BET HASHITTA"
+    },
+    {
+      "city_code": 246,
+      "city_name_he": "נתיבות",
+      "city_name_en": "NETIVOT"
+    },
+    {
+      "city_code": 247,
+      "city_name_he": "רשפון",
+      "city_name_en": "RISHPON"
+    },
+    {
+      "city_code": 248,
+      "city_name_he": "בית שערים",
+      "city_name_en": "BET SHE'ARIM"
+    },
+    {
+      "city_code": 249,
+      "city_name_he": "כפר סירקין",
+      "city_name_en": "KEFAR SIRKIN"
+    },
+    {
+      "city_code": 250,
+      "city_name_he": "הזורע",
+      "city_name_en": "HAZOREA"
+    },
+    {
+      "city_code": 252,
+      "city_name_he": "ביתן אהרן",
+      "city_name_en": "BITAN AHARON"
+    },
+    {
+      "city_code": 253,
+      "city_name_he": "חולתה",
+      "city_name_en": "HULATA"
+    },
+    {
+      "city_code": 254,
+      "city_name_he": "כפר המכבי",
+      "city_name_en": "KEFAR HAMAKKABI"
+    },
+    {
+      "city_code": 255,
+      "city_name_he": "כפר חיטים",
+      "city_name_en": "KEFAR HITTIM"
+    },
+    {
+      "city_code": 256,
+      "city_name_he": "ניר דוד (תל עמל)",
+      "city_name_en": "NIR DAWID (TEL AMAL)"
+    },
+    {
+      "city_code": 257,
+      "city_name_he": "נופך",
+      "city_name_en": "NOFEKH"
+    },
+    {
+      "city_code": 259,
+      "city_name_he": "שדה נחום",
+      "city_name_en": "SEDE NAHUM"
+    },
+    {
+      "city_code": 262,
+      "city_name_he": "גינוסר",
+      "city_name_en": "GINNOSAR"
+    },
+    {
+      "city_code": 263,
+      "city_name_he": "מסדה",
+      "city_name_en": "MASSADA"
+    },
+    {
+      "city_code": 264,
+      "city_name_he": "שער הגולן",
+      "city_name_en": "SHA'AR HAGOLAN"
+    },
+    {
+      "city_code": 265,
+      "city_name_he": "בית יוסף",
+      "city_name_en": "BET YOSEF"
+    },
+    {
+      "city_code": 267,
+      "city_name_he": "כפר שמריהו",
+      "city_name_en": "KEFAR SHEMARYAHU"
+    },
+    {
+      "city_code": 268,
+      "city_name_he": "טירת צבי",
+      "city_name_en": "TIRAT ZEVI"
+    },
+    {
+      "city_code": 269,
+      "city_name_he": "מולדת",
+      "city_name_en": "MOLEDET"
+    },
+    {
+      "city_code": 270,
+      "city_name_he": "עין השופט",
+      "city_name_en": "EN HASHOFET"
+    },
+    {
+      "city_code": 272,
+      "city_name_he": "מעוז חיים",
+      "city_name_en": "MA'OZ HAYYIM"
+    },
+    {
+      "city_code": 273,
+      "city_name_he": "עין גב",
+      "city_name_en": "EN GEV"
+    },
+    {
+      "city_code": 274,
+      "city_name_he": "כפר מנחם",
+      "city_name_en": "KEFAR MENAHEM"
+    },
+    {
+      "city_code": 276,
+      "city_name_he": "צור משה",
+      "city_name_en": "ZUR MOSHE"
+    },
+    {
+      "city_code": 278,
+      "city_name_he": "אושה",
+      "city_name_en": "USHA"
+    },
+    {
+      "city_code": 280,
+      "city_name_he": "חניתה",
+      "city_name_en": "HANITA"
+    },
+    {
+      "city_code": 281,
+      "city_name_he": "פקיעין חדשה",
+      "city_name_en": "PEQI'IN HADASHA"
+    },
+    {
+      "city_code": 282,
+      "city_name_he": "שבי ציון",
+      "city_name_en": "SHAVE ZIYYON"
+    },
+    {
+      "city_code": 284,
+      "city_name_he": "שדה ורבורג",
+      "city_name_en": "SEDE WARBURG"
+    },
+    {
+      "city_code": 285,
+      "city_name_he": "אלונים",
+      "city_name_en": "ALLONIM"
+    },
+    {
+      "city_code": 286,
+      "city_name_he": "מעלה החמישה",
+      "city_name_en": "MA'ALE HAHAMISHA"
+    },
+    {
+      "city_code": 287,
+      "city_name_he": "תל יצחק",
+      "city_name_en": "TEL YIZHAQ"
+    },
+    {
+      "city_code": 288,
+      "city_name_he": "בית יהושע",
+      "city_name_en": "BET YEHOSHUA"
+    },
+    {
+      "city_code": 289,
+      "city_name_he": "עין המפרץ",
+      "city_name_en": "EN HAMIFRAZ"
+    },
+    {
+      "city_code": 290,
+      "city_name_he": "מעין צבי",
+      "city_name_en": "MA'YAN ZEVI"
+    },
+    {
+      "city_code": 292,
+      "city_name_he": "שרונה",
+      "city_name_en": "SHARONA"
+    },
+    {
+      "city_code": 293,
+      "city_name_he": "שדה יואב",
+      "city_name_en": "SEDE YO'AV"
+    },
+    {
+      "city_code": 294,
+      "city_name_he": "אילון",
+      "city_name_en": "ELON"
+    },
+    {
+      "city_code": 295,
+      "city_name_he": "כפר רופין",
+      "city_name_en": "KEFAR RUPPIN"
+    },
+    {
+      "city_code": 296,
+      "city_name_he": "נווה איתן",
+      "city_name_en": "NEWE ETAN"
+    },
+    {
+      "city_code": 297,
+      "city_name_he": "כפר מסריק",
+      "city_name_en": "KEFAR MASARYK"
+    },
+    {
+      "city_code": 298,
+      "city_name_he": "מסילות",
+      "city_name_en": "MESILLOT"
+    },
+    {
+      "city_code": 300,
+      "city_name_he": "דליה",
+      "city_name_en": "DALIYYA"
+    },
+    {
+      "city_code": 301,
+      "city_name_he": "בית עוזיאל",
+      "city_name_en": "BET UZZI'EL"
+    },
+    {
+      "city_code": 302,
+      "city_name_he": "דפנה",
+      "city_name_en": "DAFNA"
+    },
+    {
+      "city_code": 303,
+      "city_name_he": "דן",
+      "city_name_en": "DAN"
+    },
+    {
+      "city_code": 304,
+      "city_name_he": "שדה אליהו",
+      "city_name_en": "SEDE ELIYYAHU"
+    },
+    {
+      "city_code": 305,
+      "city_name_he": "גשר",
+      "city_name_en": "GESHER"
+    },
+    {
+      "city_code": 306,
+      "city_name_he": "שדמות דבורה",
+      "city_name_en": "SHADMOT DEVORA"
+    },
+    {
+      "city_code": 307,
+      "city_name_he": "הזורעים",
+      "city_name_en": "HAZORE'IM"
+    },
+    {
+      "city_code": 308,
+      "city_name_he": "מחניים",
+      "city_name_en": "MAHANAYIM"
+    },
+    {
+      "city_code": 309,
+      "city_name_he": "נהורה",
+      "city_name_en": "NEHORA"
+    },
+    {
+      "city_code": 310,
+      "city_name_he": "כפר גליקסון",
+      "city_name_en": "KEFAR GLIKSON"
+    },
+    {
+      "city_code": 311,
+      "city_name_he": "גן שורק",
+      "city_name_en": "GAN SOREQ"
+    },
+    {
+      "city_code": 312,
+      "city_name_he": "נווה ים",
+      "city_name_en": "NEWE YAM"
+    },
+    {
+      "city_code": 313,
+      "city_name_he": "אפק",
+      "city_name_en": "AFEQ"
+    },
+    {
+      "city_code": 315,
+      "city_name_he": "נגבה",
+      "city_name_en": "NEGBA"
+    },
+    {
+      "city_code": 316,
+      "city_name_he": "כפר נטר",
+      "city_name_en": "KEFAR NETTER"
+    },
+    {
+      "city_code": 317,
+      "city_name_he": "בית אורן",
+      "city_name_en": "BET OREN"
+    },
+    {
+      "city_code": 318,
+      "city_name_he": "עמיעוז",
+      "city_name_en": "AMMI'OZ"
+    },
+    {
+      "city_code": 319,
+      "city_name_he": "עמיר",
+      "city_name_en": "AMIR"
+    },
+    {
+      "city_code": 320,
+      "city_name_he": "כפר ורבורג",
+      "city_name_en": "KEFAR WARBURG"
+    },
+    {
+      "city_code": 322,
+      "city_name_he": "בית הלל",
+      "city_name_en": "BET HILLEL"
+    },
+    {
+      "city_code": 324,
+      "city_name_he": "שאר ישוב",
+      "city_name_en": "SHE'AR YASHUV"
+    },
+    {
+      "city_code": 325,
+      "city_name_he": "מצובה",
+      "city_name_en": "MAZZUVA"
+    },
+    {
+      "city_code": 326,
+      "city_name_he": "בית יצחק-שער חפר",
+      "city_name_en": "BET YIZHAQ-SH. HEFER"
+    },
+    {
+      "city_code": 327,
+      "city_name_he": "שדות ים",
+      "city_name_en": "SEDOT YAM"
+    },
+    {
+      "city_code": 328,
+      "city_name_he": "עזוז",
+      "city_name_en": "EZUZ"
+    },
+    {
+      "city_code": 329,
+      "city_name_he": "שדה נחמיה",
+      "city_name_en": "SEDE NEHEMYA"
+    },
+    {
+      "city_code": 330,
+      "city_name_he": "אלומות",
+      "city_name_en": "ALUMMOT"
+    },
+    {
+      "city_code": 331,
+      "city_name_he": "ניר צבי",
+      "city_name_en": "NIR ZEVI"
+    },
+    {
+      "city_code": 334,
+      "city_name_he": "קבוצת יבנה",
+      "city_name_en": "QEVUZAT YAVNE"
+    },
+    {
+      "city_code": 335,
+      "city_name_he": "רמת השופט",
+      "city_name_en": "RAMAT HASHOFET"
+    },
+    {
+      "city_code": 336,
+      "city_name_he": "דורות",
+      "city_name_en": "DOROT"
+    },
+    {
+      "city_code": 338,
+      "city_name_he": "איבים",
+      "city_name_en": "IBBIM"
+    },
+    {
+      "city_code": 339,
+      "city_name_he": "רמת צבי",
+      "city_name_en": "RAMAT ZEVI"
+    },
+    {
+      "city_code": 340,
+      "city_name_he": "גת (קיבוץ)",
+      "city_name_en": "GAT(QIBBUZ)"
+    },
+    {
+      "city_code": 342,
+      "city_name_he": "גברעם",
+      "city_name_en": "GEVAR'AM"
+    },
+    {
+      "city_code": 343,
+      "city_name_he": "חמדיה",
+      "city_name_en": "HAMADYA"
+    },
+    {
+      "city_code": 344,
+      "city_name_he": "מענית",
+      "city_name_en": "MA'ANIT"
+    },
+    {
+      "city_code": 345,
+      "city_name_he": "כפר סאלד",
+      "city_name_en": "KEFAR SZOLD"
+    },
+    {
+      "city_code": 346,
+      "city_name_he": "גליל ים",
+      "city_name_en": "GELIL YAM"
+    },
+    {
+      "city_code": 347,
+      "city_name_he": "מנרה",
+      "city_name_en": "MENNARA"
+    },
+    {
+      "city_code": 348,
+      "city_name_he": "ניר עם",
+      "city_name_en": "NIR AM"
+    },
+    {
+      "city_code": 351,
+      "city_name_he": "ניצן",
+      "city_name_en": "NIZZAN"
+    },
+    {
+      "city_code": 352,
+      "city_name_he": "גבולות",
+      "city_name_en": "GEVULOT"
+    },
+    {
+      "city_code": 353,
+      "city_name_he": "בית זיד",
+      "city_name_en": "BET ZEID"
+    },
+    {
+      "city_code": 354,
+      "city_name_he": "רביבים",
+      "city_name_en": "REVIVIM"
+    },
+    {
+      "city_code": 355,
+      "city_name_he": "חורשים",
+      "city_name_en": "HORESHIM"
+    },
+    {
+      "city_code": 356,
+      "city_name_he": "הגושרים",
+      "city_name_en": "HAGOSHERIM"
+    },
+    {
+      "city_code": 357,
+      "city_name_he": "כפר בלום",
+      "city_name_en": "KEFAR BLUM"
+    },
+    {
+      "city_code": 358,
+      "city_name_he": "יד מרדכי",
+      "city_name_en": "YAD MORDEKHAY"
+    },
+    {
+      "city_code": 359,
+      "city_name_he": "ניצנים",
+      "city_name_en": "NIZZANIM"
+    },
+    {
+      "city_code": 360,
+      "city_name_he": "גבעת נילי",
+      "city_name_en": "GIV'AT NILI"
+    },
+    {
+      "city_code": 362,
+      "city_name_he": "רוחמה",
+      "city_name_en": "RUHAMA"
+    },
+    {
+      "city_code": 363,
+      "city_name_he": "חפץ חיים",
+      "city_name_en": "HAFEZ HAYYIM"
+    },
+    {
+      "city_code": 364,
+      "city_name_he": "כפר אוריה",
+      "city_name_en": "KEFAR URIYYA"
+    },
+    {
+      "city_code": 365,
+      "city_name_he": "בית קשת",
+      "city_name_en": "BET QESHET"
+    },
+    {
+      "city_code": 366,
+      "city_name_he": "שמיר",
+      "city_name_en": "SHAMIR"
+    },
+    {
+      "city_code": 367,
+      "city_name_he": "עין העמק",
+      "city_name_en": "EN HAEMEQ"
+    },
+    {
+      "city_code": 368,
+      "city_name_he": "ביריה",
+      "city_name_en": "BIRIYYA"
+    },
+    {
+      "city_code": 369,
+      "city_name_he": "גלעד (אבן יצחק)",
+      "city_name_en": "EVEN YIZHAQ(GAL'ED)"
+    },
+    {
+      "city_code": 370,
+      "city_name_he": "גזר",
+      "city_name_en": "GEZER"
+    },
+    {
+      "city_code": 371,
+      "city_name_he": "כדורי",
+      "city_name_en": "KADOORIE"
+    },
+    {
+      "city_code": 372,
+      "city_name_he": "רמות נפתלי",
+      "city_name_en": "RAMOT NAFTALI"
+    },
+    {
+      "city_code": 373,
+      "city_name_he": "בית הלוי",
+      "city_name_en": "BET HALEVI"
+    },
+    {
+      "city_code": 374,
+      "city_name_he": "חוקוק",
+      "city_name_en": "HUQOQ"
+    },
+    {
+      "city_code": 375,
+      "city_name_he": "מגל",
+      "city_name_en": "MAGGAL"
+    },
+    {
+      "city_code": 376,
+      "city_name_he": "עברון",
+      "city_name_en": "EVRON"
+    },
+    {
+      "city_code": 377,
+      "city_name_he": "המעפיל",
+      "city_name_en": "HAMA'PIL"
+    },
+    {
+      "city_code": 378,
+      "city_name_he": "משגב עם",
+      "city_name_en": "MISGAV AM"
+    },
+    {
+      "city_code": 379,
+      "city_name_he": "גאולים",
+      "city_name_en": "GE'ULIM"
+    },
+    {
+      "city_code": 380,
+      "city_name_he": "להבות הבשן",
+      "city_name_en": "LAHAVOT HABASHAN"
+    },
+    {
+      "city_code": 382,
+      "city_name_he": "מכמורת",
+      "city_name_en": "MIKHMORET"
+    },
+    {
+      "city_code": 383,
+      "city_name_he": "עין הנציב",
+      "city_name_en": "EN HANAZIV"
+    },
+    {
+      "city_code": 385,
+      "city_name_he": "עמיעד",
+      "city_name_en": "AMMI'AD"
+    },
+    {
+      "city_code": 386,
+      "city_name_he": "בני דרור",
+      "city_name_en": "BENE DEROR"
+    },
+    {
+      "city_code": 387,
+      "city_name_he": "כפר מונש",
+      "city_name_en": "KEFAR MONASH"
+    },
+    {
+      "city_code": 388,
+      "city_name_he": "כפר קיש",
+      "city_name_en": "KEFAR KISH"
+    },
+    {
+      "city_code": 389,
+      "city_name_he": "בצרה",
+      "city_name_en": "BAZRA"
+    },
+    {
+      "city_code": 390,
+      "city_name_he": "רגבה",
+      "city_name_en": "REGBA"
+    },
+    {
+      "city_code": 392,
+      "city_name_he": "קדמה",
+      "city_name_en": "QEDMA"
+    },
+    {
+      "city_code": 393,
+      "city_name_he": "גלאון",
+      "city_name_en": "GAL'ON"
+    },
+    {
+      "city_code": 394,
+      "city_name_he": "שובל",
+      "city_name_en": "SHOVAL"
+    },
+    {
+      "city_code": 395,
+      "city_name_he": "משמר הנגב",
+      "city_name_en": "MISHMAR HANEGEV"
+    },
+    {
+      "city_code": 396,
+      "city_name_he": "נבטים",
+      "city_name_en": "NEVATIM"
+    },
+    {
+      "city_code": 397,
+      "city_name_he": "חצרים",
+      "city_name_en": "HAZERIM"
+    },
+    {
+      "city_code": 398,
+      "city_name_he": "שרשרת",
+      "city_name_en": "SHARSHERET"
+    },
+    {
+      "city_code": 399,
+      "city_name_he": "בארי",
+      "city_name_en": "BE'ERI"
+    },
+    {
+      "city_code": 400,
+      "city_name_he": "אבן שמואל",
+      "city_name_en": "EVEN SHEMU'EL"
+    },
+    {
+      "city_code": 402,
+      "city_name_he": "ניר יצחק",
+      "city_name_en": "NIR YIZHAQ"
+    },
+    {
+      "city_code": 403,
+      "city_name_he": "אורים",
+      "city_name_en": "URIM"
+    },
+    {
+      "city_code": 405,
+      "city_name_he": "נווה אילן",
+      "city_name_en": "NEWE ILAN"
+    },
+    {
+      "city_code": 406,
+      "city_name_he": "חצור-אשדוד",
+      "city_name_en": "HAZOR-ASHDOD"
+    },
+    {
+      "city_code": 407,
+      "city_name_he": "דברת",
+      "city_name_en": "DAVERAT"
+    },
+    {
+      "city_code": 408,
+      "city_name_he": "נאות מרדכי",
+      "city_name_en": "NE'OT MORDEKHAY"
+    },
+    {
+      "city_code": 409,
+      "city_name_he": "יחיעם",
+      "city_name_en": "YEHI'AM"
+    },
+    {
+      "city_code": 412,
+      "city_name_he": "קרית שלמה",
+      "city_name_en": "QIRYAT SHELOMO"
+    },
+    {
+      "city_code": 413,
+      "city_name_he": "צאלים",
+      "city_name_en": "ZE'ELIM"
+    },
+    {
+      "city_code": 414,
+      "city_name_he": "קלחים",
+      "city_name_en": "QELAHIM"
+    },
+    {
+      "city_code": 415,
+      "city_name_he": "שוקדה",
+      "city_name_en": "SHOQEDA"
+    },
+    {
+      "city_code": 416,
+      "city_name_he": "מעין ברוך",
+      "city_name_en": "MA'YAN BARUKH"
+    },
+    {
+      "city_code": 417,
+      "city_name_he": "יקום",
+      "city_name_en": "YAQUM"
+    },
+    {
+      "city_code": 418,
+      "city_name_he": "בני ציון",
+      "city_name_en": "BENE ZIYYON"
+    },
+    {
+      "city_code": 419,
+      "city_name_he": "סעד",
+      "city_name_en": "SA'AD"
+    },
+    {
+      "city_code": 421,
+      "city_name_he": "משאבי שדה",
+      "city_name_en": "MASH'ABBE SADE"
+    },
+    {
+      "city_code": 422,
+      "city_name_he": "חרב לאת",
+      "city_name_en": "HEREV LE'ET"
+    },
+    {
+      "city_code": 423,
+      "city_name_he": "העוגן",
+      "city_name_en": "HAOGEN"
+    },
+    {
+      "city_code": 424,
+      "city_name_he": "גבים",
+      "city_name_en": "GEVIM"
+    },
+    {
+      "city_code": 425,
+      "city_name_he": "משמרת",
+      "city_name_en": "MISHMERET"
+    },
+    {
+      "city_code": 426,
+      "city_name_he": "עין כרמל",
+      "city_name_en": "EN KARMEL"
+    },
+    {
+      "city_code": 427,
+      "city_name_he": "כפר גלים",
+      "city_name_en": "KEFAR GALLIM"
+    },
+    {
+      "city_code": 428,
+      "city_name_he": "ברור חיל",
+      "city_name_en": "BEROR HAYIL"
+    },
+    {
+      "city_code": 429,
+      "city_name_he": "אלוני אבא",
+      "city_name_en": "ALLONE ABBA"
+    },
+    {
+      "city_code": 430,
+      "city_name_he": "בית לחם הגלילית",
+      "city_name_en": "BET LEHEM HAGELILIT"
+    },
+    {
+      "city_code": 431,
+      "city_name_he": "דלתון",
+      "city_name_en": "DALTON"
+    },
+    {
+      "city_code": 432,
+      "city_name_he": "שמרת",
+      "city_name_en": "SHAMERAT"
+    },
+    {
+      "city_code": 433,
+      "city_name_he": "נחשולים",
+      "city_name_en": "NAHSHOLIM"
+    },
+    {
+      "city_code": 434,
+      "city_name_he": "החותרים",
+      "city_name_en": "HAHOTERIM"
+    },
+    {
+      "city_code": 435,
+      "city_name_he": "נצר סרני",
+      "city_name_en": "NEZER SERENI"
+    },
+    {
+      "city_code": 436,
+      "city_name_he": "עין דור",
+      "city_name_en": "EN DOR"
+    },
+    {
+      "city_code": 437,
+      "city_name_he": "רשפים",
+      "city_name_en": "RESHAFIM"
+    },
+    {
+      "city_code": 439,
+      "city_name_he": "שלוחות",
+      "city_name_en": "SHELUHOT"
+    },
+    {
+      "city_code": 440,
+      "city_name_he": "יסודות",
+      "city_name_en": "YESODOT"
+    },
+    {
+      "city_code": 442,
+      "city_name_he": "גדעונה",
+      "city_name_en": "GID'ONA"
+    },
+    {
+      "city_code": 443,
+      "city_name_he": "כפר הנשיא",
+      "city_name_en": "KEFAR HANASI"
+    },
+    {
+      "city_code": 444,
+      "city_name_he": "רגבים",
+      "city_name_en": "REGAVIM"
+    },
+    {
+      "city_code": 445,
+      "city_name_he": "רמות מנשה",
+      "city_name_en": "RAMOT MENASHE"
+    },
+    {
+      "city_code": 446,
+      "city_name_he": "אודים",
+      "city_name_en": "UDIM"
+    },
+    {
+      "city_code": 447,
+      "city_name_he": "נורדיה",
+      "city_name_en": "NORDIYYA"
+    },
+    {
+      "city_code": 448,
+      "city_name_he": "בני עטרות",
+      "city_name_en": "BENE ATAROT"
+    },
+    {
+      "city_code": 449,
+      "city_name_he": "נחלים",
+      "city_name_en": "NEHALIM"
+    },
+    {
+      "city_code": 450,
+      "city_name_he": "בארות יצחק",
+      "city_name_en": "BE'EROT YIZHAQ"
+    },
+    {
+      "city_code": 452,
+      "city_name_he": "יזרעאל",
+      "city_name_en": "YIZRE'EL"
+    },
+    {
+      "city_code": 453,
+      "city_name_he": "יפתח",
+      "city_name_en": "YIFTAH"
+    },
+    {
+      "city_code": 454,
+      "city_name_he": "סער",
+      "city_name_en": "SA'AR"
+    },
+    {
+      "city_code": 456,
+      "city_name_he": "שורש",
+      "city_name_en": "SHORESH"
+    },
+    {
+      "city_code": 457,
+      "city_name_he": "גזית",
+      "city_name_en": "GAZIT"
+    },
+    {
+      "city_code": 460,
+      "city_name_he": "רמת רזיאל",
+      "city_name_en": "RAMAT RAZI'EL"
+    },
+    {
+      "city_code": 462,
+      "city_name_he": "טל שחר",
+      "city_name_en": "TAL SHAHAR"
+    },
+    {
+      "city_code": 463,
+      "city_name_he": "געתון",
+      "city_name_en": "GA'TON"
+    },
+    {
+      "city_code": 464,
+      "city_name_he": "הראל",
+      "city_name_en": "HAR'EL"
+    },
+    {
+      "city_code": 465,
+      "city_name_he": "צובה",
+      "city_name_en": "ZOVA"
+    },
+    {
+      "city_code": 466,
+      "city_name_he": "בית דגן",
+      "city_name_en": "BET DAGAN"
+    },
+    {
+      "city_code": 469,
+      "city_name_he": "קרית עקרון",
+      "city_name_en": "QIRYAT EQRON"
+    },
+    {
+      "city_code": 472,
+      "city_name_he": "אבו גוש",
+      "city_name_en": "ABU GHOSH"
+    },
+    {
+      "city_code": 473,
+      "city_name_he": "אבו סנאן",
+      "city_name_en": "ABU SINAN"
+    },
+    {
+      "city_code": 475,
+      "city_name_he": "דחי",
+      "city_name_en": "DAHI"
+    },
+    {
+      "city_code": 478,
+      "city_name_he": "אכסאל",
+      "city_name_en": "IKSAL"
+    },
+    {
+      "city_code": 480,
+      "city_name_he": "בית ג'ן",
+      "city_name_en": "BEIT JANN"
+    },
+    {
+      "city_code": 481,
+      "city_name_he": "מגאר",
+      "city_name_en": "MUGHAR"
+    },
+    {
+      "city_code": 482,
+      "city_name_he": "בועיינה-נוג'ידאת",
+      "city_name_en": "BU'EINE-NUJEIDAT"
+    },
+    {
+      "city_code": 483,
+      "city_name_he": "בענה",
+      "city_name_en": "BI NE"
+    },
+    {
+      "city_code": 485,
+      "city_name_he": "ג'ולס",
+      "city_name_en": "JULIS"
+    },
+    {
+      "city_code": 487,
+      "city_name_he": "ג'ש (גוש חלב)",
+      "city_name_en": "JISH(GUSH HALAV)"
+    },
+    {
+      "city_code": 489,
+      "city_name_he": "דבוריה",
+      "city_name_en": "DABBURYE"
+    },
+    {
+      "city_code": 490,
+      "city_name_he": "דייר אל-אסד",
+      "city_name_en": "DEIR AL-ASAD"
+    },
+    {
+      "city_code": 492,
+      "city_name_he": "דייר חנא",
+      "city_name_en": "DEIR HANNA"
+    },
+    {
+      "city_code": 493,
+      "city_name_he": "דייר ראפאת",
+      "city_name_en": "DEIR RAFAT"
+    },
+    {
+      "city_code": 494,
+      "city_name_he": "דאלית אל-כרמל",
+      "city_name_en": "DALIYAT AL-KARMEL"
+    },
+    {
+      "city_code": 496,
+      "city_name_he": "חורפיש",
+      "city_name_en": "HURFEISH"
+    },
+    {
+      "city_code": 497,
+      "city_name_he": "טייבה (בעמק)",
+      "city_name_en": "TAYIBE(BAEMEQ)"
+    },
+    {
+      "city_code": 498,
+      "city_name_he": "טורעאן",
+      "city_name_en": "TUR'AN"
+    },
+    {
+      "city_code": 499,
+      "city_name_he": "יפיע",
+      "city_name_en": "YAFI"
+    },
+    {
+      "city_code": 502,
+      "city_name_he": "ירכא",
+      "city_name_en": "YIRKA"
+    },
+    {
+      "city_code": 504,
+      "city_name_he": "כאבול",
+      "city_name_en": "KABUL"
+    },
+    {
+      "city_code": 505,
+      "city_name_he": "כאוכב אבו אל-היג'א",
+      "city_name_en": "KAOKAB ABU AL-HIJA"
+    },
+    {
+      "city_code": 507,
+      "city_name_he": "כפר יאסיף",
+      "city_name_en": "KAFAR YASIF"
+    },
+    {
+      "city_code": 508,
+      "city_name_he": "כפר כמא",
+      "city_name_en": "KAFAR KAMA"
+    },
+    {
+      "city_code": 509,
+      "city_name_he": "כפר כנא",
+      "city_name_en": "KAFAR KANNA"
+    },
+    {
+      "city_code": 510,
+      "city_name_he": "כפר מנדא",
+      "city_name_en": "KAFAR MANDA"
+    },
+    {
+      "city_code": 511,
+      "city_name_he": "עילוט",
+      "city_name_en": "ILUT"
+    },
+    {
+      "city_code": 512,
+      "city_name_he": "כפר מצר",
+      "city_name_en": "KAFAR MISR"
+    },
+    {
+      "city_code": 514,
+      "city_name_he": "עין ראפה",
+      "city_name_en": "EIN RAFA"
+    },
+    {
+      "city_code": 516,
+      "city_name_he": "מג'ד אל-כרום",
+      "city_name_en": "MAJD AL-KURUM"
+    },
+    {
+      "city_code": 517,
+      "city_name_he": "מזרעה",
+      "city_name_en": "MAZRA'A"
+    },
+    {
+      "city_code": 518,
+      "city_name_he": "מעיליא",
+      "city_name_en": "MI'ELYA"
+    },
+    {
+      "city_code": 520,
+      "city_name_he": "משהד",
+      "city_name_en": "MESHHED"
+    },
+    {
+      "city_code": 521,
+      "city_name_he": "עין נקובא",
+      "city_name_en": "EIN NAQQUBA"
+    },
+    {
+      "city_code": 522,
+      "city_name_he": "נחף",
+      "city_name_en": "NAHEF"
+    },
+    {
+      "city_code": 523,
+      "city_name_he": "ניין",
+      "city_name_en": "NEIN"
+    },
+    {
+      "city_code": 524,
+      "city_name_he": "נאעורה",
+      "city_name_en": "NA'URA"
+    },
+    {
+      "city_code": 525,
+      "city_name_he": "סאג'ור",
+      "city_name_en": "SAJUR"
+    },
+    {
+      "city_code": 526,
+      "city_name_he": "סולם",
+      "city_name_en": "SULAM"
+    },
+    {
+      "city_code": 527,
+      "city_name_he": "שזור",
+      "city_name_en": "SHEZOR"
+    },
+    {
+      "city_code": 528,
+      "city_name_he": "עוזייר",
+      "city_name_en": "UZEIR"
+    },
+    {
+      "city_code": 529,
+      "city_name_he": "אעבלין",
+      "city_name_en": "I'BILLIN"
+    },
+    {
+      "city_code": 530,
+      "city_name_he": "עיילבון",
+      "city_name_en": "EILABUN"
+    },
+    {
+      "city_code": 531,
+      "city_name_he": "עראבה",
+      "city_name_en": "ARRABE"
+    },
+    {
+      "city_code": 532,
+      "city_name_he": "עין מאהל",
+      "city_name_en": "EIN MAHEL"
+    },
+    {
+      "city_code": 534,
+      "city_name_he": "עספיא",
+      "city_name_en": "ISIFYA"
+    },
+    {
+      "city_code": 535,
+      "city_name_he": "פסוטה",
+      "city_name_en": "FASSUTA"
+    },
+    {
+      "city_code": 536,
+      "city_name_he": "פקיעין (בוקייעה)",
+      "city_name_en": "PEQI'IN (BUQEI'A)"
+    },
+    {
+      "city_code": 537,
+      "city_name_he": "פוריידיס",
+      "city_name_en": "FUREIDIS"
+    },
+    {
+      "city_code": 538,
+      "city_name_he": "שעב",
+      "city_name_en": "SHA'AB"
+    },
+    {
+      "city_code": 539,
+      "city_name_he": "רומאנה",
+      "city_name_en": "RUMMANE"
+    },
+    {
+      "city_code": 540,
+      "city_name_he": "ריחאניה",
+      "city_name_en": "REIHANIYYE"
+    },
+    {
+      "city_code": 541,
+      "city_name_he": "ג'סר א-זרקא",
+      "city_name_en": "JISR AZ-ZARQA"
+    },
+    {
+      "city_code": 542,
+      "city_name_he": "ריינה",
+      "city_name_en": "REINE"
+    },
+    {
+      "city_code": 543,
+      "city_name_he": "ראמה",
+      "city_name_en": "RAME"
+    },
+    {
+      "city_code": 546,
+      "city_name_he": "עין אל-אסד",
+      "city_name_en": "EIN AL-ASAD"
+    },
+    {
+      "city_code": 547,
+      "city_name_he": "טמרה (יזרעאל)",
+      "city_name_en": "TAMRA (YIZRE'EL)"
+    },
+    {
+      "city_code": 549,
+      "city_name_he": "גנות הדר",
+      "city_name_en": "GANNOT HADAR"
+    },
+    {
+      "city_code": 553,
+      "city_name_he": "ניר בנים",
+      "city_name_en": "NIR BANIM"
+    },
+    {
+      "city_code": 555,
+      "city_name_he": "שדמה",
+      "city_name_en": "SHEDEMA"
+    },
+    {
+      "city_code": 559,
+      "city_name_he": "בוסתן הגליל",
+      "city_name_en": "BUSTAN HAGALIL"
+    },
+    {
+      "city_code": 562,
+      "city_name_he": "בית אלעזרי",
+      "city_name_en": "BET EL'AZARI"
+    },
+    {
+      "city_code": 563,
+      "city_name_he": "משמר דוד",
+      "city_name_en": "MISHMAR DAWID"
+    },
+    {
+      "city_code": 564,
+      "city_name_he": "רבדים",
+      "city_name_en": "REVADIM"
+    },
+    {
+      "city_code": 565,
+      "city_name_he": "אזור",
+      "city_name_en": "AZOR"
+    },
+    {
+      "city_code": 566,
+      "city_name_he": "גבעת שמש",
+      "city_name_en": "GIV'AT SHEMESH"
+    },
+    {
+      "city_code": 567,
+      "city_name_he": "צרעה",
+      "city_name_en": "ZOR'A"
+    },
+    {
+      "city_code": 570,
+      "city_name_he": "מעונה",
+      "city_name_en": "ME'ONA"
+    },
+    {
+      "city_code": 571,
+      "city_name_he": "בית גמליאל",
+      "city_name_en": "BET GAMLI'EL"
+    },
+    {
+      "city_code": 572,
+      "city_name_he": "בית העמק",
+      "city_name_en": "BET HAEMEQ"
+    },
+    {
+      "city_code": 573,
+      "city_name_he": "מבקיעים",
+      "city_name_en": "MAVQI'IM"
+    },
+    {
+      "city_code": 574,
+      "city_name_he": "גשר הזיו",
+      "city_name_en": "GESHER HAZIW"
+    },
+    {
+      "city_code": 575,
+      "city_name_he": "יסעור",
+      "city_name_en": "YAS'UR"
+    },
+    {
+      "city_code": 576,
+      "city_name_he": "כברי",
+      "city_name_en": "KABRI"
+    },
+    {
+      "city_code": 577,
+      "city_name_he": "יד בנימין",
+      "city_name_en": "YAD BINYAMIN"
+    },
+    {
+      "city_code": 578,
+      "city_name_he": "סאסא",
+      "city_name_en": "SASA"
+    },
+    {
+      "city_code": 579,
+      "city_name_he": "כפר ראש הנקרה",
+      "city_name_en": "KEFAR ROSH HANIQRA"
+    },
+    {
+      "city_code": 580,
+      "city_name_he": "כרם מהרל",
+      "city_name_en": "KEREM MAHARAL"
+    },
+    {
+      "city_code": 582,
+      "city_name_he": "כפר הנגיד",
+      "city_name_en": "KEFAR HANAGID"
+    },
+    {
+      "city_code": 584,
+      "city_name_he": "זיקים",
+      "city_name_en": "ZIQIM"
+    },
+    {
+      "city_code": 585,
+      "city_name_he": "לביא",
+      "city_name_en": "LAVI"
+    },
+    {
+      "city_code": 586,
+      "city_name_he": "מגידו",
+      "city_name_en": "MEGIDDO"
+    },
+    {
+      "city_code": 587,
+      "city_name_he": "סביון",
+      "city_name_en": "SAVYON"
+    },
+    {
+      "city_code": 588,
+      "city_name_he": "בני ראם",
+      "city_name_en": "BENE RE'EM"
+    },
+    {
+      "city_code": 589,
+      "city_name_he": "בצת",
+      "city_name_en": "BEZET"
+    },
+    {
+      "city_code": 590,
+      "city_name_he": "נווה אור",
+      "city_name_en": "NEWE UR"
+    },
+    {
+      "city_code": 591,
+      "city_name_he": "עשרת",
+      "city_name_en": "ASERET"
+    },
+    {
+      "city_code": 592,
+      "city_name_he": "בני דרום",
+      "city_name_en": "BENE DAROM"
+    },
+    {
+      "city_code": 593,
+      "city_name_he": "ערוגות",
+      "city_name_en": "ARUGOT"
+    },
+    {
+      "city_code": 594,
+      "city_name_he": "צפריה",
+      "city_name_en": "ZAFRIYYA"
+    },
+    {
+      "city_code": 595,
+      "city_name_he": "לוחמי הגיטאות",
+      "city_name_en": "LOHAME HAGETA'OT"
+    },
+    {
+      "city_code": 596,
+      "city_name_he": "מלכיה",
+      "city_name_en": "MALKIYYA"
+    },
+    {
+      "city_code": 597,
+      "city_name_he": "פלמחים",
+      "city_name_en": "PALMAHIM"
+    },
+    {
+      "city_code": 598,
+      "city_name_he": "בית קמה",
+      "city_name_en": "BET QAMA"
+    },
+    {
+      "city_code": 599,
+      "city_name_he": "פרוד",
+      "city_name_en": "PAROD"
+    },
+    {
+      "city_code": 602,
+      "city_name_he": "נירים",
+      "city_name_en": "NIRIM"
+    },
+    {
+      "city_code": 603,
+      "city_name_he": "אלקוש",
+      "city_name_en": "ELQOSH"
+    },
+    {
+      "city_code": 604,
+      "city_name_he": "בית עריף",
+      "city_name_en": "BET ARIF"
+    },
+    {
+      "city_code": 605,
+      "city_name_he": "כפר שמאי",
+      "city_name_en": "KEFAR SHAMMAY"
+    },
+    {
+      "city_code": 606,
+      "city_name_he": "מזור",
+      "city_name_en": "MAZOR"
+    },
+    {
+      "city_code": 607,
+      "city_name_he": "מירון",
+      "city_name_en": "MERON"
+    },
+    {
+      "city_code": 609,
+      "city_name_he": "כפר חושן",
+      "city_name_en": "KEFAR HOSHEN"
+    },
+    {
+      "city_code": 610,
+      "city_name_he": "סתריה",
+      "city_name_en": "SITRIYYA"
+    },
+    {
+      "city_code": 612,
+      "city_name_he": "צרופה",
+      "city_name_en": "ZERUFA"
+    },
+    {
+      "city_code": 613,
+      "city_name_he": "ציפורי",
+      "city_name_en": "ZIPPORI"
+    },
+    {
+      "city_code": 614,
+      "city_name_he": "שומרה",
+      "city_name_en": "SHOMERA"
+    },
+    {
+      "city_code": 615,
+      "city_name_he": "קדרון",
+      "city_name_en": "QIDRON"
+    },
+    {
+      "city_code": 616,
+      "city_name_he": "רינתיה",
+      "city_name_en": "RINNATYA"
+    },
+    {
+      "city_code": 617,
+      "city_name_he": "ברקאי",
+      "city_name_en": "BARQAY"
+    },
+    {
+      "city_code": 618,
+      "city_name_he": "חדיד",
+      "city_name_en": "HADID"
+    },
+    {
+      "city_code": 619,
+      "city_name_he": "בית גוברין",
+      "city_name_en": "BET GUVRIN"
+    },
+    {
+      "city_code": 620,
+      "city_name_he": "משואות יצחק",
+      "city_name_en": "MASSUOT YIZHAQ"
+    },
+    {
+      "city_code": 622,
+      "city_name_he": "עין צורים",
+      "city_name_en": "EN ZURIM"
+    },
+    {
+      "city_code": 623,
+      "city_name_he": "יראון",
+      "city_name_en": "YIR'ON"
+    },
+    {
+      "city_code": 627,
+      "city_name_he": "ג'לג'וליה",
+      "city_name_en": "JALJULYE"
+    },
+    {
+      "city_code": 628,
+      "city_name_he": "ג'ת",
+      "city_name_en": "JAAT"
+    },
+    {
+      "city_code": 633,
+      "city_name_he": "כפר ברא",
+      "city_name_en": "KAFAR BARA"
+    },
+    {
+      "city_code": 634,
+      "city_name_he": "כפר קאסם",
+      "city_name_en": "KAFAR QASEM"
+    },
+    {
+      "city_code": 635,
+      "city_name_he": "מוקייבלה",
+      "city_name_en": "MUQEIBLE"
+    },
+    {
+      "city_code": 636,
+      "city_name_he": "צנדלה",
+      "city_name_en": "SANDALA"
+    },
+    {
+      "city_code": 637,
+      "city_name_he": "ערערה",
+      "city_name_en": "AR'ARA"
+    },
+    {
+      "city_code": 638,
+      "city_name_he": "קלנסווה",
+      "city_name_en": "QALANSAWE"
+    },
+    {
+      "city_code": 648,
+      "city_name_he": "מצר",
+      "city_name_en": "MEZER"
+    },
+    {
+      "city_code": 649,
+      "city_name_he": "מייסר",
+      "city_name_en": "MEISER"
+    },
+    {
+      "city_code": 652,
+      "city_name_he": "אבטין",
+      "city_name_en": "IBTIN"
+    },
+    {
+      "city_code": 654,
+      "city_name_he": "כפר קרע",
+      "city_name_en": "KAFAR QARA"
+    },
+    {
+      "city_code": 658,
+      "city_name_he": "שייח' דנון",
+      "city_name_en": "SHEIKH DANNUN"
+    },
+    {
+      "city_code": 661,
+      "city_name_he": "שער אפרים",
+      "city_name_en": "SHA'AR EFRAYIM"
+    },
+    {
+      "city_code": 662,
+      "city_name_he": "חוסן",
+      "city_name_en": "HOSEN"
+    },
+    {
+      "city_code": 663,
+      "city_name_he": "טירת יהודה",
+      "city_name_en": "TIRAT YEHUDA"
+    },
+    {
+      "city_code": 664,
+      "city_name_he": "כרם בן זמרה",
+      "city_name_en": "KEREM BEN ZIMRA"
+    },
+    {
+      "city_code": 665,
+      "city_name_he": "תקומה",
+      "city_name_en": "TEQUMA"
+    },
+    {
+      "city_code": 666,
+      "city_name_he": "עומר",
+      "city_name_en": "OMER"
+    },
+    {
+      "city_code": 667,
+      "city_name_he": "ברעם",
+      "city_name_en": "BAR'AM"
+    },
+    {
+      "city_code": 668,
+      "city_name_he": "מפלסים",
+      "city_name_en": "MEFALLESIM"
+    },
+    {
+      "city_code": 670,
+      "city_name_he": "משמר איילון",
+      "city_name_en": "MISHMAR AYYALON"
+    },
+    {
+      "city_code": 672,
+      "city_name_he": "בית נקופה",
+      "city_name_en": "BET NEQOFA"
+    },
+    {
+      "city_code": 673,
+      "city_name_he": "כפר טרומן",
+      "city_name_en": "KEFAR TRUMAN"
+    },
+    {
+      "city_code": 674,
+      "city_name_he": "לימן",
+      "city_name_en": "LIMAN"
+    },
+    {
+      "city_code": 675,
+      "city_name_he": "הבונים",
+      "city_name_en": "HABONIM"
+    },
+    {
+      "city_code": 676,
+      "city_name_he": "עין השלושה",
+      "city_name_en": "EN HASHELOSHA"
+    },
+    {
+      "city_code": 677,
+      "city_name_he": "הסוללים",
+      "city_name_en": "HASOLELIM"
+    },
+    {
+      "city_code": 678,
+      "city_name_he": "מעגן",
+      "city_name_en": "MA'AGAN"
+    },
+    {
+      "city_code": 679,
+      "city_name_he": "אביאל",
+      "city_name_en": "AVI'EL"
+    },
+    {
+      "city_code": 680,
+      "city_name_he": "אומץ",
+      "city_name_en": "OMEZ"
+    },
+    {
+      "city_code": 681,
+      "city_name_he": "גבעת שמואל",
+      "city_name_en": "GIV'AT SHEMU'EL"
+    },
+    {
+      "city_code": 682,
+      "city_name_he": "אליקים",
+      "city_name_en": "ELYAQIM"
+    },
+    {
+      "city_code": 683,
+      "city_name_he": "גבע כרמל",
+      "city_name_en": "GEVA KARMEL"
+    },
+    {
+      "city_code": 684,
+      "city_name_he": "היוגב",
+      "city_name_en": "HAYOGEV"
+    },
+    {
+      "city_code": 685,
+      "city_name_he": "בניה",
+      "city_name_en": "BENAYA"
+    },
+    {
+      "city_code": 686,
+      "city_name_he": "נווה ימין",
+      "city_name_en": "NEWE YAMIN"
+    },
+    {
+      "city_code": 687,
+      "city_name_he": "עין איילה",
+      "city_name_en": "EN AYYALA"
+    },
+    {
+      "city_code": 688,
+      "city_name_he": "עלמה",
+      "city_name_en": "ALMA"
+    },
+    {
+      "city_code": 689,
+      "city_name_he": "מגדים",
+      "city_name_en": "MEGADIM"
+    },
+    {
+      "city_code": 690,
+      "city_name_he": "כפר אחים",
+      "city_name_en": "KEFAR AHIM"
+    },
+    {
+      "city_code": 692,
+      "city_name_he": "שפיר",
+      "city_name_en": "SHAFIR"
+    },
+    {
+      "city_code": 693,
+      "city_name_he": "נתיב הלה",
+      "city_name_en": "NETIV HALAMED-HE"
+    },
+    {
+      "city_code": 694,
+      "city_name_he": "מעגן מיכאל",
+      "city_name_en": "MA'AGAN MIKHA'EL"
+    },
+    {
+      "city_code": 695,
+      "city_name_he": "מגן",
+      "city_name_en": "MAGEN"
+    },
+    {
+      "city_code": 696,
+      "city_name_he": "כפר חבד",
+      "city_name_en": "KEFAR HABAD"
+    },
+    {
+      "city_code": 697,
+      "city_name_he": "בארותיים",
+      "city_name_en": "BE'EROTAYIM"
+    },
+    {
+      "city_code": 698,
+      "city_name_he": "בורגתה",
+      "city_name_en": "BURGETA"
+    },
+    {
+      "city_code": 699,
+      "city_name_he": "ניר ישראל",
+      "city_name_en": "NIR YISRA'EL"
+    },
+    {
+      "city_code": 700,
+      "city_name_he": "חצב",
+      "city_name_en": "HAZAV"
+    },
+    {
+      "city_code": 701,
+      "city_name_he": "ארבל",
+      "city_name_en": "ARBEL"
+    },
+    {
+      "city_code": 702,
+      "city_name_he": "האון",
+      "city_name_en": "HAON"
+    },
+    {
+      "city_code": 703,
+      "city_name_he": "גבעת עוז",
+      "city_name_en": "GIV'AT OZ"
+    },
+    {
+      "city_code": 705,
+      "city_name_he": "נחשונים",
+      "city_name_en": "NAHSHONIM"
+    },
+    {
+      "city_code": 706,
+      "city_name_he": "גיאה",
+      "city_name_en": "GE'A"
+    },
+    {
+      "city_code": 707,
+      "city_name_he": "כפר דניאל",
+      "city_name_en": "KEFAR DANIYYEL"
+    },
+    {
+      "city_code": 708,
+      "city_name_he": "עמקה",
+      "city_name_en": "AMQA"
+    },
+    {
+      "city_code": 709,
+      "city_name_he": "תפרח",
+      "city_name_en": "TIFRAH"
+    },
+    {
+      "city_code": 710,
+      "city_name_he": "בית זית",
+      "city_name_en": "BET ZAYIT"
+    },
+    {
+      "city_code": 711,
+      "city_name_he": "עזריה",
+      "city_name_en": "AZARYA"
+    },
+    {
+      "city_code": 712,
+      "city_name_he": "בן עמי",
+      "city_name_en": "BEN AMMI"
+    },
+    {
+      "city_code": 713,
+      "city_name_he": "רעים",
+      "city_name_en": "RE'IM"
+    },
+    {
+      "city_code": 714,
+      "city_name_he": "ארז",
+      "city_name_en": "EREZ"
+    },
+    {
+      "city_code": 715,
+      "city_name_he": "להבות חביבה",
+      "city_name_en": "LAHAVOT HAVIVA"
+    },
+    {
+      "city_code": 716,
+      "city_name_he": "אייל",
+      "city_name_en": "EYAL"
+    },
+    {
+      "city_code": 717,
+      "city_name_he": "חגור",
+      "city_name_en": "HAGOR"
+    },
+    {
+      "city_code": 718,
+      "city_name_he": "ירחיב",
+      "city_name_en": "YARHIV"
+    },
+    {
+      "city_code": 719,
+      "city_name_he": "תל קציר",
+      "city_name_en": "TEL QAZIR"
+    },
+    {
+      "city_code": 720,
+      "city_name_he": "ניר גלים",
+      "city_name_en": "NIR GALLIM"
+    },
+    {
+      "city_code": 721,
+      "city_name_he": "שדה אילן",
+      "city_name_en": "SEDE ILAN"
+    },
+    {
+      "city_code": 722,
+      "city_name_he": "מגשימים",
+      "city_name_en": "MAGSHIMIM"
+    },
+    {
+      "city_code": 723,
+      "city_name_he": "בית הגדי",
+      "city_name_en": "BET HAGADDI"
+    },
+    {
+      "city_code": 726,
+      "city_name_he": "הודיה",
+      "city_name_en": "HODIYYA"
+    },
+    {
+      "city_code": 727,
+      "city_name_he": "תלמי יחיאל",
+      "city_name_en": "TALME YEHI'EL"
+    },
+    {
+      "city_code": 729,
+      "city_name_he": "משמר השבעה",
+      "city_name_en": "MISHMAR HASHIV'A"
+    },
+    {
+      "city_code": 730,
+      "city_name_he": "אליפלט",
+      "city_name_en": "ELIFELET"
+    },
+    {
+      "city_code": 731,
+      "city_name_he": "מישר",
+      "city_name_en": "MESHAR"
+    },
+    {
+      "city_code": 732,
+      "city_name_he": "משמר הירדן",
+      "city_name_en": "MISHMAR HAYARDEN"
+    },
+    {
+      "city_code": 734,
+      "city_name_he": "גן יאשיה",
+      "city_name_en": "GAN YOSHIYYA"
+    },
+    {
+      "city_code": 735,
+      "city_name_he": "רמות מאיר",
+      "city_name_en": "RAMOT ME'IR"
+    },
+    {
+      "city_code": 736,
+      "city_name_he": "גילת",
+      "city_name_en": "GILAT"
+    },
+    {
+      "city_code": 737,
+      "city_name_he": "עולש",
+      "city_name_en": "OLESH"
+    },
+    {
+      "city_code": 738,
+      "city_name_he": "דור",
+      "city_name_en": "DOR"
+    },
+    {
+      "city_code": 739,
+      "city_name_he": "שדה עוזיהו",
+      "city_name_en": "SEDE UZZIYYAHU"
+    },
+    {
+      "city_code": 740,
+      "city_name_he": "אשתאול",
+      "city_name_en": "ESHTA'OL"
+    },
+    {
+      "city_code": 741,
+      "city_name_he": "שואבה",
+      "city_name_en": "SHO'EVA"
+    },
+    {
+      "city_code": 742,
+      "city_name_he": "מסילת ציון",
+      "city_name_en": "MESILLAT ZIYYON"
+    },
+    {
+      "city_code": 743,
+      "city_name_he": "כפר שמואל",
+      "city_name_en": "KEFAR SHEMU'EL"
+    },
+    {
+      "city_code": 744,
+      "city_name_he": "תלמי יפה",
+      "city_name_en": "TALME YAFE"
+    },
+    {
+      "city_code": 745,
+      "city_name_he": "גמזו",
+      "city_name_en": "GIMZO"
+    },
+    {
+      "city_code": 746,
+      "city_name_he": "ברכיה",
+      "city_name_en": "BEREKHYA"
+    },
+    {
+      "city_code": 747,
+      "city_name_he": "בית שקמה",
+      "city_name_en": "BET SHIQMA"
+    },
+    {
+      "city_code": 748,
+      "city_name_he": "מסלול",
+      "city_name_en": "MASLUL"
+    },
+    {
+      "city_code": 749,
+      "city_name_he": "פטיש",
+      "city_name_en": "PATTISH"
+    },
+    {
+      "city_code": 750,
+      "city_name_he": "פדויים",
+      "city_name_en": "PEDUYIM"
+    },
+    {
+      "city_code": 751,
+      "city_name_he": "בית מאיר",
+      "city_name_en": "BET ME'IR"
+    },
+    {
+      "city_code": 752,
+      "city_name_he": "תעוז",
+      "city_name_en": "TA'OZ"
+    },
+    {
+      "city_code": 753,
+      "city_name_he": "ינוב",
+      "city_name_en": "YANUV"
+    },
+    {
+      "city_code": 755,
+      "city_name_he": "גורן",
+      "city_name_en": "GOREN"
+    },
+    {
+      "city_code": 756,
+      "city_name_he": "בית עזרא",
+      "city_name_en": "BET EZRA"
+    },
+    {
+      "city_code": 757,
+      "city_name_he": "מצליח",
+      "city_name_en": "MAZLIAH"
+    },
+    {
+      "city_code": 758,
+      "city_name_he": "יד חנה",
+      "city_name_en": "YAD HANNA"
+    },
+    {
+      "city_code": 759,
+      "city_name_he": "יציץ",
+      "city_name_en": "YAZIZ"
+    },
+    {
+      "city_code": 760,
+      "city_name_he": "בן זכאי",
+      "city_name_en": "BEN ZAKKAY"
+    },
+    {
+      "city_code": 761,
+      "city_name_he": "שובה",
+      "city_name_en": "SHUVA"
+    },
+    {
+      "city_code": 762,
+      "city_name_he": "בטחה",
+      "city_name_en": "BITHA"
+    },
+    {
+      "city_code": 763,
+      "city_name_he": "שתולים",
+      "city_name_en": "SHETULIM"
+    },
+    {
+      "city_code": 764,
+      "city_name_he": "כפר מרדכי",
+      "city_name_en": "KEFAR MORDEKHAY"
+    },
+    {
+      "city_code": 765,
+      "city_name_he": "משגב דב",
+      "city_name_en": "MISGAV DOV"
+    },
+    {
+      "city_code": 766,
+      "city_name_he": "קוממיות",
+      "city_name_en": "QOMEMIYYUT"
+    },
+    {
+      "city_code": 767,
+      "city_name_he": "פורת",
+      "city_name_en": "PORAT"
+    },
+    {
+      "city_code": 768,
+      "city_name_he": "כרמיה",
+      "city_name_en": "KARMIYYA"
+    },
+    {
+      "city_code": 769,
+      "city_name_he": "ניר עציון",
+      "city_name_en": "NIR EZYON"
+    },
+    {
+      "city_code": 771,
+      "city_name_he": "מבוא ביתר",
+      "city_name_en": "MEVO BETAR"
+    },
+    {
+      "city_code": 772,
+      "city_name_he": "אמונים",
+      "city_name_en": "EMUNIM"
+    },
+    {
+      "city_code": 773,
+      "city_name_he": "עמיקם",
+      "city_name_en": "AMMIQAM"
+    },
+    {
+      "city_code": 774,
+      "city_name_he": "צוריאל",
+      "city_name_en": "ZURI'EL"
+    },
+    {
+      "city_code": 775,
+      "city_name_he": "יד נתן",
+      "city_name_en": "YAD NATAN"
+    },
+    {
+      "city_code": 776,
+      "city_name_he": "מחסיה",
+      "city_name_en": "MAHSEYA"
+    },
+    {
+      "city_code": 777,
+      "city_name_he": "נחשון",
+      "city_name_en": "NAHSHON"
+    },
+    {
+      "city_code": 778,
+      "city_name_he": "תרום",
+      "city_name_en": "TARUM"
+    },
+    {
+      "city_code": 779,
+      "city_name_he": "עמינדב",
+      "city_name_en": "AMMINADAV"
+    },
+    {
+      "city_code": 780,
+      "city_name_he": "אורה",
+      "city_name_en": "ORA"
+    },
+    {
+      "city_code": 783,
+      "city_name_he": "אבן ספיר",
+      "city_name_en": "EVEN SAPPIR"
+    },
+    {
+      "city_code": 784,
+      "city_name_he": "בית נחמיה",
+      "city_name_en": "BET NEHEMYA"
+    },
+    {
+      "city_code": 785,
+      "city_name_he": "אחיהוד",
+      "city_name_en": "AHIHUD"
+    },
+    {
+      "city_code": 786,
+      "city_name_he": "כפר זיתים",
+      "city_name_en": "KEFAR ZETIM"
+    },
+    {
+      "city_code": 787,
+      "city_name_he": "גבעת יערים",
+      "city_name_en": "GIV'AT YE'ARIM"
+    },
+    {
+      "city_code": 788,
+      "city_name_he": "זיתן",
+      "city_name_en": "ZETAN"
+    },
+    {
+      "city_code": 789,
+      "city_name_he": "רנן",
+      "city_name_en": "RANNEN"
+    },
+    {
+      "city_code": 791,
+      "city_name_he": "משען",
+      "city_name_en": "MASH'EN"
+    },
+    {
+      "city_code": 792,
+      "city_name_he": "נתיב השיירה",
+      "city_name_en": "NETIV HASHAYYARA"
+    },
+    {
+      "city_code": 793,
+      "city_name_he": "גבעתי",
+      "city_name_en": "GIV'ATI"
+    },
+    {
+      "city_code": 794,
+      "city_name_he": "עגור",
+      "city_name_en": "AGUR"
+    },
+    {
+      "city_code": 795,
+      "city_name_he": "יערה",
+      "city_name_en": "YA'ARA"
+    },
+    {
+      "city_code": 796,
+      "city_name_he": "צלפון",
+      "city_name_en": "ZELAFON"
+    },
+    {
+      "city_code": 797,
+      "city_name_he": "אחיעזר",
+      "city_name_en": "AHI'EZER"
+    },
+    {
+      "city_code": 798,
+      "city_name_he": "יגל",
+      "city_name_en": "YAGEL"
+    },
+    {
+      "city_code": 799,
+      "city_name_he": "זכריה",
+      "city_name_en": "ZEKHARYA"
+    },
+    {
+      "city_code": 800,
+      "city_name_he": "בית חנניה",
+      "city_name_en": "BET HANANYA"
+    },
+    {
+      "city_code": 801,
+      "city_name_he": "חמד",
+      "city_name_en": "HEMED"
+    },
+    {
+      "city_code": 802,
+      "city_name_he": "גבעת כח",
+      "city_name_en": "GIV'AT KOAH"
+    },
+    {
+      "city_code": 803,
+      "city_name_he": "יושיביה",
+      "city_name_en": "YOSHIVYA"
+    },
+    {
+      "city_code": 804,
+      "city_name_he": "אחיסמך",
+      "city_name_en": "AHISAMAKH"
+    },
+    {
+      "city_code": 805,
+      "city_name_he": "ישעי",
+      "city_name_en": "YISH'I"
+    },
+    {
+      "city_code": 806,
+      "city_name_he": "עין יהב",
+      "city_name_en": "EN YAHAV"
+    },
+    {
+      "city_code": 807,
+      "city_name_he": "חניאל",
+      "city_name_en": "HANNI'EL"
+    },
+    {
+      "city_code": 808,
+      "city_name_he": "ניר אליהו",
+      "city_name_en": "NIR ELIYYAHU"
+    },
+    {
+      "city_code": 809,
+      "city_name_he": "נחם",
+      "city_name_en": "NAHAM"
+    },
+    {
+      "city_code": 810,
+      "city_name_he": "עופר",
+      "city_name_en": "OFER"
+    },
+    {
+      "city_code": 811,
+      "city_name_he": "יכיני",
+      "city_name_en": "YAKHINI"
+    },
+    {
+      "city_code": 812,
+      "city_name_he": "שלומי",
+      "city_name_en": "SHELOMI"
+    },
+    {
+      "city_code": 813,
+      "city_name_he": "עין יעקב",
+      "city_name_en": "EN YA'AQOV"
+    },
+    {
+      "city_code": 814,
+      "city_name_he": "תלמים",
+      "city_name_en": "TELAMIM"
+    },
+    {
+      "city_code": 815,
+      "city_name_he": "זבדיאל",
+      "city_name_en": "ZAVDI'EL"
+    },
+    {
+      "city_code": 816,
+      "city_name_he": "זנוח",
+      "city_name_en": "ZANOAH"
+    },
+    {
+      "city_code": 817,
+      "city_name_he": "עזריקם",
+      "city_name_en": "AZRIQAM"
+    },
+    {
+      "city_code": 818,
+      "city_name_he": "זרחיה",
+      "city_name_en": "ZERAHYA"
+    },
+    {
+      "city_code": 819,
+      "city_name_he": "אביגדור",
+      "city_name_en": "AVIGEDOR"
+    },
+    {
+      "city_code": 820,
+      "city_name_he": "חלץ",
+      "city_name_en": "HELEZ"
+    },
+    {
+      "city_code": 821,
+      "city_name_he": "אחוזם",
+      "city_name_en": "AHUZZAM"
+    },
+    {
+      "city_code": 822,
+      "city_name_he": "מטע",
+      "city_name_en": "MATTA"
+    },
+    {
+      "city_code": 823,
+      "city_name_he": "בר גיורא",
+      "city_name_en": "BAR GIYYORA"
+    },
+    {
+      "city_code": 824,
+      "city_name_he": "כוכב מיכאל",
+      "city_name_en": "KOKHAV MIKHA'EL"
+    },
+    {
+      "city_code": 825,
+      "city_name_he": "נס הרים",
+      "city_name_en": "NES HARIM"
+    },
+    {
+      "city_code": 826,
+      "city_name_he": "עוזה",
+      "city_name_en": "UZA"
+    },
+    {
+      "city_code": 827,
+      "city_name_he": "נווה מבטח",
+      "city_name_en": "NEWE MIVTAH"
+    },
+    {
+      "city_code": 828,
+      "city_name_he": "ישרש",
+      "city_name_en": "YASHRESH"
+    },
+    {
+      "city_code": 829,
+      "city_name_he": "מבטחים",
+      "city_name_en": "MIVTAHIM"
+    },
+    {
+      "city_code": 831,
+      "city_name_he": "ירוחם",
+      "city_name_en": "YEROHAM"
+    },
+    {
+      "city_code": 833,
+      "city_name_he": "נורית",
+      "city_name_en": "NURIT"
+    },
+    {
+      "city_code": 836,
+      "city_name_he": "גנות",
+      "city_name_en": "GANNOT"
+    },
+    {
+      "city_code": 837,
+      "city_name_he": "עזריאל",
+      "city_name_en": "AZRI'EL"
+    },
+    {
+      "city_code": 838,
+      "city_name_he": "פדיה",
+      "city_name_en": "PEDAYA"
+    },
+    {
+      "city_code": 839,
+      "city_name_he": "פתחיה",
+      "city_name_en": "PETAHYA"
+    },
+    {
+      "city_code": 840,
+      "city_name_he": "כיסופים",
+      "city_name_en": "KISSUFIM"
+    },
+    {
+      "city_code": 841,
+      "city_name_he": "אלישמע",
+      "city_name_en": "ELISHAMA"
+    },
+    {
+      "city_code": 842,
+      "city_name_he": "געש",
+      "city_name_en": "GA'ASH"
+    },
+    {
+      "city_code": 843,
+      "city_name_he": "מרגליות",
+      "city_name_en": "MARGALIYYOT"
+    },
+    {
+      "city_code": 844,
+      "city_name_he": "נחל עוז",
+      "city_name_en": "NAHAL OZ"
+    },
+    {
+      "city_code": 845,
+      "city_name_he": "כפר עזה",
+      "city_name_en": "KEFAR AZZA"
+    },
+    {
+      "city_code": 846,
+      "city_name_he": "שפר",
+      "city_name_en": "SHEFER"
+    },
+    {
+      "city_code": 848,
+      "city_name_he": "בית רבן",
+      "city_name_en": "BET RABBAN"
+    },
+    {
+      "city_code": 849,
+      "city_name_he": "דביר",
+      "city_name_en": "DVIR"
+    },
+    {
+      "city_code": 850,
+      "city_name_he": "אחיטוב",
+      "city_name_en": "AHITUV"
+    },
+    {
+      "city_code": 851,
+      "city_name_he": "ניצני עוז",
+      "city_name_en": "NIZZANE OZ"
+    },
+    {
+      "city_code": 852,
+      "city_name_he": "גונן",
+      "city_name_en": "GONEN"
+    },
+    {
+      "city_code": 853,
+      "city_name_he": "גאליה",
+      "city_name_en": "GE'ALYA"
+    },
+    {
+      "city_code": 854,
+      "city_name_he": "רחוב",
+      "city_name_en": "REHOV"
+    },
+    {
+      "city_code": 856,
+      "city_name_he": "שעלבים",
+      "city_name_en": "SHA'ALVIM"
+    },
+    {
+      "city_code": 857,
+      "city_name_he": "כפר אביב",
+      "city_name_en": "KEFAR AVIV"
+    },
+    {
+      "city_code": 858,
+      "city_name_he": "נווה ירק",
+      "city_name_en": "NEWE YARAQ"
+    },
+    {
+      "city_code": 859,
+      "city_name_he": "כסלון",
+      "city_name_en": "KESALON"
+    },
+    {
+      "city_code": 861,
+      "city_name_he": "שדה אליעזר",
+      "city_name_en": "SEDE ELI'EZER"
+    },
+    {
+      "city_code": 862,
+      "city_name_he": "גני יוחנן",
+      "city_name_en": "GANNE YOHANAN"
+    },
+    {
+      "city_code": 863,
+      "city_name_he": "גינתון",
+      "city_name_en": "GINNATON"
+    },
+    {
+      "city_code": 864,
+      "city_name_he": "בקוע",
+      "city_name_en": "BEQOA"
+    },
+    {
+      "city_code": 865,
+      "city_name_he": "שיבולים",
+      "city_name_en": "SHIBBOLIM"
+    },
+    {
+      "city_code": 866,
+      "city_name_he": "יטבתה",
+      "city_name_en": "YOTVATA"
+    },
+    {
+      "city_code": 868,
+      "city_name_he": "אלוני יצחק",
+      "city_name_en": "ALLONE YIZHAQ"
+    },
+    {
+      "city_code": 870,
+      "city_name_he": "גבעת השלושה",
+      "city_name_en": "GIV'AT HASHELOSHA"
+    },
+    {
+      "city_code": 871,
+      "city_name_he": "עינת",
+      "city_name_en": "ENAT"
+    },
+    {
+      "city_code": 872,
+      "city_name_he": "גאולי תימן",
+      "city_name_en": "GE'ULE TEMAN"
+    },
+    {
+      "city_code": 873,
+      "city_name_he": "שלווה",
+      "city_name_en": "SHALWA"
+    },
+    {
+      "city_code": 874,
+      "city_name_he": "מגדל העמק",
+      "city_name_en": "MIGDAL HAEMEQ"
+    },
+    {
+      "city_code": 875,
+      "city_name_he": "כפר עבודה",
+      "city_name_en": "KEFAR AVODA"
+    },
+    {
+      "city_code": 877,
+      "city_name_he": "בית חירות",
+      "city_name_en": "BET HERUT"
+    },
+    {
+      "city_code": 880,
+      "city_name_he": "עין שריד",
+      "city_name_en": "EN SARID"
+    },
+    {
+      "city_code": 882,
+      "city_name_he": "אורנים",
+      "city_name_en": "ORANIM"
+    },
+    {
+      "city_code": 885,
+      "city_name_he": "שדה בוקר",
+      "city_name_en": "SEDE BOQER"
+    },
+    {
+      "city_code": 886,
+      "city_name_he": "איתנים",
+      "city_name_en": "ETANIM"
+    },
+    {
+      "city_code": 888,
+      "city_name_he": "כפר הריף",
+      "city_name_en": "KEFAR HARIF"
+    },
+    {
+      "city_code": 889,
+      "city_name_he": "כפר חסידים ב'",
+      "city_name_en": "KEFAR HASIDIM BET"
+    },
+    {
+      "city_code": 890,
+      "city_name_he": "כפר הנוער הדתי",
+      "city_name_en": "KEFAR HANO'AR HADATI"
+    },
+    {
+      "city_code": 892,
+      "city_name_he": "עבדון",
+      "city_name_en": "AVDON"
+    },
+    {
+      "city_code": 897,
+      "city_name_he": "מדרשת רופין",
+      "city_name_en": "MIDRESHET RUPPIN"
+    },
+    {
+      "city_code": 913,
+      "city_name_he": "שבלי - אום אל-גנם",
+      "city_name_en": "SHIBLI"
+    },
+    {
+      "city_code": 916,
+      "city_name_he": "ישע",
+      "city_name_en": "YESHA"
+    },
+    {
+      "city_code": 917,
+      "city_name_he": "עצמון שגב",
+      "city_name_en": "ATSMON-SEGEV"
+    },
+    {
+      "city_code": 919,
+      "city_name_he": "גבעת ישעיהו",
+      "city_name_en": "GIV'AT YESHA'YAHU"
+    },
+    {
+      "city_code": 921,
+      "city_name_he": "שער מנשה",
+      "city_name_en": "SHA'AR MENASHE"
+    },
+    {
+      "city_code": 922,
+      "city_name_he": "רכסים",
+      "city_name_en": "REKHASIM"
+    },
+    {
+      "city_code": 926,
+      "city_name_he": "נווה אבות",
+      "city_name_en": "NEWE AVOT"
+    },
+    {
+      "city_code": 932,
+      "city_name_he": "אבו עמרה (שבט)",
+      "city_name_en": "ABU AMRE"
+    },
+    {
+      "city_code": 935,
+      "city_name_he": "אבו סריחאן (שבט)",
+      "city_name_en": "ABU SUREIHAN"
+    },
+    {
+      "city_code": 939,
+      "city_name_he": "מסעודין אל-עזאזמה",
+      "city_name_en": "MAS'UDIN AL-'AZAZME"
+    },
+    {
+      "city_code": 942,
+      "city_name_he": "סואעד (חמירה)",
+      "city_name_en": "SAWA'ID (HUMAYRA)"
+    },
+    {
+      "city_code": 944,
+      "city_name_he": "בסמת טבעון",
+      "city_name_en": "BASMAT TAB'UN"
+    },
+    {
+      "city_code": 948,
+      "city_name_he": "חוג'ייראת (ד'הרה)",
+      "city_name_en": "HUJEIRAT (DAHRA)"
+    },
+    {
+      "city_code": 956,
+      "city_name_he": "הוזייל (שבט)",
+      "city_name_en": "HUZAYYEL"
+    },
+    {
+      "city_code": 957,
+      "city_name_he": "עוקבי (בנו עוקבה)",
+      "city_name_en": "UQBI (BANU UQBA)"
+    },
+    {
+      "city_code": 958,
+      "city_name_he": "אבו עבדון (שבט)",
+      "city_name_en": "ABU ABDUN"
+    },
+    {
+      "city_code": 959,
+      "city_name_he": "אפיניש (שבט)",
+      "city_name_en": "AFEINISH"
+    },
+    {
+      "city_code": 960,
+      "city_name_he": "אסד (שבט)",
+      "city_name_en": "ASAD"
+    },
+    {
+      "city_code": 961,
+      "city_name_he": "אבו רוקייק (שבט)",
+      "city_name_en": "ABU RUQAYYEQ"
+    },
+    {
+      "city_code": 962,
+      "city_name_he": "טובא-זנגריה",
+      "city_name_en": "TUBA-ZANGARIYYE"
+    },
+    {
+      "city_code": 963,
+      "city_name_he": "אעצם (שבט)",
+      "city_name_en": "A'SAM"
+    },
+    {
+      "city_code": 964,
+      "city_name_he": "קודייראת א-צאנע(שבט)",
+      "city_name_en": "QUDEIRAT AS-SANI"
+    },
+    {
+      "city_code": 965,
+      "city_name_he": "אטרש (שבט)",
+      "city_name_en": "ATRASH"
+    },
+    {
+      "city_code": 966,
+      "city_name_he": "אבו רובייעה (שבט)",
+      "city_name_en": "ABU RUBEI'A"
+    },
+    {
+      "city_code": 967,
+      "city_name_he": "אבו ג'ווייעד (שבט)",
+      "city_name_en": "ABU JUWEI'ID"
+    },
+    {
+      "city_code": 968,
+      "city_name_he": "אבו קורינאת (שבט)",
+      "city_name_en": "ABU QUREINAT"
+    },
+    {
+      "city_code": 969,
+      "city_name_he": "עטאוונה (שבט)",
+      "city_name_en": "ATAWNE"
+    },
+    {
+      "city_code": 970,
+      "city_name_he": "תראבין א-צאנע (שבט)",
+      "city_name_en": "TARABIN AS-SANI"
+    },
+    {
+      "city_code": 972,
+      "city_name_he": "קוואעין (שבט)",
+      "city_name_en": "QAWA'IN"
+    },
+    {
+      "city_code": 975,
+      "city_name_he": "זרזיר",
+      "city_name_en": "ZARZIR"
+    },
+    {
+      "city_code": 976,
+      "city_name_he": "ג'נאביב (שבט)",
+      "city_name_en": "JUNNABIB"
+    },
+    {
+      "city_code": 978,
+      "city_name_he": "כעביה-טבאש-חג'אג'רה",
+      "city_name_en": "KA'ABIYYE-TABBASH-HA"
+    },
+    {
+      "city_code": 986,
+      "city_name_he": "ח'ואלד (שבט)",
+      "city_name_en": "KHAWALED"
+    },
+    {
+      "city_code": 989,
+      "city_name_he": "סואעד (כמאנה) (שבט)",
+      "city_name_en": "SAWA'ID (KAMANE)"
+    },
+    {
+      "city_code": 990,
+      "city_name_he": "ראס עלי",
+      "city_name_en": "RAS ALI"
+    },
+    {
+      "city_code": 993,
+      "city_name_he": "חמאם",
+      "city_name_en": "HAMAM"
+    },
+    {
+      "city_code": 994,
+      "city_name_he": "מנשית זבדה",
+      "city_name_en": "MANSHIYYET ZABDA"
+    },
+    {
+      "city_code": 997,
+      "city_name_he": "רומת הייב",
+      "city_name_en": "RUMAT HEIB"
+    },
+    {
+      "city_code": 998,
+      "city_name_he": "ביר אל-מכסור",
+      "city_name_en": "BIR EL-MAKSUR"
+    },
+    {
+      "city_code": 1015,
+      "city_name_he": "מבשרת ציון",
+      "city_name_en": "MEVASSERET ZIYYON"
+    },
+    {
+      "city_code": 1020,
+      "city_name_he": "אור עקיבא",
+      "city_name_en": "OR AQIVA"
+    },
+    {
+      "city_code": 1024,
+      "city_name_he": "חרוצים",
+      "city_name_en": "HARUZIM"
+    },
+    {
+      "city_code": 1031,
+      "city_name_he": "שדרות",
+      "city_name_en": "SEDEROT"
+    },
+    {
+      "city_code": 1034,
+      "city_name_he": "קרית מלאכי",
+      "city_name_en": "QIRYAT MAL'AKHI"
+    },
+    {
+      "city_code": 1041,
+      "city_name_he": "נצאצרה (שבט)",
+      "city_name_en": "NASASRA"
+    },
+    {
+      "city_code": 1042,
+      "city_name_he": "אבו עמאר (שבט)",
+      "city_name_en": "ABU AMMAR"
+    },
+    {
+      "city_code": 1043,
+      "city_name_he": "גיזו",
+      "city_name_en": "GIZO"
+    },
+    {
+      "city_code": 1044,
+      "city_name_he": "יעף",
+      "city_name_en": "YE'AF"
+    },
+    {
+      "city_code": 1045,
+      "city_name_he": "שתולה",
+      "city_name_en": "SHETULA"
+    },
+    {
+      "city_code": 1046,
+      "city_name_he": "אוהד",
+      "city_name_en": "OHAD"
+    },
+    {
+      "city_code": 1047,
+      "city_name_he": "חזון",
+      "city_name_en": "HAZON"
+    },
+    {
+      "city_code": 1050,
+      "city_name_he": "בית חשמונאי",
+      "city_name_en": "BET HASHMONAY"
+    },
+    {
+      "city_code": 1051,
+      "city_name_he": "תלמי אליהו",
+      "city_name_en": "TALME ELIYYAHU"
+    },
+    {
+      "city_code": 1052,
+      "city_name_he": "קטורה",
+      "city_name_en": "QETURA"
+    },
+    {
+      "city_code": 1053,
+      "city_name_he": "עין חצבה",
+      "city_name_en": "EN HAZEVA"
+    },
+    {
+      "city_code": 1054,
+      "city_name_he": "תל שבע",
+      "city_name_en": "TEL SHEVA"
+    },
+    {
+      "city_code": 1056,
+      "city_name_he": "עין כרם-ביס חקלאי",
+      "city_name_en": "EN KAREM-B.S.HAQLA'I"
+    },
+    {
+      "city_code": 1057,
+      "city_name_he": "נווה זוהר",
+      "city_name_en": "NEWE ZOHAR"
+    },
+    {
+      "city_code": 1058,
+      "city_name_he": "שדה ניצן",
+      "city_name_en": "SEDE NIZZAN"
+    },
+    {
+      "city_code": 1059,
+      "city_name_he": "כסיפה",
+      "city_name_en": "KUSEIFE"
+    },
+    {
+      "city_code": 1060,
+      "city_name_he": "לקיה",
+      "city_name_en": "LAQYE"
+    },
+    {
+      "city_code": 1061,
+      "city_name_he": "נוף הגליל",
+      "city_name_en": "NOF HAGALIL"
+    },
+    {
+      "city_code": 1063,
+      "city_name_he": "מעלות-תרשיחא",
+      "city_name_en": "MA'ALOT-TARSHIHA"
+    },
+    {
+      "city_code": 1064,
+      "city_name_he": "אמירים",
+      "city_name_en": "AMIRIM"
+    },
+    {
+      "city_code": 1065,
+      "city_name_he": "זמרת",
+      "city_name_en": "ZIMRAT"
+    },
+    {
+      "city_code": 1066,
+      "city_name_he": "בני עיש",
+      "city_name_en": "BENE AYISH"
+    },
+    {
+      "city_code": 1067,
+      "city_name_he": "דובב",
+      "city_name_en": "DOVEV"
+    },
+    {
+      "city_code": 1068,
+      "city_name_he": "אדמית",
+      "city_name_en": "ADAMIT"
+    },
+    {
+      "city_code": 1069,
+      "city_name_he": "רם-און",
+      "city_name_en": "RAM-ON"
+    },
+    {
+      "city_code": 1070,
+      "city_name_he": "אביעזר",
+      "city_name_en": "AVI'EZER"
+    },
+    {
+      "city_code": 1071,
+      "city_name_he": "נווה מיכאל",
+      "city_name_en": "NEWE MIKHA'EL"
+    },
+    {
+      "city_code": 1072,
+      "city_name_he": "גן הדרום",
+      "city_name_en": "GAN HADAROM"
+    },
+    {
+      "city_code": 1076,
+      "city_name_he": "בית ברל",
+      "city_name_en": "BET BERL"
+    },
+    {
+      "city_code": 1077,
+      "city_name_he": "גבעת שפירא",
+      "city_name_en": "GIV'AT SHAPPIRA"
+    },
+    {
+      "city_code": 1079,
+      "city_name_he": "צפרירים",
+      "city_name_en": "ZAFRIRIM"
+    },
+    {
+      "city_code": 1080,
+      "city_name_he": "מבועים",
+      "city_name_en": "MABBU'IM"
+    },
+    {
+      "city_code": 1081,
+      "city_name_he": "אבן מנחם",
+      "city_name_en": "EVEN MENAHEM"
+    },
+    {
+      "city_code": 1082,
+      "city_name_he": "מעגלים",
+      "city_name_en": "MA'GALIM"
+    },
+    {
+      "city_code": 1083,
+      "city_name_he": "תושיה",
+      "city_name_en": "TUSHIYYA"
+    },
+    {
+      "city_code": 1084,
+      "city_name_he": "בן שמן (כפר נוער)",
+      "city_name_en": "BEN SHEMEN(K.NO'AR)"
+    },
+    {
+      "city_code": 1085,
+      "city_name_he": "כרם שלום",
+      "city_name_en": "KEREM SHALOM"
+    },
+    {
+      "city_code": 1094,
+      "city_name_he": "כרם ביבנה (ישיבה)",
+      "city_name_en": "KEREM BEYAVNE"
+    },
+    {
+      "city_code": 1095,
+      "city_name_he": "כפר מימון",
+      "city_name_en": "KEFAR MAYMON"
+    },
+    {
+      "city_code": 1098,
+      "city_name_he": "מרכז שפירא",
+      "city_name_en": "MERKAZ SHAPPIRA"
+    },
+    {
+      "city_code": 1102,
+      "city_name_he": "צוקי ים",
+      "city_name_en": "SHOSHANNAT HAAMAQIM("
+    },
+    {
+      "city_code": 1103,
+      "city_name_he": "גני הדר",
+      "city_name_en": "GANNE HADAR"
+    },
+    {
+      "city_code": 1104,
+      "city_name_he": "פוריה - כפר עבודה",
+      "city_name_en": "PORIYYA-KEFAR AVODA"
+    },
+    {
+      "city_code": 1105,
+      "city_name_he": "פוריה - נווה עובד",
+      "city_name_en": "PORIYYA-NEWE OVED"
+    },
+    {
+      "city_code": 1108,
+      "city_name_he": "אומן",
+      "city_name_en": "OMEN"
+    },
+    {
+      "city_code": 1110,
+      "city_name_he": "חבר",
+      "city_name_en": "HEVER"
+    },
+    {
+      "city_code": 1111,
+      "city_name_he": "צופיה",
+      "city_name_en": "ZOFIYYA"
+    },
+    {
+      "city_code": 1112,
+      "city_name_he": "יודפת",
+      "city_name_en": "YODEFAT"
+    },
+    {
+      "city_code": 1113,
+      "city_name_he": "צור הדסה",
+      "city_name_en": "ZUR HADASSA"
+    },
+    {
+      "city_code": 1114,
+      "city_name_he": "שריגים (לי-און)",
+      "city_name_en": "LI-ON"
+    },
+    {
+      "city_code": 1115,
+      "city_name_he": "אביבים",
+      "city_name_en": "AVIVIM"
+    },
+    {
+      "city_code": 1117,
+      "city_name_he": "יעל",
+      "city_name_en": "YA'EL"
+    },
+    {
+      "city_code": 1123,
+      "city_name_he": "אדרת",
+      "city_name_en": "ADDERET"
+    },
+    {
+      "city_code": 1124,
+      "city_name_he": "נאות הכיכר",
+      "city_name_en": "NE'OT HAKIKKAR"
+    },
+    {
+      "city_code": 1125,
+      "city_name_he": "אלמגור",
+      "city_name_en": "ALMAGOR"
+    },
+    {
+      "city_code": 1126,
+      "city_name_he": "אילות",
+      "city_name_en": "ELOT"
+    },
+    {
+      "city_code": 1127,
+      "city_name_he": "מעלה גלבוע",
+      "city_name_en": "MA'ALE GILBOA"
+    },
+    {
+      "city_code": 1128,
+      "city_name_he": "מי עמי",
+      "city_name_en": "ME AMMI"
+    },
+    {
+      "city_code": 1129,
+      "city_name_he": "גרופית",
+      "city_name_en": "GEROFIT"
+    },
+    {
+      "city_code": 1130,
+      "city_name_he": "כפר רוזנואלד (זרעית)",
+      "city_name_en": "KEFAR ROZENWALD(ZAR."
+    },
+    {
+      "city_code": 1132,
+      "city_name_he": "שניר",
+      "city_name_en": "SENIR"
+    },
+    {
+      "city_code": 1133,
+      "city_name_he": "ורדון",
+      "city_name_en": "WARDON"
+    },
+    {
+      "city_code": 1134,
+      "city_name_he": "יד השמונה",
+      "city_name_en": "YAD HASHEMONA"
+    },
+    {
+      "city_code": 1136,
+      "city_name_he": "צוחר",
+      "city_name_en": "ZOHAR"
+    },
+    {
+      "city_code": 1137,
+      "city_name_he": "קרית יערים",
+      "city_name_en": "QIRYAT YE'ARIM"
+    },
+    {
+      "city_code": 1138,
+      "city_name_he": "יעד",
+      "city_name_en": "YA'AD"
+    },
+    {
+      "city_code": 1139,
+      "city_name_he": "כרמיאל",
+      "city_name_en": "KARMI'EL"
+    },
+    {
+      "city_code": 1140,
+      "city_name_he": "מדרשת בן גוריון",
+      "city_name_en": "MIDRESHET BEN GURION"
+    },
+    {
+      "city_code": 1141,
+      "city_name_he": "מבוא מודיעים",
+      "city_name_en": "MEVO MODI'IM"
+    },
+    {
+      "city_code": 1143,
+      "city_name_he": "נס עמים",
+      "city_name_en": "NES AMMIM"
+    },
+    {
+      "city_code": 1144,
+      "city_name_he": "ידידה",
+      "city_name_en": "YEDIDA"
+    },
+    {
+      "city_code": 1145,
+      "city_name_he": "אלומה",
+      "city_name_en": "ALUMMA"
+    },
+    {
+      "city_code": 1146,
+      "city_name_he": "עלומים",
+      "city_name_en": "ALUMIM"
+    },
+    {
+      "city_code": 1147,
+      "city_name_he": "נטועה",
+      "city_name_en": "NETU'A"
+    },
+    {
+      "city_code": 1148,
+      "city_name_he": "צור נתן",
+      "city_name_en": "ZUR NATAN"
+    },
+    {
+      "city_code": 1149,
+      "city_name_he": "עזר",
+      "city_name_en": "EZER"
+    },
+    {
+      "city_code": 1150,
+      "city_name_he": "צופר",
+      "city_name_en": "ZOFAR"
+    },
+    {
+      "city_code": 1151,
+      "city_name_he": "פארן",
+      "city_name_en": "PARAN"
+    },
+    {
+      "city_code": 1152,
+      "city_name_he": "אשלים",
+      "city_name_en": "ASHALIM"
+    },
+    {
+      "city_code": 1153,
+      "city_name_he": "כישור",
+      "city_name_en": "KISHOR"
+    },
+    {
+      "city_code": 1154,
+      "city_name_he": "מיטל",
+      "city_name_en": "METAL"
+    },
+    {
+      "city_code": 1155,
+      "city_name_he": "מגן שאול",
+      "city_name_en": "MAGEN SHA'UL"
+    },
+    {
+      "city_code": 1156,
+      "city_name_he": "סמר",
+      "city_name_en": "SAMAR"
+    },
+    {
+      "city_code": 1157,
+      "city_name_he": "אחווה",
+      "city_name_en": "AHAWA"
+    },
+    {
+      "city_code": 1158,
+      "city_name_he": "יהל",
+      "city_name_en": "YAHEL"
+    },
+    {
+      "city_code": 1160,
+      "city_name_he": "שכניה",
+      "city_name_en": "SHEKHANYA"
+    },
+    {
+      "city_code": 1161,
+      "city_name_he": "רהט",
+      "city_name_en": "RAHAT"
+    },
+    {
+      "city_code": 1162,
+      "city_name_he": "בית רימון",
+      "city_name_en": "BET RIMMON"
+    },
+    {
+      "city_code": 1163,
+      "city_name_he": "מורן",
+      "city_name_en": "MORAN"
+    },
+    {
+      "city_code": 1165,
+      "city_name_he": "שילת",
+      "city_name_en": "SHILAT"
+    },
+    {
+      "city_code": 1166,
+      "city_name_he": "כפר רות",
+      "city_name_en": "KEFAR RUT"
+    },
+    {
+      "city_code": 1167,
+      "city_name_he": "קיסריה",
+      "city_name_en": "QESARIYYA"
+    },
+    {
+      "city_code": 1169,
+      "city_name_he": "הוואשלה (שבט)",
+      "city_name_en": "HAWASHLA"
+    },
+    {
+      "city_code": 1170,
+      "city_name_he": "סייד (שבט)",
+      "city_name_en": "SAYYID"
+    },
+    {
+      "city_code": 1171,
+      "city_name_he": "לוטם",
+      "city_name_en": "LOTEM"
+    },
+    {
+      "city_code": 1172,
+      "city_name_he": "תובל",
+      "city_name_en": "TUVAL"
+    },
+    {
+      "city_code": 1173,
+      "city_name_he": "לפידות",
+      "city_name_en": "LAPPIDOT"
+    },
+    {
+      "city_code": 1174,
+      "city_name_he": "מנוף",
+      "city_name_en": "MANOF"
+    },
+    {
+      "city_code": 1175,
+      "city_name_he": "עידן",
+      "city_name_en": "IDDAN"
+    },
+    {
+      "city_code": 1176,
+      "city_name_he": "ספיר",
+      "city_name_en": "SAPPIR"
+    },
+    {
+      "city_code": 1177,
+      "city_name_he": "טללים",
+      "city_name_en": "TELALIM"
+    },
+    {
+      "city_code": 1178,
+      "city_name_he": "מורשת",
+      "city_name_en": "MORESHET"
+    },
+    {
+      "city_code": 1179,
+      "city_name_he": "קורנית",
+      "city_name_en": "QORANIT"
+    },
+    {
+      "city_code": 1180,
+      "city_name_he": "צביה",
+      "city_name_en": "ZVIYYA"
+    },
+    {
+      "city_code": 1181,
+      "city_name_he": "טל-אל",
+      "city_name_en": "TAL-EL"
+    },
+    {
+      "city_code": 1182,
+      "city_name_he": "אלון הגליל",
+      "city_name_en": "ALLON HAGALIL"
+    },
+    {
+      "city_code": 1183,
+      "city_name_he": "כליל",
+      "city_name_en": "KELIL"
+    },
+    {
+      "city_code": 1184,
+      "city_name_he": "מתת",
+      "city_name_en": "MATTAT"
+    },
+    {
+      "city_code": 1185,
+      "city_name_he": "פלך",
+      "city_name_en": "PELEKH"
+    },
+    {
+      "city_code": 1186,
+      "city_name_he": "הושעיה",
+      "city_name_en": "HOSHA'AYA"
+    },
+    {
+      "city_code": 1187,
+      "city_name_he": "עיר אובות",
+      "city_name_en": "IR OVOT"
+    },
+    {
+      "city_code": 1188,
+      "city_name_he": "אשחר",
+      "city_name_en": "ESHHAR"
+    },
+    {
+      "city_code": 1190,
+      "city_name_he": "מצפה נטופה",
+      "city_name_en": "MIZPE NETOFA"
+    },
+    {
+      "city_code": 1191,
+      "city_name_he": "בר יוחאי",
+      "city_name_en": "BAR YOHAY"
+    },
+    {
+      "city_code": 1192,
+      "city_name_he": "ערערה-בנגב",
+      "city_name_en": "AR'ARA-BANEGEV"
+    },
+    {
+      "city_code": 1195,
+      "city_name_he": "ניצנה (קהילת חינוך)",
+      "city_name_en": "NIZZANA (QEHILAT HIN"
+    },
+    {
+      "city_code": 1196,
+      "city_name_he": "מחנה יתיר",
+      "city_name_en": "MAHANE YATTIR"
+    },
+    {
+      "city_code": 1197,
+      "city_name_he": "נאות סמדר",
+      "city_name_en": "SHIZZAFON"
+    },
+    {
+      "city_code": 1198,
+      "city_name_he": "כרמים",
+      "city_name_en": "KERAMIM"
+    },
+    {
+      "city_code": 1199,
+      "city_name_he": "עדי",
+      "city_name_en": "ADI"
+    },
+    {
+      "city_code": 1200,
+      "city_name_he": "מודיעין-מכבים-רעות",
+      "city_name_en": "MODI'IN-MAKKABBIM-RE"
+    },
+    {
+      "city_code": 1201,
+      "city_name_he": "כמון",
+      "city_name_en": "KAMMON"
+    },
+    {
+      "city_code": 1202,
+      "city_name_he": "מכמנים",
+      "city_name_en": "MIKHMANNIM"
+    },
+    {
+      "city_code": 1203,
+      "city_name_he": "הררית",
+      "city_name_en": "HARARIT"
+    },
+    {
+      "city_code": 1204,
+      "city_name_he": "גילון",
+      "city_name_en": "GILON"
+    },
+    {
+      "city_code": 1205,
+      "city_name_he": "מנות",
+      "city_name_en": "MANOT"
+    },
+    {
+      "city_code": 1206,
+      "city_name_he": "גיתה",
+      "city_name_en": "GITTA"
+    },
+    {
+      "city_code": 1207,
+      "city_name_he": "לבון",
+      "city_name_en": "LAVON"
+    },
+    {
+      "city_code": 1208,
+      "city_name_he": "הילה",
+      "city_name_en": "HILLA"
+    },
+    {
+      "city_code": 1209,
+      "city_name_he": "חרשים",
+      "city_name_en": "HARASHIM"
+    },
+    {
+      "city_code": 1210,
+      "city_name_he": "כחל",
+      "city_name_en": "KAHAL"
+    },
+    {
+      "city_code": 1211,
+      "city_name_he": "קדרים",
+      "city_name_en": "QADDARIM"
+    },
+    {
+      "city_code": 1212,
+      "city_name_he": "עמוקה",
+      "city_name_en": "AMUQQA"
+    },
+    {
+      "city_code": 1213,
+      "city_name_he": "צבעון",
+      "city_name_en": "ZIV'ON"
+    },
+    {
+      "city_code": 1214,
+      "city_name_he": "טפחות",
+      "city_name_en": "TEFAHOT"
+    },
+    {
+      "city_code": 1219,
+      "city_name_he": "גורנות הגליל",
+      "city_name_en": "GORNOT HAGALIL"
+    },
+    {
+      "city_code": 1220,
+      "city_name_he": "אבירים",
+      "city_name_en": "ABBIRIM"
+    },
+    {
+      "city_code": 1221,
+      "city_name_he": "צורית",
+      "city_name_en": "ZURIT"
+    },
+    {
+      "city_code": 1222,
+      "city_name_he": "מצפה אביב",
+      "city_name_en": "MIZPE AVIV"
+    },
+    {
+      "city_code": 1223,
+      "city_name_he": "שדי אברהם",
+      "city_name_en": "SEDE AVRAHAM"
+    },
+    {
+      "city_code": 1224,
+      "city_name_he": "כוכב יאיר-צור יגאל",
+      "city_name_en": "KOCHAV YAIR TSUR YI"
+    },
+    {
+      "city_code": 1225,
+      "city_name_he": "רביד",
+      "city_name_en": "RAVID"
+    },
+    {
+      "city_code": 1226,
+      "city_name_he": "יובלים",
+      "city_name_en": "YUVALIM"
+    },
+    {
+      "city_code": 1227,
+      "city_name_he": "יתד",
+      "city_name_en": "YATED"
+    },
+    {
+      "city_code": 1228,
+      "city_name_he": "רקפת",
+      "city_name_en": "RAQEFET"
+    },
+    {
+      "city_code": 1229,
+      "city_name_he": "כלנית",
+      "city_name_en": "KALLANIT"
+    },
+    {
+      "city_code": 1230,
+      "city_name_he": "לבנים",
+      "city_name_en": "LIVNIM"
+    },
+    {
+      "city_code": 1231,
+      "city_name_he": "פרי גן",
+      "city_name_en": "PERI GAN"
+    },
+    {
+      "city_code": 1232,
+      "city_name_he": "יבול",
+      "city_name_en": "YEVUL"
+    },
+    {
+      "city_code": 1233,
+      "city_name_he": "שקף",
+      "city_name_en": "SHEQEF"
+    },
+    {
+      "city_code": 1234,
+      "city_name_he": "קבועה (שבט)",
+      "city_name_en": "QABBO'A"
+    },
+    {
+      "city_code": 1235,
+      "city_name_he": "שורשים",
+      "city_name_en": "SHORASHIM"
+    },
+    {
+      "city_code": 1236,
+      "city_name_he": "נירית",
+      "city_name_en": "NIRIT"
+    },
+    {
+      "city_code": 1237,
+      "city_name_he": "תלמי יוסף",
+      "city_name_en": "TALME YOSEF"
+    },
+    {
+      "city_code": 1238,
+      "city_name_he": "סופה",
+      "city_name_en": "SUFA"
+    },
+    {
+      "city_code": 1239,
+      "city_name_he": "חולית",
+      "city_name_en": "HOLIT"
+    },
+    {
+      "city_code": 1240,
+      "city_name_he": "עין הבשור",
+      "city_name_en": "EN HABESOR"
+    },
+    {
+      "city_code": 1241,
+      "city_name_he": "דקל",
+      "city_name_en": "DEQEL"
+    },
+    {
+      "city_code": 1242,
+      "city_name_he": "נתיב העשרה",
+      "city_name_en": "NETIV HAASARA"
+    },
+    {
+      "city_code": 1243,
+      "city_name_he": "קציר",
+      "city_name_en": "QAZIR"
+    },
+    {
+      "city_code": 1244,
+      "city_name_he": "תמרת",
+      "city_name_en": "TIMRAT"
+    },
+    {
+      "city_code": 1245,
+      "city_name_he": "סלמה",
+      "city_name_en": "SALLAMA"
+    },
+    {
+      "city_code": 1246,
+      "city_name_he": "עראמשה",
+      "city_name_en": "ARAMSHA"
+    },
+    {
+      "city_code": 1247,
+      "city_name_he": "חריש",
+      "city_name_en": "HARISH"
+    },
+    {
+      "city_code": 1248,
+      "city_name_he": "אליפז",
+      "city_name_en": "ELIFAZ"
+    },
+    {
+      "city_code": 1249,
+      "city_name_he": "הרדוף",
+      "city_name_en": "HARDUF"
+    },
+    {
+      "city_code": 1251,
+      "city_name_he": "עין תמר",
+      "city_name_en": "EN TAMAR"
+    },
+    {
+      "city_code": 1252,
+      "city_name_he": "כורזים",
+      "city_name_en": "KORAZIM"
+    },
+    {
+      "city_code": 1253,
+      "city_name_he": "אמנון",
+      "city_name_en": "AMNUN"
+    },
+    {
+      "city_code": 1254,
+      "city_name_he": "נטף",
+      "city_name_en": "NATAF"
+    },
+    {
+      "city_code": 1255,
+      "city_name_he": "לוטן",
+      "city_name_en": "LOTAN"
+    },
+    {
+      "city_code": 1256,
+      "city_name_he": "אשרת",
+      "city_name_en": "ASHERAT"
+    },
+    {
+      "city_code": 1257,
+      "city_name_he": "חנתון",
+      "city_name_en": "HANNATON"
+    },
+    {
+      "city_code": 1258,
+      "city_name_he": "מסד",
+      "city_name_en": "MASSAD"
+    },
+    {
+      "city_code": 1259,
+      "city_name_he": "נווה שלום",
+      "city_name_en": "NEWE SHALOM"
+    },
+    {
+      "city_code": 1260,
+      "city_name_he": "רתמים",
+      "city_name_en": "RETAMIM"
+    },
+    {
+      "city_code": 1261,
+      "city_name_he": "הר עמשא",
+      "city_name_en": "HAR AMASA"
+    },
+    {
+      "city_code": 1262,
+      "city_name_he": "צוקים",
+      "city_name_en": "MAHANE BILDAD"
+    },
+    {
+      "city_code": 1263,
+      "city_name_he": "כפר ורדים",
+      "city_name_en": "KEFAR WERADIM"
+    },
+    {
+      "city_code": 1264,
+      "city_name_he": "כרמי יוסף",
+      "city_name_en": "KARME YOSEF"
+    },
+    {
+      "city_code": 1265,
+      "city_name_he": "שומריה",
+      "city_name_en": "SHOMERIYYA"
+    },
+    {
+      "city_code": 1266,
+      "city_name_he": "שחרות",
+      "city_name_en": "SHAHARUT"
+    },
+    {
+      "city_code": 1267,
+      "city_name_he": "שיטים",
+      "city_name_en": "NAHAL SHITTIM"
+    },
+    {
+      "city_code": 1268,
+      "city_name_he": "מיתר",
+      "city_name_en": "METAR"
+    },
+    {
+      "city_code": 1271,
+      "city_name_he": "להבים",
+      "city_name_en": "LEHAVIM"
+    },
+    {
+      "city_code": 1272,
+      "city_name_he": "חלוץ",
+      "city_name_en": "HALUZ"
+    },
+    {
+      "city_code": 1274,
+      "city_name_he": "גן נר",
+      "city_name_en": "GAN NER"
+    },
+    {
+      "city_code": 1275,
+      "city_name_he": "אבטליון",
+      "city_name_en": "AVTALYON"
+    },
+    {
+      "city_code": 1276,
+      "city_name_he": "אשבל",
+      "city_name_en": "NAHAL ESHBAL"
+    },
+    {
+      "city_code": 1278,
+      "city_name_he": "באר מילכה",
+      "city_name_en": "BE'ER MILKA"
+    },
+    {
+      "city_code": 1279,
+      "city_name_he": "נווה חריף",
+      "city_name_en": "NEWE HARIF"
+    },
+    {
+      "city_code": 1280,
+      "city_name_he": "ניצני סיני",
+      "city_name_en": "NIZZANE SINAY"
+    },
+    {
+      "city_code": 1282,
+      "city_name_he": "מירב",
+      "city_name_en": "MERAV"
+    },
+    {
+      "city_code": 1283,
+      "city_name_he": "תל תאומים",
+      "city_name_en": "TEL TE'OMIM"
+    },
+    {
+      "city_code": 1284,
+      "city_name_he": "נופית",
+      "city_name_en": "NOFIT"
+    },
+    {
+      "city_code": 1285,
+      "city_name_he": "כרכום",
+      "city_name_en": "KARKOM"
+    },
+    {
+      "city_code": 1286,
+      "city_name_he": "שגב-שלום",
+      "city_name_en": "SEGEV-SHALOM"
+    },
+    {
+      "city_code": 1287,
+      "city_name_he": "שני",
+      "city_name_en": "SHANI"
+    },
+    {
+      "city_code": 1288,
+      "city_name_he": "גבעת אלה",
+      "city_name_en": "GIV'AT ELA"
+    },
+    {
+      "city_code": 1290,
+      "city_name_he": "זמר",
+      "city_name_en": "ZEMER"
+    },
+    {
+      "city_code": 1291,
+      "city_name_he": "כמהין",
+      "city_name_en": "KEMEHIN"
+    },
+    {
+      "city_code": 1292,
+      "city_name_he": "ג'דיידה-מכר",
+      "city_name_en": "JUDEIDE-MAKER"
+    },
+    {
+      "city_code": 1293,
+      "city_name_he": "גבעת אבני",
+      "city_name_en": "GIV'AT AVNI"
+    },
+    {
+      "city_code": 1294,
+      "city_name_he": "אור הגנוז",
+      "city_name_en": "OR HAGANUZ"
+    },
+    {
+      "city_code": 1295,
+      "city_name_he": "יאנוח-ג'ת",
+      "city_name_en": "YANUH-JAT"
+    },
+    {
+      "city_code": 1296,
+      "city_name_he": "כסרא-סמיע",
+      "city_name_en": "KISRA-SUMEI"
+    },
+    {
+      "city_code": 1297,
+      "city_name_he": "כפר חנניה",
+      "city_name_en": "KEFAR HANANYA"
+    },
+    {
+      "city_code": 1298,
+      "city_name_he": "אתגר",
+      "city_name_en": "ETGAR"
+    },
+    {
+      "city_code": 1303,
+      "city_name_he": "חורה",
+      "city_name_en": "HURA"
+    },
+    {
+      "city_code": 1304,
+      "city_name_he": "שוהם",
+      "city_name_en": "SHOHAM"
+    },
+    {
+      "city_code": 1309,
+      "city_name_he": "אלעד",
+      "city_name_en": "EL'AD"
+    },
+    {
+      "city_code": 1310,
+      "city_name_he": "לפיד",
+      "city_name_en": "LAPPID"
+    },
+    {
+      "city_code": 1311,
+      "city_name_he": "אבשלום",
+      "city_name_en": "AVSHALOM"
+    },
+    {
+      "city_code": 1313,
+      "city_name_he": "פוריה עילית",
+      "city_name_en": "PORIYYA ILLIT"
+    },
+    {
+      "city_code": 1314,
+      "city_name_he": "נווה זיו",
+      "city_name_en": "NEWE ZIV"
+    },
+    {
+      "city_code": 1315,
+      "city_name_he": "מתן",
+      "city_name_en": "MATTAN"
+    },
+    {
+      "city_code": 1316,
+      "city_name_he": "אל-עריאן",
+      "city_name_en": "AL-ARYAN"
+    },
+    {
+      "city_code": 1317,
+      "city_name_he": "דמיידה",
+      "city_name_en": "DEMEIDE"
+    },
+    {
+      "city_code": 1318,
+      "city_name_he": "מבואות ים",
+      "city_name_en": "MEVO'OT YAM"
+    },
+    {
+      "city_code": 1319,
+      "city_name_he": "בת חפר",
+      "city_name_en": "BAT HEFER"
+    },
+    {
+      "city_code": 1320,
+      "city_name_he": "עין חוד",
+      "city_name_en": "EIN HOD"
+    },
+    {
+      "city_code": 1321,
+      "city_name_he": "ח'ואלד",
+      "city_name_en": "KHAWALED"
+    },
+    {
+      "city_code": 1322,
+      "city_name_he": "הודיות",
+      "city_name_en": "HODAYOT"
+    },
+    {
+      "city_code": 1323,
+      "city_name_he": "בת הדר",
+      "city_name_en": "BAT HADAR"
+    },
+    {
+      "city_code": 1324,
+      "city_name_he": "ארסוף",
+      "city_name_en": "ARSUF"
+    },
+    {
+      "city_code": 1325,
+      "city_name_he": "כפר זוהרים",
+      "city_name_en": "KEFAR ZOHARIM"
+    },
+    {
+      "city_code": 1326,
+      "city_name_he": "בסמה",
+      "city_name_en": "BASMA"
+    },
+    {
+      "city_code": 1327,
+      "city_name_he": "מעלה עירון",
+      "city_name_en": "MA'ALE IRON"
+    },
+    {
+      "city_code": 1330,
+      "city_name_he": "אחוזת ברק",
+      "city_name_en": "AHUZZAT BARAQ"
+    },
+    {
+      "city_code": 1331,
+      "city_name_he": "כמאנה",
+      "city_name_en": ""
+    },
+    {
+      "city_code": 1332,
+      "city_name_he": "חוסנייה",
+      "city_name_en": "HUSSNIYYA"
+    },
+    {
+      "city_code": 1333,
+      "city_name_he": "נוף איילון",
+      "city_name_en": "NOF AYYALON"
+    },
+    {
+      "city_code": 1334,
+      "city_name_he": "ראס אל-עין",
+      "city_name_en": "RAS AL-EIN"
+    },
+    {
+      "city_code": 1335,
+      "city_name_he": "ערב אל נעים",
+      "city_name_en": "ARRAB AL NAIM"
+    },
+    {
+      "city_code": 1336,
+      "city_name_he": "אירוס",
+      "city_name_en": "IRUS"
+    },
+    {
+      "city_code": 1337,
+      "city_name_he": "שמשית",
+      "city_name_en": "SHIMSHIT"
+    },
+    {
+      "city_code": 1338,
+      "city_name_he": "כדיתה",
+      "city_name_en": "KADDITA"
+    },
+    {
+      "city_code": 1339,
+      "city_name_he": "אל-עזי",
+      "city_name_en": "AL-AZY"
+    },
+    {
+      "city_code": 1340,
+      "city_name_he": "מרחב עם",
+      "city_name_en": "MERHAV AM"
+    },
+    {
+      "city_code": 1341,
+      "city_name_he": "רוח מדבר",
+      "city_name_en": "RUAH MIDBAR"
+    },
+    {
+      "city_code": 1342,
+      "city_name_he": "אבו קרינאת (יישוב)",
+      "city_name_en": "ABU QUREINAT"
+    },
+    {
+      "city_code": 1343,
+      "city_name_he": "מכחול",
+      "city_name_en": "MAKCHUL"
+    },
+    {
+      "city_code": 1344,
+      "city_name_he": "גבעות בר",
+      "city_name_en": "GEVA'OT BAR"
+    },
+    {
+      "city_code": 1345,
+      "city_name_he": "צור יצחק",
+      "city_name_en": "ZUR YIZHAQ"
+    },
+    {
+      "city_code": 1346,
+      "city_name_he": "תראבין א-צאנע(ישוב)",
+      "city_name_en": "TARABIN AS-SANI"
+    },
+    {
+      "city_code": 1347,
+      "city_name_he": "קצר א-סר",
+      "city_name_en": ""
+    },
+    {
+      "city_code": 1348,
+      "city_name_he": "ביר הדאג'",
+      "city_name_en": "BIR HADAGE"
+    },
+    {
+      "city_code": 1349,
+      "city_name_he": "דריג'את",
+      "city_name_en": "DERIG'AT"
+    },
+    {
+      "city_code": 1358,
+      "city_name_he": "אום בטין",
+      "city_name_en": "UMM BATIN"
+    },
+    {
+      "city_code": 1359,
+      "city_name_he": "אל סייד",
+      "city_name_en": "AL SAYYID"
+    },
+    {
+      "city_code": 1360,
+      "city_name_he": "סעוה",
+      "city_name_en": "SA'WA"
+    },
+    {
+      "city_code": 1361,
+      "city_name_he": "בת חן",
+      "city_name_en": "BAT HEN"
+    },
+    {
+      "city_code": 1362,
+      "city_name_he": "גבעות עדן",
+      "city_name_en": "GIV'OT EDEN"
+    },
+    {
+      "city_code": 1363,
+      "city_name_he": "בני נצרים",
+      "city_name_en": "BENE NEZARIM"
+    },
+    {
+      "city_code": 1364,
+      "city_name_he": "שלומית",
+      "city_name_en": "SHLOMIT"
+    },
+    {
+      "city_code": 1365,
+      "city_name_he": "אליאב",
+      "city_name_en": "ELIAV"
+    },
+    {
+      "city_code": 1366,
+      "city_name_he": "נווה",
+      "city_name_en": "NAVE"
+    },
+    {
+      "city_code": 1367,
+      "city_name_he": "כחלה",
+      "city_name_en": "KOCHLEA"
+    },
+    {
+      "city_code": 1368,
+      "city_name_he": "בני דקלים",
+      "city_name_en": "BNE DKALIM"
+    },
+    {
+      "city_code": 1369,
+      "city_name_he": "נטע",
+      "city_name_en": "NETA"
+    },
+    {
+      "city_code": 1370,
+      "city_name_he": "מצפה אילן",
+      "city_name_en": "MITSPE ILAN"
+    },
+    {
+      "city_code": 1371,
+      "city_name_he": "גני טל",
+      "city_name_en": "GANNE TAL"
+    },
+    {
+      "city_code": 1372,
+      "city_name_he": "נצר חזני",
+      "city_name_en": "NEZER HAZZANI"
+    },
+    {
+      "city_code": 1373,
+      "city_name_he": "שלווה במדבר",
+      "city_name_en": "SHALVA BAMIDBAR"
+    },
+    {
+      "city_code": 1374,
+      "city_name_he": "כרמי קטיף",
+      "city_name_en": "KARME QATIF"
+    },
+    {
+      "city_code": 1375,
+      "city_name_he": "אבו תלול",
+      "city_name_en": "ABU TULUL"
+    },
+    {
+      "city_code": 1376,
+      "city_name_he": "באר גנים",
+      "city_name_en": "BEER GANNIM"
+    },
+    {
+      "city_code": 1377,
+      "city_name_he": "שבי דרום",
+      "city_name_en": "SHAVE DAROM"
+    },
+    {
+      "city_code": 1378,
+      "city_name_he": "שיזף",
+      "city_name_en": "SHEZAF"
+    },
+    {
+      "city_code": 1411,
+      "city_name_he": "מחנה הילה",
+      "city_name_en": "MAHANE HILLA"
+    },
+    {
+      "city_code": 1412,
+      "city_name_he": "מחנה תל נוף",
+      "city_name_en": "MAHANE TEL NOF"
+    },
+    {
+      "city_code": 1413,
+      "city_name_he": "מחנה יהודית",
+      "city_name_en": "MAHANE YEHUDIT"
+    },
+    {
+      "city_code": 1414,
+      "city_name_he": "מחנה מרים",
+      "city_name_en": "MAHANE MIRYAM"
+    },
+    {
+      "city_code": 1415,
+      "city_name_he": "מחנה יפה",
+      "city_name_en": "MAHANE YAFA"
+    },
+    {
+      "city_code": 1416,
+      "city_name_he": "מחנה יוכבד",
+      "city_name_en": "MAHANE YOKHVED"
+    },
+    {
+      "city_code": 1418,
+      "city_name_he": "מחנה טלי",
+      "city_name_en": "MAHANE TALI"
+    },
+    {
+      "city_code": 1419,
+      "city_name_he": "ניצן ב'",
+      "city_name_en": "NIZZAN B"
+    },
+    {
+      "city_code": 2002,
+      "city_name_he": "תנובות",
+      "city_name_en": "TENUVOT"
+    },
+    {
+      "city_code": 2003,
+      "city_name_he": "תלמי אלעזר",
+      "city_name_en": "TALME EL'AZAR"
+    },
+    {
+      "city_code": 2006,
+      "city_name_he": "כנות",
+      "city_name_en": "KANNOT"
+    },
+    {
+      "city_code": 2008,
+      "city_name_he": "שדה יצחק",
+      "city_name_en": "SEDE YIZHAQ"
+    },
+    {
+      "city_code": 2009,
+      "city_name_he": "יובל",
+      "city_name_en": "YUVAL"
+    },
+    {
+      "city_code": 2010,
+      "city_name_he": "כפר בן נון",
+      "city_name_en": "KEFAR BIN NUN"
+    },
+    {
+      "city_code": 2011,
+      "city_name_he": "ינון",
+      "city_name_en": "YINNON"
+    },
+    {
+      "city_code": 2012,
+      "city_name_he": "אורות",
+      "city_name_en": "OROT"
+    },
+    {
+      "city_code": 2013,
+      "city_name_he": "בן שמן (מושב)",
+      "city_name_en": "BEN SHEMEN (MOSHAV)"
+    },
+    {
+      "city_code": 2014,
+      "city_name_he": "גבעולים",
+      "city_name_en": "GIV'OLIM"
+    },
+    {
+      "city_code": 2015,
+      "city_name_he": "שדי חמד",
+      "city_name_en": "SEDE HEMED"
+    },
+    {
+      "city_code": 2016,
+      "city_name_he": "רוויה",
+      "city_name_en": "REWAYA"
+    },
+    {
+      "city_code": 2018,
+      "city_name_he": "גבעת חיים (איחוד)",
+      "city_name_en": "GIV'AT HAYYIM (IHUD)"
+    },
+    {
+      "city_code": 2021,
+      "city_name_he": "אשל הנשיא",
+      "city_name_en": "ESHEL HANASI"
+    },
+    {
+      "city_code": 2023,
+      "city_name_he": "להב",
+      "city_name_en": "LAHAV"
+    },
+    {
+      "city_code": 2024,
+      "city_name_he": "אום אל-קוטוף",
+      "city_name_en": "UMM AL-QUTUF"
+    },
+    {
+      "city_code": 2026,
+      "city_name_he": "ירדנה",
+      "city_name_en": "YARDENA"
+    },
+    {
+      "city_code": 2029,
+      "city_name_he": "מדרך עוז",
+      "city_name_en": "MIDRAKH OZ"
+    },
+    {
+      "city_code": 2030,
+      "city_name_he": "מנוחה",
+      "city_name_en": "MENUHA"
+    },
+    {
+      "city_code": 2033,
+      "city_name_he": "בית חלקיה",
+      "city_name_en": "BET HILQIYYA"
+    },
+    {
+      "city_code": 2034,
+      "city_name_he": "חצור הגלילית",
+      "city_name_en": "HAZOR HAGELILIT"
+    },
+    {
+      "city_code": 2035,
+      "city_name_he": "עדנים",
+      "city_name_en": "ADANIM"
+    },
+    {
+      "city_code": 2038,
+      "city_name_he": "ברקת",
+      "city_name_en": "BAREQET"
+    },
+    {
+      "city_code": 2039,
+      "city_name_he": "קרית יערים(מוסד)",
+      "city_name_en": "QIRYAT YE'ARIM(INSTI"
+    },
+    {
+      "city_code": 2042,
+      "city_name_he": "עין גדי",
+      "city_name_en": "EN GEDI"
+    },
+    {
+      "city_code": 2043,
+      "city_name_he": "בחן",
+      "city_name_en": "BAHAN"
+    },
+    {
+      "city_code": 2044,
+      "city_name_he": "מלילות",
+      "city_name_en": "MELILOT"
+    },
+    {
+      "city_code": 2045,
+      "city_name_he": "נחלה",
+      "city_name_en": "NAHALA"
+    },
+    {
+      "city_code": 2046,
+      "city_name_he": "סגולה",
+      "city_name_en": "SEGULA"
+    },
+    {
+      "city_code": 2047,
+      "city_name_he": "ניר משה",
+      "city_name_en": "NIR MOSHE"
+    },
+    {
+      "city_code": 2048,
+      "city_name_he": "ניר עקיבא",
+      "city_name_en": "NIR AQIVA"
+    },
+    {
+      "city_code": 2049,
+      "city_name_he": "שדה צבי",
+      "city_name_en": "SEDE ZEVI"
+    },
+    {
+      "city_code": 2050,
+      "city_name_he": "תלמי בילו",
+      "city_name_en": "TALME BILU"
+    },
+    {
+      "city_code": 2051,
+      "city_name_he": "רווחה",
+      "city_name_en": "REWAHA"
+    },
+    {
+      "city_code": 2052,
+      "city_name_he": "אביטל",
+      "city_name_en": "AVITAL"
+    },
+    {
+      "city_code": 2053,
+      "city_name_he": "פרזון",
+      "city_name_en": "PERAZON"
+    },
+    {
+      "city_code": 2054,
+      "city_name_he": "מיטב",
+      "city_name_en": "METAV"
+    },
+    {
+      "city_code": 2055,
+      "city_name_he": "מאור",
+      "city_name_en": "MA'OR"
+    },
+    {
+      "city_code": 2057,
+      "city_name_he": "שדי תרומות",
+      "city_name_en": "SEDE TERUMOT"
+    },
+    {
+      "city_code": 2059,
+      "city_name_he": "פעמי תשז",
+      "city_name_en": "PA'AME TASHAZ"
+    },
+    {
+      "city_code": 2060,
+      "city_name_he": "ברוש",
+      "city_name_en": "BEROSH"
+    },
+    {
+      "city_code": 2061,
+      "city_name_he": "תדהר",
+      "city_name_en": "TIDHAR"
+    },
+    {
+      "city_code": 2062,
+      "city_name_he": "תאשור",
+      "city_name_en": "TE'ASHUR"
+    },
+    {
+      "city_code": 2063,
+      "city_name_he": "דישון",
+      "city_name_en": "DISHON"
+    },
+    {
+      "city_code": 2064,
+      "city_name_he": "זרועה",
+      "city_name_en": "ZERU'A"
+    },
+    {
+      "city_code": 2100,
+      "city_name_he": "טירת כרמל",
+      "city_name_en": "TIRAT KARMEL"
+    },
+    {
+      "city_code": 2200,
+      "city_name_he": "דימונה",
+      "city_name_en": "DIMONA"
+    },
+    {
+      "city_code": 2300,
+      "city_name_he": "קרית טבעון",
+      "city_name_en": "QIRYAT TIV'ON"
+    },
+    {
+      "city_code": 2400,
+      "city_name_he": "אור יהודה",
+      "city_name_en": "OR YEHUDA"
+    },
+    {
+      "city_code": 2500,
+      "city_name_he": "נשר",
+      "city_name_en": "NESHER"
+    },
+    {
+      "city_code": 2530,
+      "city_name_he": "באר יעקב",
+      "city_name_en": "BE'ER YA'AQOV"
+    },
+    {
+      "city_code": 2550,
+      "city_name_he": "גדרה",
+      "city_name_en": "GEDERA"
+    },
+    {
+      "city_code": 2560,
+      "city_name_he": "ערד",
+      "city_name_en": "ARAD"
+    },
+    {
+      "city_code": 2600,
+      "city_name_he": "אילת",
+      "city_name_en": "ELAT"
+    },
+    {
+      "city_code": 2610,
+      "city_name_he": "בית שמש",
+      "city_name_en": "BET SHEMESH"
+    },
+    {
+      "city_code": 2620,
+      "city_name_he": "קרית אונו",
+      "city_name_en": "QIRYAT ONO"
+    },
+    {
+      "city_code": 2630,
+      "city_name_he": "קרית גת",
+      "city_name_en": "QIRYAT GAT"
+    },
+    {
+      "city_code": 2640,
+      "city_name_he": "ראש העין",
+      "city_name_en": "ROSH HAAYIN"
+    },
+    {
+      "city_code": 2650,
+      "city_name_he": "רמת השרון",
+      "city_name_en": "RAMAT HASHARON"
+    },
+    {
+      "city_code": 2660,
+      "city_name_he": "יבנה",
+      "city_name_en": "YAVNE"
+    },
+    {
+      "city_code": 2710,
+      "city_name_he": "אום אל-פחם",
+      "city_name_en": "UMM AL-FAHM"
+    },
+    {
+      "city_code": 2720,
+      "city_name_he": "טירה",
+      "city_name_en": "TIRE"
+    },
+    {
+      "city_code": 2730,
+      "city_name_he": "טייבה",
+      "city_name_en": "TAYIBE"
+    },
+    {
+      "city_code": 2742,
+      "city_name_he": "זבארגה (שבט)",
+      "city_name_en": "ZABARGA"
+    },
+    {
+      "city_code": 2800,
+      "city_name_he": "קרית שמונה",
+      "city_name_en": "QIRYAT SHEMONA"
+    },
+    {
+      "city_code": 3000,
+      "city_name_he": "ירושלים",
+      "city_name_en": "JERUSALEM"
+    },
+    {
+      "city_code": 3400,
+      "city_name_he": "חברון",
+      "city_name_en": ""
+    },
+    {
+      "city_code": 3488,
+      "city_name_he": "כפר עציון",
+      "city_name_en": "KEFAR EZYON"
+    },
+    {
+      "city_code": 3499,
+      "city_name_he": "בר כוכבא",
+      "city_name_en": "BAR KOKHVA"
+    },
+    {
+      "city_code": 3555,
+      "city_name_he": "נתיב הגדוד",
+      "city_name_en": "NETIV HAGEDUD"
+    },
+    {
+      "city_code": 3556,
+      "city_name_he": "אלמוג",
+      "city_name_en": "ALMOG"
+    },
+    {
+      "city_code": 3557,
+      "city_name_he": "קדומים",
+      "city_name_en": "QEDUMIM"
+    },
+    {
+      "city_code": 3558,
+      "city_name_he": "תומר",
+      "city_name_en": "TOMER"
+    },
+    {
+      "city_code": 3560,
+      "city_name_he": "אלקנה",
+      "city_name_en": "ELQANA"
+    },
+    {
+      "city_code": 3561,
+      "city_name_he": "מגדל עוז",
+      "city_name_en": "MIGDAL OZ"
+    },
+    {
+      "city_code": 3563,
+      "city_name_he": "תקוע",
+      "city_name_en": "TEQOA"
+    },
+    {
+      "city_code": 3564,
+      "city_name_he": "כוכב השחר",
+      "city_name_en": "KOKHAV HASHAHAR"
+    },
+    {
+      "city_code": 3565,
+      "city_name_he": "רימונים",
+      "city_name_en": "RIMMONIM"
+    },
+    {
+      "city_code": 3566,
+      "city_name_he": "יפית",
+      "city_name_en": "YAFIT"
+    },
+    {
+      "city_code": 3567,
+      "city_name_he": "סלעית",
+      "city_name_en": "SAL'IT"
+    },
+    {
+      "city_code": 3568,
+      "city_name_he": "ריחן",
+      "city_name_en": "REHAN"
+    },
+    {
+      "city_code": 3569,
+      "city_name_he": "מבוא דותן",
+      "city_name_en": "MEVO DOTAN"
+    },
+    {
+      "city_code": 3570,
+      "city_name_he": "אריאל",
+      "city_name_en": "ARI'EL"
+    },
+    {
+      "city_code": 3571,
+      "city_name_he": "שבי שומרון",
+      "city_name_en": "SHAVE SHOMERON"
+    },
+    {
+      "city_code": 3572,
+      "city_name_he": "כפר תפוח",
+      "city_name_en": "KEFAR TAPPUAH"
+    },
+    {
+      "city_code": 3573,
+      "city_name_he": "נוה צוף",
+      "city_name_en": "NEVE TSUF"
+    },
+    {
+      "city_code": 3574,
+      "city_name_he": "בית אל",
+      "city_name_en": "BET EL"
+    },
+    {
+      "city_code": 3575,
+      "city_name_he": "בית חורון",
+      "city_name_en": "BET HORON"
+    },
+    {
+      "city_code": 3576,
+      "city_name_he": "מצפה יריחו",
+      "city_name_en": "MIZPE YERIHO"
+    },
+    {
+      "city_code": 3578,
+      "city_name_he": "שדמות מחולה",
+      "city_name_en": "SHADMOT MEHOLA"
+    },
+    {
+      "city_code": 3579,
+      "city_name_he": "אלון מורה",
+      "city_name_en": "ELON MORE"
+    },
+    {
+      "city_code": 3598,
+      "city_name_he": "ארגמן",
+      "city_name_en": "ARGAMAN"
+    },
+    {
+      "city_code": 3599,
+      "city_name_he": "מחולה",
+      "city_name_en": "MEHOLA"
+    },
+    {
+      "city_code": 3601,
+      "city_name_he": "קליה",
+      "city_name_en": "QALYA"
+    },
+    {
+      "city_code": 3602,
+      "city_name_he": "ראש צורים",
+      "city_name_en": "ROSH ZURIM"
+    },
+    {
+      "city_code": 3603,
+      "city_name_he": "הר גילה",
+      "city_name_en": "HAR GILLO"
+    },
+    {
+      "city_code": 3604,
+      "city_name_he": "אלון שבות",
+      "city_name_en": "ALLON SHEVUT"
+    },
+    {
+      "city_code": 3605,
+      "city_name_he": "משואה",
+      "city_name_en": "MASSU'A"
+    },
+    {
+      "city_code": 3606,
+      "city_name_he": "גלגל",
+      "city_name_en": "GILGAL"
+    },
+    {
+      "city_code": 3607,
+      "city_name_he": "ייטב",
+      "city_name_en": "YITAV"
+    },
+    {
+      "city_code": 3608,
+      "city_name_he": "מעלה אפרים",
+      "city_name_en": "MA'ALE EFRAYIM"
+    },
+    {
+      "city_code": 3609,
+      "city_name_he": "חמרה",
+      "city_name_en": "HAMRA"
+    },
+    {
+      "city_code": 3610,
+      "city_name_he": "מצפה שלם",
+      "city_name_en": "MIZPE SHALEM"
+    },
+    {
+      "city_code": 3611,
+      "city_name_he": "קרית ארבע",
+      "city_name_en": "QIRYAT ARBA"
+    },
+    {
+      "city_code": 3612,
+      "city_name_he": "בקעות",
+      "city_name_en": "BEQA'OT"
+    },
+    {
+      "city_code": 3613,
+      "city_name_he": "גיתית",
+      "city_name_en": "GITTIT"
+    },
+    {
+      "city_code": 3614,
+      "city_name_he": "מכורה",
+      "city_name_en": "MEKHORA"
+    },
+    {
+      "city_code": 3615,
+      "city_name_he": "פצאל",
+      "city_name_en": "PEZA'EL"
+    },
+    {
+      "city_code": 3616,
+      "city_name_he": "מעלה אדומים",
+      "city_name_en": "MA'ALE ADUMMIM"
+    },
+    {
+      "city_code": 3617,
+      "city_name_he": "עופרה",
+      "city_name_en": "OFRA"
+    },
+    {
+      "city_code": 3618,
+      "city_name_he": "אלעזר",
+      "city_name_en": "EL'AZAR"
+    },
+    {
+      "city_code": 3619,
+      "city_name_he": "רועי",
+      "city_name_en": "RO'I"
+    },
+    {
+      "city_code": 3620,
+      "city_name_he": "נערן",
+      "city_name_en": "NA'ARAN"
+    },
+    {
+      "city_code": 3638,
+      "city_name_he": "כפר אדומים",
+      "city_name_en": "KEFAR ADUMMIM"
+    },
+    {
+      "city_code": 3639,
+      "city_name_he": "ורד יריחו",
+      "city_name_en": "WERED YERIHO"
+    },
+    {
+      "city_code": 3640,
+      "city_name_he": "קרני שומרון",
+      "city_name_en": "QARNE SHOMERON"
+    },
+    {
+      "city_code": 3641,
+      "city_name_he": "שילה",
+      "city_name_en": "SHILO"
+    },
+    {
+      "city_code": 3642,
+      "city_name_he": "חומש",
+      "city_name_en": "HOMESH"
+    },
+    {
+      "city_code": 3643,
+      "city_name_he": "חיננית",
+      "city_name_en": "HINNANIT"
+    },
+    {
+      "city_code": 3644,
+      "city_name_he": "גבעון החדשה",
+      "city_name_en": "GIV'ON HAHADASHA"
+    },
+    {
+      "city_code": 3645,
+      "city_name_he": "בית הערבה",
+      "city_name_en": "BET HAARAVA"
+    },
+    {
+      "city_code": 3646,
+      "city_name_he": "חמדת",
+      "city_name_en": "NAHAL HEMDAT"
+    },
+    {
+      "city_code": 3647,
+      "city_name_he": "יקיר",
+      "city_name_en": "YAQIR"
+    },
+    {
+      "city_code": 3648,
+      "city_name_he": "מתתיהו",
+      "city_name_en": "MATTITYAHU"
+    },
+    {
+      "city_code": 3649,
+      "city_name_he": "שקד",
+      "city_name_en": "SHAQED"
+    },
+    {
+      "city_code": 3650,
+      "city_name_he": "אפרת",
+      "city_name_en": "EFRAT"
+    },
+    {
+      "city_code": 3651,
+      "city_name_he": "מעלה מכמש",
+      "city_name_en": "MA'ALE MIKHMAS"
+    },
+    {
+      "city_code": 3652,
+      "city_name_he": "בית אריה",
+      "city_name_en": "BET ARYE"
+    },
+    {
+      "city_code": 3653,
+      "city_name_he": "מעלה עמוס",
+      "city_name_en": "MA'ALE AMOS"
+    },
+    {
+      "city_code": 3654,
+      "city_name_he": "ברקן",
+      "city_name_en": "BARQAN"
+    },
+    {
+      "city_code": 3655,
+      "city_name_he": "נילי",
+      "city_name_en": "NILI"
+    },
+    {
+      "city_code": 3656,
+      "city_name_he": "כרמל",
+      "city_name_en": "KARMEL"
+    },
+    {
+      "city_code": 3657,
+      "city_name_he": "מעון",
+      "city_name_en": "MA'ON"
+    },
+    {
+      "city_code": 3658,
+      "city_name_he": "עטרת",
+      "city_name_en": "ATERET"
+    },
+    {
+      "city_code": 3659,
+      "city_name_he": "פסגות",
+      "city_name_en": "PESAGOT"
+    },
+    {
+      "city_code": 3660,
+      "city_name_he": "עמנואל",
+      "city_name_en": "IMMANU'EL"
+    },
+    {
+      "city_code": 3709,
+      "city_name_he": "מבוא חורון",
+      "city_name_en": "MEVO HORON"
+    },
+    {
+      "city_code": 3710,
+      "city_name_he": "ברכה",
+      "city_name_en": "BERAKHA"
+    },
+    {
+      "city_code": 3711,
+      "city_name_he": "שא-נור",
+      "city_name_en": "SA-NUR"
+    },
+    {
+      "city_code": 3712,
+      "city_name_he": "ענב",
+      "city_name_en": "ENAV"
+    },
+    {
+      "city_code": 3713,
+      "city_name_he": "נעמה",
+      "city_name_en": "NAAMA"
+    },
+    {
+      "city_code": 3715,
+      "city_name_he": "עלמון",
+      "city_name_en": "ALMON"
+    },
+    {
+      "city_code": 3717,
+      "city_name_he": "חרמש",
+      "city_name_en": "HERMESH"
+    },
+    {
+      "city_code": 3719,
+      "city_name_he": "תלם",
+      "city_name_en": "TELEM"
+    },
+    {
+      "city_code": 3722,
+      "city_name_he": "אשכולות",
+      "city_name_en": "ESHKOLOT"
+    },
+    {
+      "city_code": 3723,
+      "city_name_he": "פני חבר",
+      "city_name_en": "PENE HEVER"
+    },
+    {
+      "city_code": 3724,
+      "city_name_he": "נגוהות",
+      "city_name_en": "NEGOHOT"
+    },
+    {
+      "city_code": 3725,
+      "city_name_he": "נווה דניאל",
+      "city_name_en": "NEWE DANIYYEL"
+    },
+    {
+      "city_code": 3726,
+      "city_name_he": "נוקדים",
+      "city_name_en": "NOQEDIM"
+    },
+    {
+      "city_code": 3727,
+      "city_name_he": "עלי זהב",
+      "city_name_en": "ALE ZAHAV"
+    },
+    {
+      "city_code": 3729,
+      "city_name_he": "כדים",
+      "city_name_en": "KADDIM"
+    },
+    {
+      "city_code": 3730,
+      "city_name_he": "גבעת זאב",
+      "city_name_en": "GIV'AT ZE'EV"
+    },
+    {
+      "city_code": 3743,
+      "city_name_he": "טנא",
+      "city_name_en": "TENE"
+    },
+    {
+      "city_code": 3744,
+      "city_name_he": "ברוכין",
+      "city_name_en": "BRUKHIN"
+    },
+    {
+      "city_code": 3745,
+      "city_name_he": "בית יתיר",
+      "city_name_en": "BET YATTIR"
+    },
+    {
+      "city_code": 3746,
+      "city_name_he": "קרית נטפים",
+      "city_name_en": "QIRYAT NETAFIM"
+    },
+    {
+      "city_code": 3747,
+      "city_name_he": "דולב",
+      "city_name_en": "DOLEV"
+    },
+    {
+      "city_code": 3748,
+      "city_name_he": "עתניאל",
+      "city_name_en": "OTNI'EL"
+    },
+    {
+      "city_code": 3749,
+      "city_name_he": "יצהר",
+      "city_name_en": "YIZHAR"
+    },
+    {
+      "city_code": 3750,
+      "city_name_he": "אלפי מנשה",
+      "city_name_en": "ALFE MENASHE"
+    },
+    {
+      "city_code": 3751,
+      "city_name_he": "מגדלים",
+      "city_name_en": "MIGDALIM"
+    },
+    {
+      "city_code": 3752,
+      "city_name_he": "מעלה לבונה",
+      "city_name_en": "MA'ALE LEVONA"
+    },
+    {
+      "city_code": 3754,
+      "city_name_he": "אספר",
+      "city_name_en": "ASEFAR"
+    },
+    {
+      "city_code": 3756,
+      "city_name_he": "סוסיה",
+      "city_name_en": "SUSEYA"
+    },
+    {
+      "city_code": 3757,
+      "city_name_he": "ברוש הבקעה",
+      "city_name_en": "BROSH HABIK'A"
+    },
+    {
+      "city_code": 3758,
+      "city_name_he": "גנים",
+      "city_name_en": "GANNIM"
+    },
+    {
+      "city_code": 3759,
+      "city_name_he": "אדורה",
+      "city_name_en": "ADORA"
+    },
+    {
+      "city_code": 3760,
+      "city_name_he": "אורנית",
+      "city_name_en": "ORANIT"
+    },
+    {
+      "city_code": 3762,
+      "city_name_he": "איתמר",
+      "city_name_en": "ITAMAR"
+    },
+    {
+      "city_code": 3763,
+      "city_name_he": "גבע בנימין",
+      "city_name_en": "GEVA BINYAMIN"
+    },
+    {
+      "city_code": 3764,
+      "city_name_he": "חגי",
+      "city_name_en": "HAGGAI"
+    },
+    {
+      "city_code": 3765,
+      "city_name_he": "עלי",
+      "city_name_en": "ELI"
+    },
+    {
+      "city_code": 3766,
+      "city_name_he": "כרמי צור",
+      "city_name_en": "KARME ZUR"
+    },
+    {
+      "city_code": 3767,
+      "city_name_he": "נחליאל",
+      "city_name_en": "NAHALI'EL"
+    },
+    {
+      "city_code": 3768,
+      "city_name_he": "פדואל",
+      "city_name_en": "PEDU'EL"
+    },
+    {
+      "city_code": 3769,
+      "city_name_he": "הר אדר",
+      "city_name_en": "HAR ADAR"
+    },
+    {
+      "city_code": 3770,
+      "city_name_he": "חשמונאים",
+      "city_name_en": "HASHMONA'IM"
+    },
+    {
+      "city_code": 3777,
+      "city_name_he": "סנסנה",
+      "city_name_en": ""
+    },
+    {
+      "city_code": 3779,
+      "city_name_he": "כוכב יעקב",
+      "city_name_en": "KOKHAV YA'AQOV"
+    },
+    {
+      "city_code": 3780,
+      "city_name_he": "ביתר עילית",
+      "city_name_en": "BETAR ILLIT"
+    },
+    {
+      "city_code": 3781,
+      "city_name_he": "קדר",
+      "city_name_en": "QEDAR"
+    },
+    {
+      "city_code": 3782,
+      "city_name_he": "רותם",
+      "city_name_en": "ROTEM"
+    },
+    {
+      "city_code": 3783,
+      "city_name_he": "גבעות",
+      "city_name_en": "GVA'OT"
+    },
+    {
+      "city_code": 3784,
+      "city_name_he": "שמעה",
+      "city_name_en": "SHIM'A"
+    },
+    {
+      "city_code": 3785,
+      "city_name_he": "משכיות",
+      "city_name_en": "MASKIYYOT"
+    },
+    {
+      "city_code": 3786,
+      "city_name_he": "אובנת",
+      "city_name_en": "OVNAT"
+    },
+    {
+      "city_code": 3787,
+      "city_name_he": "נעלה",
+      "city_name_en": "NA'ALE"
+    },
+    {
+      "city_code": 3788,
+      "city_name_he": "טלמון",
+      "city_name_en": "TALMON"
+    },
+    {
+      "city_code": 3790,
+      "city_name_he": "נופים",
+      "city_name_en": "NOFIM"
+    },
+    {
+      "city_code": 3791,
+      "city_name_he": "צופים",
+      "city_name_en": "ZUFIN"
+    },
+    {
+      "city_code": 3793,
+      "city_name_he": "אבני חפץ",
+      "city_name_en": "AVNE HEFEZ"
+    },
+    {
+      "city_code": 3794,
+      "city_name_he": "בת עין",
+      "city_name_en": "BAT AYIN"
+    },
+    {
+      "city_code": 3795,
+      "city_name_he": "רבבה",
+      "city_name_en": "REVAVA"
+    },
+    {
+      "city_code": 3796,
+      "city_name_he": "כפר האורנים",
+      "city_name_en": "KEFAR HAORANIM"
+    },
+    {
+      "city_code": 3797,
+      "city_name_he": "מודיעין עילית",
+      "city_name_en": "MODI'IN ILLIT"
+    },
+    {
+      "city_code": 3815,
+      "city_name_he": "תל ציון",
+      "city_name_en": "TEL TSIYON"
+    },
+    {
+      "city_code": 3822,
+      "city_name_he": "רחלים",
+      "city_name_en": "REHELIM"
+    },
+    {
+      "city_code": 3823,
+      "city_name_he": "גני מודיעין",
+      "city_name_en": "GANNE MODIIN"
+    },
+    {
+      "city_code": 3824,
+      "city_name_he": "עמיחי",
+      "city_name_en": "AMMIHAY"
+    },
+    {
+      "city_code": 3825,
+      "city_name_he": "מבואות יריחו",
+      "city_name_en": "MEVO'OT YERIHO"
+    },
+    {
+      "city_code": 3826,
+      "city_name_he": "שער שומרון",
+      "city_name_en": "SHA'AR SHOMRON"
+    },
+    {
+      "city_code": 3861,
+      "city_name_he": "עשהאל",
+      "city_name_en": "ASA'EL"
+    },
+    {
+      "city_code": 3862,
+      "city_name_he": "גבעות הרואה",
+      "city_name_en": "GIV'OT HARO'E"
+    },
+    {
+      "city_code": 3863,
+      "city_name_he": "מלאכי השלום",
+      "city_name_en": "MAL'AKHE HASHLOM"
+    },
+    {
+      "city_code": 3864,
+      "city_name_he": "בית חוגלה",
+      "city_name_en": "BET HOGLA"
+    },
+    {
+      "city_code": 3865,
+      "city_name_he": "משמר יהודה",
+      "city_name_en": "MISHMAR YEHUDA"
+    },
+    {
+      "city_code": 3868,
+      "city_name_he": "שחרית",
+      "city_name_en": "SHAHARIT"
+    },
+    {
+      "city_code": 3869,
+      "city_name_he": "אביגיל",
+      "city_name_en": "AVIGAYIL"
+    },
+    {
+      "city_code": 3870,
+      "city_name_he": "חרשה",
+      "city_name_en": "HARESHA"
+    },
+    {
+      "city_code": 3871,
+      "city_name_he": "מגרון",
+      "city_name_en": "MIGRON"
+    },
+    {
+      "city_code": 3872,
+      "city_name_he": "שבות רחל",
+      "city_name_en": "SHVUT RAHEL"
+    },
+    {
+      "city_code": 3873,
+      "city_name_he": "טל מנשה",
+      "city_name_en": "TAL MENASHE"
+    },
+    {
+      "city_code": 3874,
+      "city_name_he": "עדי עד",
+      "city_name_en": "ADE AD"
+    },
+    {
+      "city_code": 3875,
+      "city_name_he": "אחיה",
+      "city_name_en": "AHIYA"
+    },
+    {
+      "city_code": 3876,
+      "city_name_he": "נופי פרת",
+      "city_name_en": "NOFE PRAT"
+    },
+    {
+      "city_code": 3877,
+      "city_name_he": "נווה גדיד",
+      "city_name_en": "NEVE GADID"
+    },
+    {
+      "city_code": 3878,
+      "city_name_he": "תמרה",
+      "city_name_en": "TMARA"
+    },
+    {
+      "city_code": 3879,
+      "city_name_he": "מעוז",
+      "city_name_en": "MA'OZ"
+    },
+    {
+      "city_code": 3880,
+      "city_name_he": "עיבל",
+      "city_name_en": "EVAL"
+    },
+    {
+      "city_code": 3887,
+      "city_name_he": "נזר שומרון",
+      "city_name_en": "NEZER SHOMRON"
+    },
+    {
+      "city_code": 3889,
+      "city_name_he": "כרם רעים",
+      "city_name_en": "KEREM RE'IM"
+    },
+    {
+      "city_code": 3890,
+      "city_name_he": "נריה",
+      "city_name_en": "NERIYA"
+    },
+    {
+      "city_code": 3891,
+      "city_name_he": "איבי הנחל",
+      "city_name_en": "IBBE HANAHAL"
+    },
+    {
+      "city_code": 3892,
+      "city_name_he": "לשם",
+      "city_name_en": "LESHEM"
+    },
+    {
+      "city_code": 3893,
+      "city_name_he": "גודר",
+      "city_name_en": "GODER"
+    },
+    {
+      "city_code": 3894,
+      "city_name_he": "פרשים",
+      "city_name_en": "PARASHIM"
+    },
+    {
+      "city_code": 3895,
+      "city_name_he": "קדם ערבה",
+      "city_name_en": "KEDEM ARAVA"
+    },
+    {
+      "city_code": 3896,
+      "city_name_he": "יונדב",
+      "city_name_en": "YONADAV"
+    },
+    {
+      "city_code": 3897,
+      "city_name_he": "בתרון",
+      "city_name_en": "BITRON"
+    },
+    {
+      "city_code": 3898,
+      "city_name_he": "אלון",
+      "city_name_en": "ALLON"
+    },
+    {
+      "city_code": 3899,
+      "city_name_he": "מצפה זיף",
+      "city_name_en": "MITSPE ZIF"
+    },
+    {
+      "city_code": 3901,
+      "city_name_he": "לחי",
+      "city_name_en": "LEHI"
+    },
+    {
+      "city_code": 3902,
+      "city_name_he": "כנפי שחר",
+      "city_name_en": "KANFE SHAHAR"
+    },
+    {
+      "city_code": 3903,
+      "city_name_he": "מצוקי ארץ",
+      "city_name_en": "METSUKE ERETS"
+    },
+    {
+      "city_code": 3904,
+      "city_name_he": "עין ייטב",
+      "city_name_en": "EN YITAV"
+    },
+    {
+      "city_code": 3905,
+      "city_name_he": "אביה",
+      "city_name_en": "AVIYA"
+    },
+    {
+      "city_code": 3906,
+      "city_name_he": "אסיף",
+      "city_name_en": "ASIF"
+    },
+    {
+      "city_code": 3987,
+      "city_name_he": "אדוריים",
+      "city_name_en": "ADORAYIM"
+    },
+    {
+      "city_code": 4000,
+      "city_name_he": "חיפה",
+      "city_name_en": "HAIFA"
+    },
+    {
+      "city_code": 4001,
+      "city_name_he": "בוקעאתא",
+      "city_name_en": "BUQ'ATA"
+    },
+    {
+      "city_code": 4002,
+      "city_name_he": "אלי-עד",
+      "city_name_en": "ELI-AD"
+    },
+    {
+      "city_code": 4003,
+      "city_name_he": "אל-רום",
+      "city_name_en": "EL-ROM"
+    },
+    {
+      "city_code": 4004,
+      "city_name_he": "כפר חרוב",
+      "city_name_en": "KEFAR HARUV"
+    },
+    {
+      "city_code": 4005,
+      "city_name_he": "חספין",
+      "city_name_en": "HASPIN"
+    },
+    {
+      "city_code": 4006,
+      "city_name_he": "קשת",
+      "city_name_en": "QESHET"
+    },
+    {
+      "city_code": 4007,
+      "city_name_he": "יונתן",
+      "city_name_en": "YONATAN"
+    },
+    {
+      "city_code": 4008,
+      "city_name_he": "מעלה גמלא",
+      "city_name_en": "MA'ALE GAMLA"
+    },
+    {
+      "city_code": 4009,
+      "city_name_he": "שעל",
+      "city_name_en": "SHA'AL"
+    },
+    {
+      "city_code": 4010,
+      "city_name_he": "אודם",
+      "city_name_en": "ODEM"
+    },
+    {
+      "city_code": 4011,
+      "city_name_he": "אבני איתן",
+      "city_name_en": "AVNE ETAN"
+    },
+    {
+      "city_code": 4012,
+      "city_name_he": "אניעם",
+      "city_name_en": "ANI'AM"
+    },
+    {
+      "city_code": 4013,
+      "city_name_he": "אורטל",
+      "city_name_en": "ORTAL"
+    },
+    {
+      "city_code": 4014,
+      "city_name_he": "נטור",
+      "city_name_en": "NATUR"
+    },
+    {
+      "city_code": 4015,
+      "city_name_he": "בני יהודה",
+      "city_name_en": "BENE YEHUDA"
+    },
+    {
+      "city_code": 4017,
+      "city_name_he": "אלוני הבשן",
+      "city_name_en": "ALLONE HABASHAN"
+    },
+    {
+      "city_code": 4019,
+      "city_name_he": "מיצר",
+      "city_name_en": "MEZAR"
+    },
+    {
+      "city_code": 4021,
+      "city_name_he": "גבעת יואב",
+      "city_name_en": "GIV'AT YO'AV"
+    },
+    {
+      "city_code": 4022,
+      "city_name_he": "גשור",
+      "city_name_en": "GESHUR"
+    },
+    {
+      "city_code": 4024,
+      "city_name_he": "קלע",
+      "city_name_en": "QELA"
+    },
+    {
+      "city_code": 4025,
+      "city_name_he": "קדמת צבי",
+      "city_name_en": "QIDMAT ZEVI"
+    },
+    {
+      "city_code": 4026,
+      "city_name_he": "חד-נס",
+      "city_name_en": "HAD-NES"
+    },
+    {
+      "city_code": 4028,
+      "city_name_he": "כנף",
+      "city_name_en": "KANAF"
+    },
+    {
+      "city_code": 4029,
+      "city_name_he": "רמת הנשיא טראמפ",
+      "city_name_en": "PRESIDENT TRUMP HEI"
+    },
+    {
+      "city_code": 4035,
+      "city_name_he": "נמרוד",
+      "city_name_en": "NIMROD"
+    },
+    {
+      "city_code": 4100,
+      "city_name_he": "קצרין",
+      "city_name_en": "QAZRIN"
+    },
+    {
+      "city_code": 4101,
+      "city_name_he": "מרום גולן",
+      "city_name_en": "MEROM GOLAN"
+    },
+    {
+      "city_code": 4201,
+      "city_name_he": "מג'דל שמס",
+      "city_name_en": "MAJDAL SHAMS"
+    },
+    {
+      "city_code": 4203,
+      "city_name_he": "מסעדה",
+      "city_name_en": "MAS'ADE"
+    },
+    {
+      "city_code": 4204,
+      "city_name_he": "מבוא חמה",
+      "city_name_en": "MEVO HAMMA"
+    },
+    {
+      "city_code": 4301,
+      "city_name_he": "אפיק",
+      "city_name_en": "AFIQ"
+    },
+    {
+      "city_code": 4303,
+      "city_name_he": "נווה אטיב",
+      "city_name_en": "NEWE ATIV"
+    },
+    {
+      "city_code": 4304,
+      "city_name_he": "נוב",
+      "city_name_en": "NOV"
+    },
+    {
+      "city_code": 4501,
+      "city_name_he": "ע'ג'ר",
+      "city_name_en": "GHAJAR"
+    },
+    {
+      "city_code": 4502,
+      "city_name_he": "עין קנייא",
+      "city_name_en": "EIN QINIYYE"
+    },
+    {
+      "city_code": 4503,
+      "city_name_he": "עין זיוון",
+      "city_name_en": "EN ZIWAN"
+    },
+    {
+      "city_code": 4551,
+      "city_name_he": "נאות גולן",
+      "city_name_en": "NE'OT GOLAN"
+    },
+    {
+      "city_code": 4701,
+      "city_name_he": "רמת מגשימים",
+      "city_name_en": "RAMAT MAGSHIMIM"
+    },
+    {
+      "city_code": 4702,
+      "city_name_he": "רמות",
+      "city_name_en": "RAMOT"
+    },
+    {
+      "city_code": 5000,
+      "city_name_he": "תל אביב - יפו",
+      "city_name_en": "TEL AVIV - YAFO"
+    },
+    {
+      "city_code": 6000,
+      "city_name_he": "באקה אל-גרביה",
+      "city_name_en": "BAQA AL-GHARBIYYE"
+    },
+    {
+      "city_code": 6100,
+      "city_name_he": "בני ברק",
+      "city_name_en": "BENE BERAQ"
+    },
+    {
+      "city_code": 6200,
+      "city_name_he": "בת ים",
+      "city_name_en": "BAT YAM"
+    },
+    {
+      "city_code": 6300,
+      "city_name_he": "גבעתיים",
+      "city_name_en": "GIV'ATAYIM"
+    },
+    {
+      "city_code": 6400,
+      "city_name_he": "הרצליה",
+      "city_name_en": "HERZELIYYA"
+    },
+    {
+      "city_code": 6500,
+      "city_name_he": "חדרה",
+      "city_name_en": "HADERA"
+    },
+    {
+      "city_code": 6600,
+      "city_name_he": "חולון",
+      "city_name_en": "HOLON"
+    },
+    {
+      "city_code": 6700,
+      "city_name_he": "טבריה",
+      "city_name_en": "TIBERIAS"
+    },
+    {
+      "city_code": 6800,
+      "city_name_he": "קרית אתא",
+      "city_name_en": "QIRYAT ATTA"
+    },
+    {
+      "city_code": 6900,
+      "city_name_he": "כפר סבא",
+      "city_name_en": "KEFAR SAVA"
+    },
+    {
+      "city_code": 7000,
+      "city_name_he": "לוד",
+      "city_name_en": "LOD"
+    },
+    {
+      "city_code": 7100,
+      "city_name_he": "אשקלון",
+      "city_name_en": "ASHQELON"
+    },
+    {
+      "city_code": 7200,
+      "city_name_he": "נס ציונה",
+      "city_name_en": "NES ZIYYONA"
+    },
+    {
+      "city_code": 7300,
+      "city_name_he": "נצרת",
+      "city_name_en": "NAZARETH"
+    },
+    {
+      "city_code": 7400,
+      "city_name_he": "נתניה",
+      "city_name_en": "NETANYA"
+    },
+    {
+      "city_code": 7500,
+      "city_name_he": "סח'נין",
+      "city_name_en": "SAKHNIN"
+    },
+    {
+      "city_code": 7600,
+      "city_name_he": "עכו",
+      "city_name_en": "AKKO"
+    },
+    {
+      "city_code": 7700,
+      "city_name_he": "עפולה",
+      "city_name_en": "AFULA"
+    },
+    {
+      "city_code": 7800,
+      "city_name_he": "פרדס חנה-כרכור",
+      "city_name_en": "PARDES HANNA-KARKUR"
+    },
+    {
+      "city_code": 7900,
+      "city_name_he": "פתח תקווה",
+      "city_name_en": "PETAH TIQWA"
+    },
+    {
+      "city_code": 8000,
+      "city_name_he": "צפת",
+      "city_name_en": "ZEFAT"
+    },
+    {
+      "city_code": 8200,
+      "city_name_he": "קרית מוצקין",
+      "city_name_en": "QIRYAT MOTZKIN"
+    },
+    {
+      "city_code": 8300,
+      "city_name_he": "ראשון לציון",
+      "city_name_en": "RISHON LEZIYYON"
+    },
+    {
+      "city_code": 8400,
+      "city_name_he": "רחובות",
+      "city_name_en": "REHOVOT"
+    },
+    {
+      "city_code": 8500,
+      "city_name_he": "רמלה",
+      "city_name_en": "RAMLA"
+    },
+    {
+      "city_code": 8600,
+      "city_name_he": "רמת גן",
+      "city_name_en": "RAMAT GAN"
+    },
+    {
+      "city_code": 8700,
+      "city_name_he": "רעננה",
+      "city_name_en": "RA'ANANA"
+    },
+    {
+      "city_code": 8800,
+      "city_name_he": "שפרעם",
+      "city_name_en": "SHEFAR'AM"
+    },
+    {
+      "city_code": 8900,
+      "city_name_he": "טמרה",
+      "city_name_en": "TAMRA"
+    },
+    {
+      "city_code": 9000,
+      "city_name_he": "באר שבע",
+      "city_name_en": "BE'ER SHEVA"
+    },
+    {
+      "city_code": 9100,
+      "city_name_he": "נהריה",
+      "city_name_en": "NAHARIYYA"
+    },
+    {
+      "city_code": 9200,
+      "city_name_he": "בית שאן",
+      "city_name_en": "BET SHE'AN"
+    },
+    {
+      "city_code": 9300,
+      "city_name_he": "זכרון יעקב",
+      "city_name_en": "ZIKHRON YA'AQOV"
+    },
+    {
+      "city_code": 9400,
+      "city_name_he": "יהוד-מונוסון",
+      "city_name_en": "YEHUD-MONOSON"
+    },
+    {
+      "city_code": 9500,
+      "city_name_he": "קרית ביאליק",
+      "city_name_en": "QIRYAT BIALIK"
+    },
+    {
+      "city_code": 9600,
+      "city_name_he": "קרית ים",
+      "city_name_en": "QIRYAT YAM"
+    },
+    {
+      "city_code": 9700,
+      "city_name_he": "הוד השרון",
+      "city_name_en": "HOD HASHARON"
+    },
+    {
+      "city_code": 9800,
+      "city_name_he": "בנימינה-גבעת עדה",
+      "city_name_en": "BINYAMINA"
+    }
+  ]
+}

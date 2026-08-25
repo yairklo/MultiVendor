@@ -19,6 +19,10 @@ from app.schemas.order_schemas import (
     OrderResponse, CouponCreateRequest, CouponResponse,
     OrderStatusUpdateResponse
 )
+from app.schemas.shipping_schemas import (
+    ShippingProviderCode, TenantShippingConfigCreate, TenantShippingConfigResponse,
+    FulfillOrderResponse
+)
 from app.schemas.auth_schemas import CustomerSummaryResponse
 from app.schemas.tenant_schemas import (
     TenantSettingsSchema, TenantUpdateSchema, TenantResponse, TenantSettingsUpdateSchema,
@@ -43,6 +47,10 @@ from app.services.order_service import (
 )
 from app.services.coupon_service import (
     list_tenant_coupons_service, create_tenant_coupon_service, delete_tenant_coupon_service
+)
+from app.services.shipping_service import (
+    list_tenant_shipping_configs_service, upsert_tenant_shipping_config_service,
+    delete_tenant_shipping_config_service, fulfill_order_service
 )
 
 tenant_admin_router = APIRouter(
@@ -336,6 +344,44 @@ async def update_order_status(
     db: AsyncSession = Depends(get_db)
 ):
     return await update_order_status_service(tenant_slug, order_id, status, db)
+
+# SHIPPING PROVIDER CONFIG
+@tenant_admin_router.get("/shipping-config", response_model=list[TenantShippingConfigResponse])
+async def list_shipping_config(
+    tenant_slug: str = Path(...),
+    admin: User = Depends(get_tenant_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    return await list_tenant_shipping_configs_service(tenant_slug, db)
+
+@tenant_admin_router.put("/shipping-config", response_model=TenantShippingConfigResponse)
+async def upsert_shipping_config(
+    req: TenantShippingConfigCreate,
+    tenant_slug: str = Path(...),
+    admin: User = Depends(get_tenant_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    return await upsert_tenant_shipping_config_service(tenant_slug, req, db)
+
+@tenant_admin_router.delete("/shipping-config/{provider}")
+async def delete_shipping_config(
+    provider: ShippingProviderCode,
+    tenant_slug: str = Path(...),
+    admin: User = Depends(get_tenant_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    return await delete_tenant_shipping_config_service(tenant_slug, provider, db)
+
+# ORDER FULFILLMENT
+@tenant_admin_router.post("/orders/{order_id}/fulfill", response_model=FulfillOrderResponse)
+async def fulfill_order(
+    order_id: int = Path(...),
+    provider: Optional[ShippingProviderCode] = Query(None, description="Override the store's default courier for this order."),
+    tenant_slug: str = Path(...),
+    admin: User = Depends(get_tenant_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    return await fulfill_order_service(tenant_slug, order_id, db, provider_override=provider)
 
 # REPORTS EXPORT
 @tenant_admin_router.get(

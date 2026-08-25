@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.schemas.tenant_schemas import TenantRegisterRequest
 from app.schemas.auth_schemas import TokenResponse, LoginRequest, CustomerRegisterRequest, UserResponse, RefreshTokenRequest
-from app.services.auth_service import register_tenant_service, login_service, register_customer_service, refresh_tokens_service
+from app.services.auth_service import register_tenant_service, login_service, register_customer_service, register_customer_global_service, refresh_tokens_service
 from fastapi import Request
 from app.core.limiter import limiter
 
@@ -52,7 +52,23 @@ async def refresh_tokens(request: Request, req: RefreshTokenRequest, db: AsyncSe
     return await refresh_tokens_service(req.refresh_token, db)
 
 @auth_router.post(
-    "/register-customer/{tenant_slug}", 
+    "/register",
+    response_model=TokenResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Register a Customer (marketplace-wide)",
+    description="Registers a new customer account that is not scoped to any single store. Returns a JWT access token for immediate login, so the account can shop across every vendor on the marketplace.",
+    responses={
+        201: {"description": "Customer successfully registered."},
+        409: {"description": "Email already registered."},
+        422: {"description": "Validation error in request payload."}
+    }
+)
+@limiter.limit("10/minute")
+async def register_customer_global(request: Request, req: CustomerRegisterRequest, db: AsyncSession = Depends(get_db)):
+    return await register_customer_global_service(req, db)
+
+@auth_router.post(
+    "/register-customer/{tenant_slug}",
     response_model=UserResponse, 
     status_code=status.HTTP_201_CREATED,
     summary="Register a Customer",

@@ -84,13 +84,26 @@ class Order(TenantScoped, Base):
     # normal single-store orders): what the platform keeps vs. what the vendor is owed.
     platform_commission = Column(Numeric(10, 2), nullable=False, default=0.00)
     vendor_net_payout = Column(Numeric(10, 2), nullable=False, default=0.00)
-    status = Column(Enum('pending', 'pending_payment', 'processing', 'completed', 'cancelled', 'expired'), default='pending')
+    # 'shipped' sits between 'processing' and 'completed': set by
+    # fulfill_order_service once a courier has actually accepted the
+    # shipment (tracking_number populated), not just when the vendor clicks
+    # "Fulfill" -- see app/services/shipping_service.py.
+    status = Column(Enum('pending', 'pending_payment', 'processing', 'shipped', 'completed', 'cancelled', 'expired'), default='pending')
     order_type = Column(Enum('physical', 'digital'), default='physical')
     shipping_json = Column(JSON, nullable=True)
     # Set when PAYMENT_PROVIDER=stripe creates a PaymentIntent for this
     # (single-store) order; NULL for mock-mode orders and for marketplace
     # sub-orders, which are paid via MasterOrder.payment_intent_id instead.
     payment_intent_id = Column(String(255), nullable=True, unique=True)
+    # Populated by fulfill_order_service (app/services/shipping_service.py)
+    # after a successful israel_shipping_sdk create_shipment call. All NULL
+    # until fulfilled; shipping_provider mirrors israel_shipping_sdk's
+    # ProviderCode values ('hfd' / 'lionwheel'), not TenantShippingConfig.id,
+    # so it stays meaningful even if the tenant later deletes that config row.
+    tracking_number = Column(String(255), nullable=True)
+    shipping_label_url = Column(String(512), nullable=True)
+    shipping_provider = Column(Enum('hfd', 'lionwheel'), nullable=True)
+    shipped_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=func.now())
 
     items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
