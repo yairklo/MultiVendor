@@ -15,6 +15,7 @@ from app.schemas.ai_schemas import (
 )
 from app.services.storefront_templates import (
     StorefrontTemplateMeta, get_storefront_template, list_storefront_template_metas,
+    list_all_storefront_templates,
 )
 from app.services.i18n_utils import validate_i18n
 
@@ -586,6 +587,11 @@ async def list_storefront_templates_service(db: AsyncSession) -> List[Storefront
     server except through apply_storefront_template_service, which writes it straight into the
     tenant's own StorePage rows rather than exposing the raw template payload to the client."""
     return await list_storefront_template_metas(db)
+
+
+async def list_all_storefront_templates_service(db: AsyncSession):
+    """Super-admin catalog (includes inactive). Tenant-facing list above stays active-only."""
+    return await list_all_storefront_templates(db)
 
 
 async def apply_storefront_template_service(tenant_slug: str, template_key: str, db: AsyncSession) -> List[StorePageSchema]:
