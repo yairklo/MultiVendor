@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import {
   Cart,
   addItemToCart,
@@ -15,6 +15,7 @@ interface CartContextValue {
   cart: Cart | null
   loading: boolean
   isOpen: boolean
+  pendingItemIds: Set<number>
   openDrawer: () => void
   closeDrawer: () => void
   addItem: (tenantSlug: string, variantId: number, quantity?: number) => Promise<void>
@@ -31,6 +32,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = useState<Cart | null>(null)
   const [loading, setLoading] = useState(true)
   const [isOpen, setIsOpen] = useState(false)
+  const [pendingItemIds, setPendingItemIds] = useState<Set<number>>(new Set())
+  // Mirrors pendingItemIds but readable synchronously inside the same tick a
+  // click handler runs in, so a second click on the same item before React
+  // re-renders is still rejected (state alone lags one render behind).
+  const pendingRef = useRef<Set<number>>(new Set())
 
   const refresh = useCallback(async () => {
     const active = getActiveCart()
@@ -64,32 +70,50 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     await refresh()
   }, [refresh])
 
+  const withItemLock = useCallback(async (itemId: number, run: () => Promise<void>) => {
+    if (pendingRef.current.has(itemId)) return
+    pendingRef.current.add(itemId)
+    setPendingItemIds(new Set(pendingRef.current))
+    try {
+      await run()
+    } finally {
+      pendingRef.current.delete(itemId)
+      setPendingItemIds(new Set(pendingRef.current))
+    }
+  }, [])
+
   const incrementItem = useCallback(async (itemId: number) => {
-    const active = getActiveCart()
-    const item = cart?.items.find(i => i.id === itemId)
-    if (!active || !item) return
-    await updateItemQuantity(active.tenantSlug, active.cartId, itemId, item.quantity + 1)
-    await refresh()
-  }, [cart, refresh])
+    await withItemLock(itemId, async () => {
+      const active = getActiveCart()
+      const item = cart?.items.find(i => i.id === itemId)
+      if (!active || !item) return
+      await updateItemQuantity(active.tenantSlug, active.cartId, itemId, item.quantity + 1)
+      await refresh()
+    })
+  }, [cart, refresh, withItemLock])
 
   const decrementItem = useCallback(async (itemId: number) => {
-    const active = getActiveCart()
-    const item = cart?.items.find(i => i.id === itemId)
-    if (!active || !item) return
-    if (item.quantity <= 1) {
-      await removeCartItem(active.tenantSlug, active.cartId, itemId)
-    } else {
-      await updateItemQuantity(active.tenantSlug, active.cartId, itemId, item.quantity - 1)
-    }
-    await refresh()
-  }, [cart, refresh])
+    await withItemLock(itemId, async () => {
+      const active = getActiveCart()
+      const item = cart?.items.find(i => i.id === itemId)
+      if (!active || !item) return
+      if (item.quantity <= 1) {
+        await removeCartItem(active.tenantSlug, active.cartId, itemId)
+      } else {
+        await updateItemQuantity(active.tenantSlug, active.cartId, itemId, item.quantity - 1)
+      }
+      await refresh()
+    })
+  }, [cart, refresh, withItemLock])
 
   const removeItem = useCallback(async (itemId: number) => {
-    const active = getActiveCart()
-    if (!active) return
-    await removeCartItem(active.tenantSlug, active.cartId, itemId)
-    await refresh()
-  }, [refresh])
+    await withItemLock(itemId, async () => {
+      const active = getActiveCart()
+      if (!active) return
+      await removeCartItem(active.tenantSlug, active.cartId, itemId)
+      await refresh()
+    })
+  }, [refresh, withItemLock])
 
   const clear = useCallback(() => {
     clearStoredCart()
@@ -100,6 +124,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     cart,
     loading,
     isOpen,
+    pendingItemIds,
     openDrawer: () => setIsOpen(true),
     closeDrawer: () => setIsOpen(false),
     addItem,

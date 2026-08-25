@@ -8,7 +8,7 @@ import { resolveImageUrl } from '@/lib/media'
 import { useUiLocale } from '@/context/UiLocaleContext'
 
 export function CartDrawer() {
-  const { cart, isOpen, closeDrawer, incrementItem, decrementItem, removeItem } = useCart()
+  const { cart, isOpen, closeDrawer, incrementItem, decrementItem, removeItem, pendingItemIds } = useCart()
   const { formatCurrency } = useCurrency()
   const { t } = useUiLocale()
   const router = useRouter()
@@ -62,7 +62,8 @@ export function CartDrawer() {
                   <button
                     aria-label={t('cart.decrease')}
                     onClick={() => decrementItem(item.id)}
-                    className="w-7 h-7 border border-border rounded-lg text-foreground transition-colors hover:bg-muted"
+                    disabled={pendingItemIds.has(item.id)}
+                    className="w-7 h-7 border border-border rounded-lg text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     &minus;
                   </button>
@@ -70,14 +71,16 @@ export function CartDrawer() {
                   <button
                     aria-label={t('cart.increase')}
                     onClick={() => incrementItem(item.id)}
-                    className="w-7 h-7 border border-border rounded-lg text-foreground transition-colors hover:bg-muted"
+                    disabled={pendingItemIds.has(item.id)}
+                    className="w-7 h-7 border border-border rounded-lg text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     +
                   </button>
                   <button
                     aria-label={t('cart.remove')}
                     onClick={() => removeItem(item.id)}
-                    className="ml-auto text-sm font-medium text-destructive transition-colors hover:underline"
+                    disabled={pendingItemIds.has(item.id)}
+                    className="ml-auto text-sm font-medium text-destructive transition-colors hover:underline disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {t('cart.removeLabel')}
                   </button>
