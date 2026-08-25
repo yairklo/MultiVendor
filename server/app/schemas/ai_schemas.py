@@ -28,7 +28,7 @@ DESIGN_VARIANTS: tuple = ("primary", "accent", "secondary", "muted", "neutral")
 # AI-selectable product card presentation for product_grid sections (frontend/src/lib/
 # product-card-styles.ts maps each to a literal, statically-scanned class string) — lets the AI
 # restyle how product cards look without ever touching the card's markup or its Add to Cart wiring.
-CARD_STYLES: tuple = ("default", "framed", "minimal")
+CARD_STYLES: tuple = ("default", "framed", "minimal", "glass", "elevated")
 # A store's page tree is user/AI-authored — cap nesting so a hallucinated or malicious payload
 # can't produce pathologically deep recursion server- or client-side.
 MAX_SECTION_NESTING_DEPTH = 3

@@ -72,7 +72,7 @@ export function DashboardClient({
         animate={prefersReducedMotion ? undefined : 'show'}
       >
         <motion.div variants={prefersReducedMotion ? undefined : kpiCardVariants}>
-          <Card className="shadow-apple-elevated shadow-apple-inset hover:scale-[1.01] transition-transform duration-300 ease-spring">
+          <Card className="shadow-apple-elevated shadow-apple-inset motion-safe:hover:scale-[1.01] transition-transform duration-300 ease-spring">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">{t('dashboard.totalRevenue')}</CardTitle>
               <DollarSign className="h-4 w-4 text-emerald-500" />
@@ -87,7 +87,7 @@ export function DashboardClient({
         </motion.div>
 
         <motion.div variants={prefersReducedMotion ? undefined : kpiCardVariants}>
-          <Card className="shadow-apple-elevated shadow-apple-inset hover:scale-[1.01] transition-transform duration-300 ease-spring">
+          <Card className="shadow-apple-elevated shadow-apple-inset motion-safe:hover:scale-[1.01] transition-transform duration-300 ease-spring">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">{t('dashboard.totalOrders')}</CardTitle>
               <ShoppingBag className="h-4 w-4 text-primary" />
@@ -102,7 +102,7 @@ export function DashboardClient({
         </motion.div>
 
         <motion.div variants={prefersReducedMotion ? undefined : kpiCardVariants}>
-          <Card className="shadow-apple-elevated shadow-apple-inset hover:scale-[1.01] transition-transform duration-300 ease-spring">
+          <Card className="shadow-apple-elevated shadow-apple-inset motion-safe:hover:scale-[1.01] transition-transform duration-300 ease-spring">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">{t('dashboard.aov')}</CardTitle>
               <Activity className="h-4 w-4 text-[oklch(0.62_0.19_300)]" />
@@ -117,7 +117,7 @@ export function DashboardClient({
         </motion.div>
 
         <motion.div variants={prefersReducedMotion ? undefined : kpiCardVariants}>
-          <Card className="shadow-apple-elevated shadow-apple-inset hover:scale-[1.01] transition-transform duration-300 ease-spring">
+          <Card className="shadow-apple-elevated shadow-apple-inset motion-safe:hover:scale-[1.01] transition-transform duration-300 ease-spring">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">{t('dashboard.activeProducts')}</CardTitle>
               <Package className="h-4 w-4 text-orange-500" />

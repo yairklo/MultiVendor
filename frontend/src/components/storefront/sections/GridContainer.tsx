@@ -1,6 +1,8 @@
 import { Section } from '@/lib/ai/types'
 import { resolveDesignVariantClasses } from '@/lib/design-tokens'
 import { renderSections } from '../PageRenderer'
+import { useUiLocale } from '@/context/UiLocaleContext'
+import React from 'react'
 
 const COLUMN_CLASSES: Record<number, string> = {
   1: 'grid-cols-1',
@@ -24,34 +26,31 @@ export function GridContainer({
   const columnClass = COLUMN_CLASSES[columns] ?? COLUMN_CLASSES[3]
   const containerClass = resolveDesignVariantClasses(section.settings.design_variant)
   const children = section.children ?? []
+  const { t } = useUiLocale()
 
   const isBento = section.settings.bento_grid === true
   
-  // Bento grid mapping for auto-spans
-  const renderBentoChildren = () => {
-    return children.map((child, idx) => {
-      let bentoClass = ''
-      if (isBento) {
-        if (columns === 3) {
-          bentoClass = idx === 0 ? 'md:col-span-2 md:row-span-2' : ''
-        } else if (columns === 4) {
-          bentoClass = idx === 0 || idx === 3 ? 'md:col-span-2 md:row-span-2' : 'md:col-span-1 md:row-span-1'
-        }
-      }
-      return (
-        <div key={child.id} className={bentoClass}>
-          {renderSections([child], { onAction, tenantSlug, showTypeLabels })}
-        </div>
-      )
-    })
-  }
+  const renderedChildren = renderSections(children, { onAction, tenantSlug, showTypeLabels })
 
   return (
     <div className={containerClass}>
-      <div className={`grid gap-4 ${isBento ? 'auto-rows-[minmax(180px,auto)]' : ''} ${columnClass}`}>
+      <div className={`grid gap-4 ${isBento ? 'auto-rows-[minmax(180px,auto)] grid-flow-dense' : ''} ${columnClass}`}>
         {children.length > 0
-          ? (isBento ? renderBentoChildren() : renderSections(children, { onAction, tenantSlug, showTypeLabels }))
-          : <div className="col-span-full p-4 text-center text-sm text-current/60">Empty grid — add items.</div>}
+          ? renderedChildren.map((childElement, idx) => {
+              let bentoClass = ''
+              if (isBento) {
+                if (columns === 3) {
+                  bentoClass = idx % 5 === 0 ? 'md:col-span-2 md:row-span-2' : ''
+                } else if (columns === 4) {
+                  bentoClass = idx % 5 === 0 || idx % 5 === 3 ? 'md:col-span-2 md:row-span-2' : ''
+                }
+              }
+              if (!bentoClass) return childElement
+              return React.cloneElement(childElement, {
+                className: `${childElement.props.className} ${bentoClass}`
+              })
+            })
+          : <div className="col-span-full p-4 text-center text-sm text-current/60">{t('common.emptyGrid')}</div>}
       </div>
     </div>
   )

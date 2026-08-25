@@ -46,9 +46,9 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
-  --shadow-apple-elevated: 0 0 0 1px rgba(0,0,0,0.06), 0 2px 4px rgba(0,0,0,0.04), 0 12px 24px rgba(0,0,0,0.06);
-  --shadow-apple-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
-  --shadow-apple-inset: inset 0 1px 0 0 rgba(255,255,255,0.15);
+  --shadow-apple-elevated: var(--apple-elevated);
+  --shadow-apple-glass: var(--apple-glass);
+  --shadow-apple-inset: var(--apple-inset);
   --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -85,6 +85,10 @@
   --sidebar-accent-foreground: oklch(0.25 0.03 275);
   --sidebar-border: oklch(0.9 0.01 275);
   --sidebar-ring: oklch(0.62 0.19 277);
+  
+  --apple-elevated: 0 0 0 1px rgba(0,0,0,0.06), 0 2px 4px rgba(0,0,0,0.04), 0 12px 24px rgba(0,0,0,0.06);
+  --apple-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+  --apple-inset: inset 0 1px 0 0 rgba(255,255,255,0.15);
 }
 
 .dark {
@@ -119,6 +123,10 @@
   --sidebar-accent-foreground: oklch(0.97 0.005 275);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.62 0.19 277);
+  
+  --apple-elevated: 0 0 0 1px rgba(255,255,255,0.06), 0 2px 4px rgba(0,0,0,0.4), 0 12px 24px rgba(0,0,0,0.6);
+  --apple-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+  --apple-inset: inset 0 1px 0 0 rgba(255,255,255,0.05);
 }
 
 @layer base {
@@ -131,24 +139,4 @@
   html {
     @apply font-sans;
   }
-}
-
-.preview-canvas-scroll {
-  scrollbar-gutter: stable;
-  scrollbar-width: auto;
-  scrollbar-color: var(--muted-foreground) var(--muted);
-}
-.preview-canvas-scroll::-webkit-scrollbar {
-  width: 14px;
-  height: 14px;
-  background: var(--muted);
-}
-.preview-canvas-scroll::-webkit-scrollbar-thumb {
-  background: color-mix(in oklch, var(--muted-foreground) 55%, transparent);
-  border-radius: 999px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
-}
-.preview-canvas-scroll::-webkit-scrollbar-track {
-  background: color-mix(in oklch, var(--muted) 80%, transparent);
 }

@@ -200,7 +200,7 @@ export function ProductsPageClient({
         </Select>
       </div>
 
-      <div className="bg-card rounded-xl shadow-apple-elevated border border-border overflow-hidden relative max-h-[70vh] overflow-y-auto preview-canvas-scroll">
+      <div className="bg-card rounded-xl shadow-apple-elevated border border-border overflow-hidden relative max-h-[70vh] overflow-y-auto">
         <Table>
           <TableHeader className="sticky top-0 z-10 backdrop-blur-md bg-background/80 border-b border-border/40">
             <TableRow>
@@ -217,7 +217,7 @@ export function ProductsPageClient({
               <TableHead>{t('products.basePrice')}</TableHead>
               <TableHead>{t('products.stock')}</TableHead>
               <TableHead>{t('common.status')}</TableHead>
-              <TableHead className="text-right">{t('common.actions')}</TableHead>
+              <TableHead className="text-end">{t('common.actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -232,7 +232,7 @@ export function ProductsPageClient({
                 const stock = totalStock(product.variants)
                 const level = stockLevel(stock)
                 return (
-                <TableRow key={product.id} className="group hover:bg-muted/50 transition-colors active:scale-[0.99] duration-100 ease-spring">
+                <TableRow key={product.id} className="group hover:bg-muted/50 transition-colors duration-100 ease-spring">
                   <TableCell>
                     <input
                       type="checkbox"
@@ -268,22 +268,22 @@ export function ProductsPageClient({
                     <div className="flex items-center gap-2 tabular-nums">
                       <span className="font-medium">{stock}</span>
                       <Badge variant="outline" className={stockLevelClass[level]}>
-                        <div className={`h-1.5 w-1.5 rounded-full mr-1.5 ${level === 'in' ? 'bg-green-500' : level === 'low' ? 'bg-yellow-500' : 'bg-red-500'}`} />
+                        <div className={`h-1.5 w-1.5 rounded-full me-1.5 ${level === 'in' ? 'bg-green-500' : level === 'low' ? 'bg-yellow-500' : 'bg-red-500'}`} />
                         {t(`stock.${level}`)}
                       </Badge>
                     </div>
                   </TableCell>
                   <TableCell>
                     <Badge variant={product.is_active ? 'success' : 'secondary'} className="relative">
-                      <div className={`h-1.5 w-1.5 rounded-full mr-1.5 ${product.is_active ? 'bg-green-500' : 'bg-gray-400'}`} />
+                      <div className={`h-1.5 w-1.5 rounded-full me-1.5 ${product.is_active ? 'bg-green-500' : 'bg-gray-400'}`} />
                       {product.is_active ? t('products.active') : t('products.inactive')}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right">
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                  <TableCell className="text-end">
+                    <div className="transition-opacity duration-200 focus-within:opacity-100 flex justify-end">
                       <Link
                         href={`/admin/products/${product.id}/edit`}
-                        className={buttonVariants({ variant: 'ghost', size: 'sm', className: 'mr-2' })}
+                        className={buttonVariants({ variant: 'ghost', size: 'sm', className: 'me-2' })}
                       >
                         {t('common.edit')}
                       </Link>
@@ -296,6 +296,8 @@ export function ProductsPageClient({
             )}
           </TableBody>
         </Table>
+      </div>
+      <div className="mt-4">
         <PaginationControls meta={meta} onPageChange={setPage} />
       </div>
     </div>

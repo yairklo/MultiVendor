@@ -48,7 +48,7 @@ _SECTION_SCHEMA_DEFS: Dict[str, Any] = {
                     "unsure — e.g. {\"en\": \"Summer Sale\", \"he\": \"מבצע קיץ\"}), NEVER a plain string; the save "
                     "is rejected if any supported language is missing. hero_banner: {headline (localized), size: "
                     "'small'|'medium'|'large', alignment: 'left'|'center'|'right'}. product_grid: {title (localized), "
-                    "columns (number), category_id?: number, card_style?: 'default'|'framed'|'minimal'} renders "
+                    "columns (number), category_id?: number, card_style?: 'default'|'framed'|'minimal'|'glass'|'elevated'} renders "
                     "REAL live products from this store, filtered to that category if category_id is given (look it "
                     "up via the store's categories if the user names one) or the newest products otherwise — never "
                     "invent product data yourself, this section always pulls the real catalog and every card "

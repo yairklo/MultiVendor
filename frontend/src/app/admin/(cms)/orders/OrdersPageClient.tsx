@@ -91,14 +91,14 @@ export function OrdersPageClient({ initialOrders }: { initialOrders: any[] }) {
         </Button>
       </div>
 
-      <div className="bg-card rounded-xl shadow-apple-elevated border border-border overflow-hidden relative max-h-[70vh] overflow-y-auto preview-canvas-scroll">
+      <div className="bg-card rounded-xl shadow-apple-elevated border border-border overflow-hidden relative max-h-[70vh] overflow-y-auto">
         <Table>
           <TableHeader className="sticky top-0 z-10 backdrop-blur-md bg-background/80 border-b border-border/40">
             <TableRow>
               <TableHead className="w-[120px]">{t('orders.orderId')}</TableHead>
               <TableHead>{t('orders.customer')}</TableHead>
               <TableHead>{t('orders.total')}</TableHead>
-              <TableHead className="text-right">{t('common.status')}</TableHead>
+              <TableHead className="text-end">{t('common.status')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -108,7 +108,7 @@ export function OrdersPageClient({ initialOrders }: { initialOrders: any[] }) {
               </TableRow>
             )}
             {orders.map(order => (
-              <TableRow key={order.id} className="group hover:bg-muted/50 transition-colors active:scale-[0.99] duration-100 ease-spring">
+              <TableRow key={order.id} className="group hover:bg-muted/50 transition-colors duration-100 ease-spring">
                 <TableCell className="font-medium tabular-nums text-muted-foreground">#{order.id}</TableCell>
                 <TableCell>
                   <div className="font-medium text-foreground">{order.customer_name || t('orders.guest')}</div>
@@ -117,9 +117,13 @@ export function OrdersPageClient({ initialOrders }: { initialOrders: any[] }) {
                   )}
                 </TableCell>
                 <TableCell className="tabular-nums font-medium">{formatCurrency(Number(order.total_amount))}</TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-end">
                   <div className="flex items-center justify-end gap-3 relative">
-                    <div className="absolute inset-y-0 right-0 flex items-center justify-end pr-2 bg-transparent opacity-0 group-hover:opacity-100 group-hover:-translate-x-32 transition-all duration-300">
+                    <Badge variant="outline" className={`${orderStatusClass[order.status] || 'bg-muted text-muted-foreground'}`}>
+                      <div className={`h-1.5 w-1.5 rounded-full me-1.5 ${order.status === 'completed' ? 'bg-green-500' : order.status === 'cancelled' ? 'bg-red-500' : 'bg-yellow-500'}`} />
+                      {orderStatusLabel[order.status] ? t(`orderStatus.${order.status}`) : order.status || t('orderStatus.pending')}
+                    </Badge>
+                    <div className="flex items-center justify-end">
                       <select
                         aria-label={`Change status for order ${order.id}`}
                         value={MANUAL_STATUSES.includes(order.status) ? order.status : ''}
@@ -135,10 +139,6 @@ export function OrdersPageClient({ initialOrders }: { initialOrders: any[] }) {
                         ))}
                       </select>
                     </div>
-                    <Badge variant="outline" className={`relative transition-transform duration-300 group-hover:translate-x-0 ${orderStatusClass[order.status] || 'bg-muted text-muted-foreground'}`}>
-                      <div className={`h-1.5 w-1.5 rounded-full mr-1.5 ${order.status === 'completed' ? 'bg-green-500' : order.status === 'cancelled' ? 'bg-red-500' : 'bg-yellow-500'}`} />
-                      {orderStatusLabel[order.status] ? t(`orderStatus.${order.status}`) : order.status || t('orderStatus.pending')}
-                    </Badge>
                   </div>
                 </TableCell>
               </TableRow>
