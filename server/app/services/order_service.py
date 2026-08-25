@@ -330,19 +330,12 @@ async def pay_order_service(
 
 @platform_plane
 async def mark_order_paid_by_payment_intent(
-    provider_ref: str, amount: int, currency: str, db: AsyncSession
+    provider_ref: str, amount: int, currency: str, charge_id: str | None, db: AsyncSession
 ) -> bool:
     """
     Called only from the payments webhook (payments_router.py) after its
     signature has verified -- this is the one place a real gateway payment
-    actually turns into 'processing'. `amount`/`currency` are what the
-    *provider* reports the payment as (from the verified event, not
-    anything client-supplied); they're cross-checked against the order's own
-    total before anything is marked paid, so a webhook can never move an
-    order to 'processing' for less than it's actually owed. Returns False
-    for a provider_ref that matches no order/master_order (an unrelated
-    event, or a stale retry), which the webhook treats as a no-op rather
-    than an error.
+    actually turns into 'processing'.
     """
     result = await db.execute(select(Order).where(Order.payment_intent_id == provider_ref))
     order = result.scalar_one_or_none()
@@ -358,14 +351,10 @@ async def mark_order_paid_by_payment_intent(
             order.status = 'processing'
             await db.commit()
             await maybe_auto_fulfill_order(order.id, order.tenant_id, db)
+            
+            # Transfer to vendor if they have a Connect account
+            await _transfer_for_order(order, charge_id, db)
         elif order.status == 'expired':
-            # cleanup_abandoned_checkouts already canceled this order's
-            # PaymentIntent before expiring it and releasing its stock -- a
-            # succeeded event landing anyway (the cancel raced a
-            # near-simultaneous confirmation) must NOT silently flip it to
-            # 'processing': that stock may already be sold to someone else.
-            # Surfaced as an error log for manual reconciliation/refund
-            # rather than auto-refunding, which needs its own review.
             logger.error(
                 "payment_intent %s succeeded for already-expired order %s -- "
                 "stock was released, needs manual reconciliation/refund",
@@ -389,7 +378,8 @@ async def mark_order_paid_by_payment_intent(
     sub_orders_result = await db.execute(select(Order).where(Order.master_order_id == master_order.id))
     any_updated = False
     newly_processing: list[tuple[int, int]] = []  # (order_id, tenant_id)
-    for sub_order in sub_orders_result.scalars().all():
+    sub_orders = sub_orders_result.scalars().all()
+    for sub_order in sub_orders:
         if sub_order.status == 'pending_payment':
             sub_order.status = 'processing'
             any_updated = True
@@ -404,7 +394,36 @@ async def mark_order_paid_by_payment_intent(
         await db.commit()
         for sub_order_id, sub_order_tenant_id in newly_processing:
             await maybe_auto_fulfill_order(sub_order_id, sub_order_tenant_id, db)
+            
+        for sub_order in sub_orders:
+            if sub_order.status in ('processing', 'completed'):
+                await _transfer_for_order(sub_order, charge_id, db)
     return True
+
+async def _transfer_for_order(order: Order, charge_id: str | None, db: AsyncSession):
+    if not charge_id or settings.PAYMENT_PROVIDER == "mock":
+        return
+
+    tenant_result = await db.execute(select(Tenant).where(Tenant.id == order.tenant_id))
+    tenant = tenant_result.scalar_one_or_none()
+    if not tenant or not getattr(tenant, "stripe_account_id", None):
+        return
+        
+    payout = order.vendor_net_payout if order.vendor_net_payout > 0 else (order.total_amount - order.platform_commission)
+    if payout <= 0:
+        return
+
+    provider = get_payment_provider()
+    if hasattr(provider, 'transfer'):
+        try:
+            await provider.transfer(
+                amount=payout,
+                currency=settings.STRIPE_CURRENCY,
+                destination_account_id=tenant.stripe_account_id,
+                source_transaction=charge_id
+            )
+        except Exception as e:
+            logger.error("Failed to transfer funds for order %s to tenant %s: %s", order.id, tenant.id, str(e))
 
 async def get_customer_insights_service(tenant_slug: str, db: AsyncSession, top_n: int = 5) -> dict:
     """

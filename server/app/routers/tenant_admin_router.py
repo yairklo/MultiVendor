@@ -493,3 +493,56 @@ async def delete_tenant_coupon(
 ):
     await delete_tenant_coupon_service(tenant_slug, coupon_id, db)
     return None
+
+from pydantic import BaseModel
+
+class StripeConnectResponse(BaseModel):
+    url: str
+
+class StripeConnectStatusResponse(BaseModel):
+    is_connected: bool
+    account_id: Optional[str]
+
+@tenant_admin_router.post(
+    "/stripe/connect",
+    response_model=StripeConnectResponse,
+    summary="Create Stripe Connect Onboarding Link"
+)
+async def create_stripe_connect(
+    return_url: str = Query(...),
+    refresh_url: str = Query(...),
+    tenant_slug: str = Path(...),
+    tenant: Tenant = Depends(get_current_tenant),
+    admin: User = Depends(get_tenant_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    from app.services.payments import get_payment_provider
+    try:
+        provider = get_payment_provider()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Stripe Connect not supported by current provider")
+        
+    if not hasattr(provider, 'create_connect_account'):
+        raise HTTPException(status_code=400, detail="Stripe Connect not supported by current provider")
+    
+    if not tenant.stripe_account_id:
+        tenant.stripe_account_id = await provider.create_connect_account()
+        await db.commit()
+    
+    url = await provider.create_account_link(tenant.stripe_account_id, refresh_url, return_url)
+    return StripeConnectResponse(url=url)
+
+@tenant_admin_router.get(
+    "/stripe/connect/status",
+    response_model=StripeConnectStatusResponse,
+    summary="Check Stripe Connect Status"
+)
+async def get_stripe_connect_status(
+    tenant_slug: str = Path(...),
+    tenant: Tenant = Depends(get_current_tenant),
+    admin: User = Depends(get_tenant_admin),
+):
+    return StripeConnectStatusResponse(
+        is_connected=bool(tenant.stripe_account_id),
+        account_id=tenant.stripe_account_id
+    )

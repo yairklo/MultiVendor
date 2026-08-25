@@ -79,6 +79,36 @@ class StripePaymentProvider(PaymentProvider):
             succeeded=event["type"] in _SUCCESS_EVENT_TYPES,
             amount=payment_intent["amount"],
             currency=payment_intent["currency"],
+            charge_id=payment_intent.get("latest_charge")
+        )
+
+    async def create_connect_account(self) -> str:
+        self._require_api_key()
+        account = await asyncio.to_thread(
+            stripe.Account.create,
+            type="express",
+        )
+        return account.id
+
+    async def create_account_link(self, account_id: str, refresh_url: str, return_url: str) -> str:
+        self._require_api_key()
+        account_link = await asyncio.to_thread(
+            stripe.AccountLink.create,
+            account=account_id,
+            refresh_url=refresh_url,
+            return_url=return_url,
+            type="account_onboarding",
+        )
+        return account_link.url
+
+    async def transfer(self, amount: Decimal, currency: str, destination_account_id: str, source_transaction: str) -> None:
+        self._require_api_key()
+        await asyncio.to_thread(
+            stripe.Transfer.create,
+            amount=to_smallest_unit(amount, currency),
+            currency=currency.lower(),
+            destination=destination_account_id,
+            source_transaction=source_transaction,
         )
 
 
