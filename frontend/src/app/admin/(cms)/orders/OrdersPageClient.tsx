@@ -91,14 +91,14 @@ export function OrdersPageClient({ initialOrders }: { initialOrders: any[] }) {
         </Button>
       </div>
 
-      <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
+      <div className="bg-card rounded-xl shadow-apple-elevated border border-border overflow-hidden relative max-h-[70vh] overflow-y-auto preview-canvas-scroll">
         <Table>
-          <TableHeader>
+          <TableHeader className="sticky top-0 z-10 backdrop-blur-md bg-background/80 border-b border-border/40">
             <TableRow>
-              <TableHead>{t('orders.orderId')}</TableHead>
+              <TableHead className="w-[120px]">{t('orders.orderId')}</TableHead>
               <TableHead>{t('orders.customer')}</TableHead>
               <TableHead>{t('orders.total')}</TableHead>
-              <TableHead>{t('common.status')}</TableHead>
+              <TableHead className="text-right">{t('common.status')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -108,34 +108,37 @@ export function OrdersPageClient({ initialOrders }: { initialOrders: any[] }) {
               </TableRow>
             )}
             {orders.map(order => (
-              <TableRow key={order.id} className="hover:bg-muted/50 transition-colors">
-                <TableCell className="font-medium">#{order.id}</TableCell>
+              <TableRow key={order.id} className="group hover:bg-muted/50 transition-colors active:scale-[0.99] duration-100 ease-spring">
+                <TableCell className="font-medium tabular-nums text-muted-foreground">#{order.id}</TableCell>
                 <TableCell>
                   <div className="font-medium text-foreground">{order.customer_name || t('orders.guest')}</div>
                   {order.customer_email && (
                     <div className="text-sm text-muted-foreground">{order.customer_email}</div>
                   )}
                 </TableCell>
-                <TableCell>{formatCurrency(Number(order.total_amount))}</TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className={orderStatusClass[order.status] || 'bg-muted text-muted-foreground'}>
+                <TableCell className="tabular-nums font-medium">{formatCurrency(Number(order.total_amount))}</TableCell>
+                <TableCell className="text-right">
+                  <div className="flex items-center justify-end gap-3 relative">
+                    <div className="absolute inset-y-0 right-0 flex items-center justify-end pr-2 bg-transparent opacity-0 group-hover:opacity-100 group-hover:-translate-x-32 transition-all duration-300">
+                      <select
+                        aria-label={`Change status for order ${order.id}`}
+                        value={MANUAL_STATUSES.includes(order.status) ? order.status : ''}
+                        disabled={updatingId === order.id}
+                        onChange={e => handleStatusChange(order.id, e.target.value)}
+                        className="text-xs border border-input rounded-md px-1.5 py-1 text-muted-foreground bg-background transition-colors focus:outline-none focus:ring-2 focus:ring-ring/50 disabled:opacity-50 hover:bg-muted"
+                      >
+                        {!MANUAL_STATUSES.includes(order.status) && (
+                          <option value="" disabled>{orderStatusLabel[order.status] ? t(`orderStatus.${order.status}`) : order.status}</option>
+                        )}
+                        {MANUAL_STATUSES.map(s => (
+                          <option key={s} value={s}>{t(`orderStatus.${s}`)}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <Badge variant="outline" className={`relative transition-transform duration-300 group-hover:translate-x-0 ${orderStatusClass[order.status] || 'bg-muted text-muted-foreground'}`}>
+                      <div className={`h-1.5 w-1.5 rounded-full mr-1.5 ${order.status === 'completed' ? 'bg-green-500' : order.status === 'cancelled' ? 'bg-red-500' : 'bg-yellow-500'}`} />
                       {orderStatusLabel[order.status] ? t(`orderStatus.${order.status}`) : order.status || t('orderStatus.pending')}
                     </Badge>
-                    <select
-                      aria-label={`Change status for order ${order.id}`}
-                      value={MANUAL_STATUSES.includes(order.status) ? order.status : ''}
-                      disabled={updatingId === order.id}
-                      onChange={e => handleStatusChange(order.id, e.target.value)}
-                      className="text-xs border border-input rounded-md px-1.5 py-1 text-muted-foreground bg-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-ring/50 disabled:opacity-50"
-                    >
-                      {!MANUAL_STATUSES.includes(order.status) && (
-                        <option value="" disabled>{orderStatusLabel[order.status] ? t(`orderStatus.${order.status}`) : order.status}</option>
-                      )}
-                      {MANUAL_STATUSES.map(s => (
-                        <option key={s} value={s}>{t(`orderStatus.${s}`)}</option>
-                      ))}
-                    </select>
                   </div>
                 </TableCell>
               </TableRow>

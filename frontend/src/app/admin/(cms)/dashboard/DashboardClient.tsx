@@ -66,20 +66,20 @@ export function DashboardClient({
 
       {/* KPI Cards */}
       <motion.div
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 auto-rows-min"
         variants={prefersReducedMotion ? undefined : kpiContainerVariants}
         initial={prefersReducedMotion ? undefined : 'hidden'}
         animate={prefersReducedMotion ? undefined : 'show'}
       >
         <motion.div variants={prefersReducedMotion ? undefined : kpiCardVariants}>
-          <Card className="shadow-sm hover:shadow-md transition-shadow">
+          <Card className="shadow-apple-elevated shadow-apple-inset hover:scale-[1.01] transition-transform duration-300 ease-spring">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">{t('dashboard.totalRevenue')}</CardTitle>
               <DollarSign className="h-4 w-4 text-emerald-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-foreground">{formatCurrency(metrics?.total_revenue || 0)}</div>
-              <p className="text-xs text-emerald-600 flex items-center mt-1 font-medium">
+              <div className="text-3xl font-bold tracking-tight tabular-nums text-foreground">{formatCurrency(metrics?.total_revenue || 0)}</div>
+              <p className="text-xs text-emerald-600 flex items-center mt-1 font-medium tabular-nums">
                 <TrendingUp className="h-3 w-3 mr-1" /> +20.1% {t('dashboard.fromLastMonth')}
               </p>
             </CardContent>
@@ -87,14 +87,14 @@ export function DashboardClient({
         </motion.div>
 
         <motion.div variants={prefersReducedMotion ? undefined : kpiCardVariants}>
-          <Card className="shadow-sm hover:shadow-md transition-shadow">
+          <Card className="shadow-apple-elevated shadow-apple-inset hover:scale-[1.01] transition-transform duration-300 ease-spring">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">{t('dashboard.totalOrders')}</CardTitle>
               <ShoppingBag className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-foreground">{(metrics?.orders_count || 0).toLocaleString()}</div>
-              <p className="text-xs text-primary flex items-center mt-1 font-medium">
+              <div className="text-3xl font-bold tracking-tight tabular-nums text-foreground">{(metrics?.orders_count || 0).toLocaleString()}</div>
+              <p className="text-xs text-primary flex items-center mt-1 font-medium tabular-nums">
                 <TrendingUp className="h-3 w-3 mr-1" /> +12.5% {t('dashboard.fromLastMonth')}
               </p>
             </CardContent>
@@ -102,13 +102,13 @@ export function DashboardClient({
         </motion.div>
 
         <motion.div variants={prefersReducedMotion ? undefined : kpiCardVariants}>
-          <Card className="shadow-sm hover:shadow-md transition-shadow">
+          <Card className="shadow-apple-elevated shadow-apple-inset hover:scale-[1.01] transition-transform duration-300 ease-spring">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">{t('dashboard.aov')}</CardTitle>
               <Activity className="h-4 w-4 text-[oklch(0.62_0.19_300)]" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-foreground">{formatCurrency(metrics?.aov || 0)}</div>
+              <div className="text-3xl font-bold tracking-tight tabular-nums text-foreground">{formatCurrency(metrics?.aov || 0)}</div>
               <p className="text-xs text-muted-foreground mt-1">
                 {t('dashboard.basedOnPaid')}
               </p>
@@ -117,14 +117,14 @@ export function DashboardClient({
         </motion.div>
 
         <motion.div variants={prefersReducedMotion ? undefined : kpiCardVariants}>
-          <Card className="shadow-sm hover:shadow-md transition-shadow">
+          <Card className="shadow-apple-elevated shadow-apple-inset hover:scale-[1.01] transition-transform duration-300 ease-spring">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">{t('dashboard.activeProducts')}</CardTitle>
               <Package className="h-4 w-4 text-orange-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-foreground">{topProducts.length * 12 || 45}</div>
-              <p className="text-xs text-muted-foreground mt-1 flex items-center">
+              <div className="text-3xl font-bold tracking-tight tabular-nums text-foreground">{topProducts.length * 12 || 45}</div>
+              <p className="text-xs text-muted-foreground mt-1 flex items-center tabular-nums">
                 {t('dashboard.itemsLowStock', { count: lowStockProducts.length })}
               </p>
             </CardContent>

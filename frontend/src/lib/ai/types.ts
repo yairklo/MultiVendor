@@ -50,7 +50,10 @@ export interface SectionMedia {
 export interface Section {
   id: string
   type: SectionType
-  settings: Record<string, any>
+  settings: Record<string, any> & {
+    bento_grid?: boolean
+    card_style?: 'default' | 'framed' | 'minimal' | 'glass' | 'elevated'
+  }
   media?: SectionMedia
   /** Only meaningful for type="grid_container" — the sections rendered inside the grid. */
   children?: Section[]

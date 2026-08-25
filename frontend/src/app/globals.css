@@ -46,6 +46,10 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  --shadow-apple-elevated: 0 0 0 1px rgba(0,0,0,0.06), 0 2px 4px rgba(0,0,0,0.04), 0 12px 24px rgba(0,0,0,0.06);
+  --shadow-apple-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+  --shadow-apple-inset: inset 0 1px 0 0 rgba(255,255,255,0.15);
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 :root {

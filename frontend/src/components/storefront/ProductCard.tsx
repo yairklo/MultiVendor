@@ -66,7 +66,7 @@ export function ProductCard({
   }
 
   return (
-    <div className={`group flex flex-col p-3 ${resolveCardStyleClasses(styleVariant)}`}>
+    <div className={`group flex flex-col p-3 active:scale-[0.98] transition-transform duration-100 ease-spring ${resolveCardStyleClasses(styleVariant)}`}>
       <Link href={`/store/${tenantSlug}/products/${product.slug}`} className="mb-2 block overflow-hidden rounded-lg">
         {image ? (
           // eslint-disable-next-line @next/next/no-img-element -- arbitrary vendor-supplied
@@ -83,23 +83,23 @@ export function ProductCard({
       </Link>
       <Link
         href={`/store/${tenantSlug}/products/${product.slug}`}
-        className="line-clamp-2 text-sm font-semibold text-gray-900 transition-colors hover:text-blue-600"
+        className="line-clamp-2 text-sm font-semibold tracking-tight text-balance text-gray-900 transition-colors hover:text-blue-600"
       >
         {name}
       </Link>
       {product.review_count > 0 && (
         <div className="mt-1 flex items-center gap-1">
           <StarRating rating={product.average_rating} size={12} />
-          <span className="text-xs text-gray-400">({product.review_count})</span>
+          <span className="text-xs text-gray-400 tabular-nums">({product.review_count})</span>
         </div>
       )}
-      <span className="mt-1 text-sm font-medium text-gray-700">{formatCurrency(product.base_price ?? product.price)}</span>
+      <span className="mt-1 text-sm font-medium tabular-nums text-gray-700">{formatCurrency(product.base_price ?? product.price)}</span>
 
       <button
         type="button"
         disabled={outOfStock || adding}
         onClick={handleAddToCart}
-        className={`mt-3 w-full px-3 py-2 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${theme.primaryButtonClass}`}
+        className={`mt-3 w-full px-3 py-2 text-xs font-semibold active:scale-[0.98] transition-all duration-100 ease-spring disabled:cursor-not-allowed disabled:opacity-50 ${theme.primaryButtonClass}`}
       >
         {outOfStock ? t.outOfStock : adding ? t.adding : t.addToCart}
       </button>

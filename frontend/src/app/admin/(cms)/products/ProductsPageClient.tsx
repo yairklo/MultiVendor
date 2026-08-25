@@ -200,9 +200,9 @@ export function ProductsPageClient({
         </Select>
       </div>
 
-      <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
+      <div className="bg-card rounded-xl shadow-apple-elevated border border-border overflow-hidden relative max-h-[70vh] overflow-y-auto preview-canvas-scroll">
         <Table>
-          <TableHeader>
+          <TableHeader className="sticky top-0 z-10 backdrop-blur-md bg-background/80 border-b border-border/40">
             <TableRow>
               <TableHead className="w-12">
                 <input
@@ -232,7 +232,7 @@ export function ProductsPageClient({
                 const stock = totalStock(product.variants)
                 const level = stockLevel(stock)
                 return (
-                <TableRow key={product.id} className="hover:bg-muted/50 transition-colors">
+                <TableRow key={product.id} className="group hover:bg-muted/50 transition-colors active:scale-[0.99] duration-100 ease-spring">
                   <TableCell>
                     <input
                       type="checkbox"
@@ -256,35 +256,39 @@ export function ProductsPageClient({
                     )}
                   </TableCell>
                   <TableCell>
-                    <div className="font-bold">
+                    <div className="font-bold tracking-tight">
                       {resolveI18nText(product.name, locale) || t('products.unnamed')}
                     </div>
                     <div className="text-sm text-muted-foreground truncate max-w-xs">
                       {resolveI18nText(product.description, locale)}
                     </div>
                   </TableCell>
-                  <TableCell>{formatCurrency(product.base_price)}</TableCell>
+                  <TableCell className="tabular-nums">{formatCurrency(product.base_price)}</TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 tabular-nums">
                       <span className="font-medium">{stock}</span>
                       <Badge variant="outline" className={stockLevelClass[level]}>
+                        <div className={`h-1.5 w-1.5 rounded-full mr-1.5 ${level === 'in_stock' ? 'bg-green-500' : level === 'low_stock' ? 'bg-yellow-500' : 'bg-red-500'}`} />
                         {t(`stock.${level}`)}
                       </Badge>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={product.is_active ? 'success' : 'secondary'}>
+                    <Badge variant={product.is_active ? 'success' : 'secondary'} className="relative">
+                      <div className={`h-1.5 w-1.5 rounded-full mr-1.5 ${product.is_active ? 'bg-green-500' : 'bg-gray-400'}`} />
                       {product.is_active ? t('products.active') : t('products.inactive')}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Link
-                      href={`/admin/products/${product.id}/edit`}
-                      className={buttonVariants({ variant: 'ghost', size: 'sm', className: 'mr-2' })}
-                    >
-                      {t('common.edit')}
-                    </Link>
-                    <Button variant="destructive" size="sm" onClick={() => handleDelete(product.id)}>{t('common.delete')}</Button>
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                      <Link
+                        href={`/admin/products/${product.id}/edit`}
+                        className={buttonVariants({ variant: 'ghost', size: 'sm', className: 'mr-2' })}
+                      >
+                        {t('common.edit')}
+                      </Link>
+                      <Button variant="destructive" size="sm" onClick={() => handleDelete(product.id)}>{t('common.delete')}</Button>
+                    </div>
                   </TableCell>
                 </TableRow>
                 )
