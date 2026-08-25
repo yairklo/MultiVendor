@@ -29,6 +29,7 @@ class Tenant(Base):
     # eligible for the cross-store marketplace listing unless overridden per-product
     # (see Product.show_in_marketplace in models/catalog.py).
     show_all_products_in_marketplace = Column(Boolean, nullable=False, default=False)
+    stripe_account_id = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 

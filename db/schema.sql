@@ -29,6 +29,7 @@ CREATE TABLE tenants (
     -- tenant on the cross-store marketplace, unless a product overrides it
     -- (see products.show_in_marketplace below).
     show_all_products_in_marketplace BOOLEAN NOT NULL DEFAULT FALSE,
+    stripe_account_id VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (plan_id) REFERENCES subscription_plans(id)

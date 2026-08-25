@@ -30,6 +30,7 @@ class WebhookEvent:
     # order_service.mark_order_paid_by_payment_intent).
     amount: int
     currency: str
+    charge_id: Optional[str] = None
 
 
 class WebhookVerificationError(Exception):
@@ -82,4 +83,19 @@ class PaymentProvider(ABC):
 
     @abstractmethod
     def verify_webhook(self, payload: bytes, signature_header: str) -> WebhookEvent:
+        ...
+
+    @abstractmethod
+    async def create_connect_account(self) -> str:
+        """Create a connected account and return its ID."""
+        ...
+
+    @abstractmethod
+    async def create_account_link(self, account_id: str, refresh_url: str, return_url: str) -> str:
+        """Create an onboarding link for a connected account."""
+        ...
+
+    @abstractmethod
+    async def transfer(self, amount: Decimal, currency: str, destination_account_id: str, source_transaction: str) -> None:
+        """Transfer funds to a connected account."""
         ...
