@@ -6,6 +6,7 @@ import type { SubscriptionPlanAdmin, TenantAdmin } from '../../types'
 
 const apiClientMock = vi.fn()
 const showToastMock = vi.fn()
+const confirmMock = vi.fn()
 
 vi.mock('@/lib/api/apiClient', () => ({
   apiClient: (...args: unknown[]) => apiClientMock(...args),
@@ -13,6 +14,10 @@ vi.mock('@/lib/api/apiClient', () => ({
 
 vi.mock('@/context/ToastContext', () => ({
   useToast: () => ({ showToast: showToastMock }),
+}))
+
+vi.mock('@/context/ConfirmContext', () => ({
+  useConfirm: () => ({ confirm: confirmMock }),
 }))
 
 const plans: SubscriptionPlanAdmin[] = [
@@ -48,6 +53,7 @@ describe('TenantsClient', () => {
   beforeEach(() => {
     apiClientMock.mockReset()
     showToastMock.mockReset()
+    confirmMock.mockReset()
   })
 
   it('lists tenant plan, product usage, and marketplace state', () => {
@@ -62,6 +68,7 @@ describe('TenantsClient', () => {
 
   it('suspends a tenant with the status query param', async () => {
     const user = userEvent.setup()
+    confirmMock.mockResolvedValueOnce(true)
     apiClientMock.mockResolvedValueOnce({})
     apiClientMock.mockResolvedValueOnce({ data: [{ ...storeA, status: 'suspended' }] })
 
@@ -72,5 +79,15 @@ describe('TenantsClient', () => {
       '/api/v1/super-admin/tenants/1/status?status=suspended',
       expect.objectContaining({ method: 'PATCH' }),
     )
+  })
+
+  it('does not suspend when the confirmation is declined', async () => {
+    const user = userEvent.setup()
+    confirmMock.mockResolvedValueOnce(false)
+
+    render(<TenantsClient initialTenants={[storeA]} plans={plans} />)
+    await user.click(screen.getByRole('button', { name: 'Suspend' }))
+
+    expect(apiClientMock).not.toHaveBeenCalled()
   })
 })
