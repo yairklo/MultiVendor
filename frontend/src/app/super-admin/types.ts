@@ -78,6 +78,8 @@ export type AuditLogItem = {
   id: number
   tenant_id: number | null
   user_id: number | null
+  actor_name: string | null
+  actor_email: string | null
   action: string
   resource: string
   ip_address: string | null

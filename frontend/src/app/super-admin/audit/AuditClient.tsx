@@ -59,7 +59,7 @@ export function AuditClient({ initialLogs }: { initialLogs: AuditLogItem[] }) {
                 <TableCell className="whitespace-nowrap text-muted-foreground">{formatDateTime(log.created_at)}</TableCell>
                 <TableCell className="font-medium">{log.action}</TableCell>
                 <TableCell className="font-mono text-xs">{log.resource}</TableCell>
-                <TableCell className="text-muted-foreground">{log.user_id ?? '—'}</TableCell>
+                <TableCell className="text-muted-foreground">{log.actor_name || log.actor_email || (log.user_id ? `User #${log.user_id}` : '—')}</TableCell>
                 <TableCell className="max-w-xs truncate font-mono text-xs text-muted-foreground">
                   {log.details_json ? JSON.stringify(log.details_json) : '—'}
                 </TableCell>

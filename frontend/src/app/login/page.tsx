@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { setCookie } from 'cookies-next'
-import { apiClient } from '@/lib/api/apiClient'
+import { apiClient, ApiError } from '@/lib/api/apiClient'
 import { useUiLocale } from '@/context/UiLocaleContext'
 import { UiLanguageSwitcher } from '@/components/ui/UiLanguageSwitcher'
 
@@ -33,7 +33,12 @@ export default function CustomerLoginPage() {
         router.push(`/store/${tenantSlug}`)
       }
     } catch (err: any) {
-      setError(err.message || t('auth.loginFailed'))
+      // The backend's 401 detail ("Invalid credentials") is a fixed,
+      // untranslated English string -- show the localized copy instead of
+      // relaying it as-is into an otherwise-translated UI. Anything else
+      // (network failure, 5xx) is unexpected enough that the raw message is
+      // more useful than a generic one.
+      setError(err instanceof ApiError && err.status === 401 ? t('auth.loginFailed') : err.message || t('auth.loginFailed'))
     } finally {
       setLoading(false)
     }

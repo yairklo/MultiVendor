@@ -215,22 +215,29 @@ async def list_audit_logs_admin(
     tenant_id: Optional[int] = None,
     limit: int = 100,
 ) -> list[dict[str, Any]]:
-    stmt = select(AuditLog).order_by(AuditLog.created_at.desc()).limit(limit)
+    stmt = (
+        select(AuditLog, User)
+        .outerjoin(User, User.id == AuditLog.user_id)
+        .order_by(AuditLog.created_at.desc())
+        .limit(limit)
+    )
     if tenant_id is not None:
         stmt = stmt.where(AuditLog.tenant_id == tenant_id)
-    logs = (await db.execute(stmt)).scalars().all()
+    rows = (await db.execute(stmt)).all()
     return [
         {
             "id": log.id,
             "tenant_id": log.tenant_id,
             "user_id": log.user_id,
+            "actor_name": user.full_name if user else None,
+            "actor_email": user.email if user else None,
             "action": log.action,
             "resource": log.resource,
             "ip_address": log.ip_address,
             "details_json": log.details_json,
             "created_at": log.created_at,
         }
-        for log in logs
+        for log, user in rows
     ]
 
 
