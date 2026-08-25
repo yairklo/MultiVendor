@@ -20,10 +20,14 @@ test_every_storefront_template_page_is_schema_valid).
 """
 from typing import Any, Dict, List, TypedDict
 
+from fastapi import HTTPException
+from pydantic import ValidationError
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.storefront_template import StorefrontTemplate as StorefrontTemplateRow
+from app.schemas.ai_schemas import Section
 
 
 class StorefrontTemplateMeta(TypedDict):
@@ -474,6 +478,63 @@ NOVA: StorefrontTemplate = {
 
 STOREFRONT_TEMPLATES: List[StorefrontTemplate] = [AURORA, ATELIER, NOVA]
 STOREFRONT_TEMPLATES_BY_KEY: Dict[str, StorefrontTemplate] = {t["key"]: t for t in STOREFRONT_TEMPLATES}
+# The three templates that ship with the app: they can be deactivated, never deleted.
+BUILTIN_TEMPLATE_KEYS = frozenset({"aurora", "atelier", "nova"})
+
+
+def validate_swatch_json(swatch: Any) -> None:
+    if not isinstance(swatch, dict):
+        raise HTTPException(status_code=422, detail="swatch_json must be an object")
+    for key in ("bg", "text", "accent"):
+        value = swatch.get(key)
+        if not isinstance(value, str) or not value.strip():
+            raise HTTPException(status_code=422, detail=f"swatch_json.{key} is required")
+
+
+def validate_storefront_template_pages(pages: Any) -> None:
+    """Same section-schema check as test_every_storefront_template_page_is_schema_valid.
+
+    Every page must have a non-empty `sections` list, and every section must construct
+    as `Section(**s)` (type, nested children/zones, media, etc.).
+    """
+    if not isinstance(pages, dict) or not pages:
+        raise HTTPException(
+            status_code=422,
+            detail="pages_json must be a non-empty object mapping page_key to page content",
+        )
+    for page_key, page_content in pages.items():
+        if not isinstance(page_key, str) or not page_key.strip():
+            raise HTTPException(status_code=422, detail="pages_json keys must be non-empty page keys")
+        if not isinstance(page_content, dict):
+            raise HTTPException(status_code=422, detail=f"pages_json[{page_key}] must be an object")
+        raw_sections = page_content.get("sections")
+        if not isinstance(raw_sections, list) or len(raw_sections) == 0:
+            raise HTTPException(status_code=422, detail=f"{page_key} has no sections")
+        try:
+            parsed = [Section(**s) for s in raw_sections]
+        except (ValidationError, TypeError) as exc:
+            raise HTTPException(
+                status_code=422,
+                detail=f"{page_key} sections failed schema validation",
+            ) from exc
+        if len(parsed) == 0:
+            raise HTTPException(status_code=422, detail=f"{page_key} has no sections")
+
+
+def template_row_to_admin_dict(row: StorefrontTemplateRow) -> Dict[str, Any]:
+    return {
+        "id": row.id,
+        "template_key": row.template_key,
+        "name": row.name,
+        "tagline": row.tagline,
+        "swatch_json": row.swatch_json,
+        "pages_json": row.pages_json,
+        "display_order": row.display_order,
+        "is_active": bool(row.is_active),
+        "is_builtin": row.template_key in BUILTIN_TEMPLATE_KEYS,
+        "created_at": row.created_at,
+        "updated_at": row.updated_at,
+    }
 
 
 async def list_storefront_template_metas(db: AsyncSession) -> List[StorefrontTemplateMeta]:
@@ -494,3 +555,97 @@ async def get_storefront_template(template_key: str, db: AsyncSession) -> Storef
     if not row:
         return None
     return {"key": row.template_key, "name": row.name, "tagline": row.tagline, "swatch": row.swatch_json, "pages": row.pages_json}
+
+
+async def list_all_storefront_templates(db: AsyncSession) -> List[StorefrontTemplateRow]:
+    """Super-admin catalog — includes inactive templates. Tenant-facing list stays active-only."""
+    result = await db.execute(
+        select(StorefrontTemplateRow).order_by(
+            StorefrontTemplateRow.display_order,
+            StorefrontTemplateRow.id,
+        )
+    )
+    return list(result.scalars().all())
+
+
+async def get_storefront_template_row(template_key: str, db: AsyncSession) -> StorefrontTemplateRow | None:
+    result = await db.execute(
+        select(StorefrontTemplateRow).where(StorefrontTemplateRow.template_key == template_key)
+    )
+    return result.scalar_one_or_none()
+
+
+async def create_storefront_template(
+    *,
+    template_key: str,
+    name: str,
+    tagline: str,
+    swatch_json: Dict[str, Any],
+    pages_json: Dict[str, Any],
+    display_order: int,
+    db: AsyncSession,
+) -> StorefrontTemplateRow:
+    validate_swatch_json(swatch_json)
+    validate_storefront_template_pages(pages_json)
+    row = StorefrontTemplateRow(
+        template_key=template_key,
+        name=name,
+        tagline=tagline,
+        swatch_json=swatch_json,
+        pages_json=pages_json,
+        display_order=display_order,
+        is_active=True,
+    )
+    db.add(row)
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="template_key already exists")
+    await db.refresh(row)
+    return row
+
+
+async def update_storefront_template(
+    template_key: str,
+    *,
+    name: str,
+    tagline: str,
+    swatch_json: Dict[str, Any],
+    pages_json: Dict[str, Any],
+    display_order: int | None,
+    db: AsyncSession,
+) -> StorefrontTemplateRow:
+    row = await get_storefront_template_row(template_key, db)
+    if not row:
+        raise HTTPException(status_code=404, detail="Storefront template not found")
+    validate_swatch_json(swatch_json)
+    validate_storefront_template_pages(pages_json)
+    row.name = name
+    row.tagline = tagline
+    row.swatch_json = swatch_json
+    row.pages_json = pages_json
+    if display_order is not None:
+        row.display_order = display_order
+    await db.commit()
+    await db.refresh(row)
+    return row
+
+
+async def patch_storefront_template(
+    template_key: str,
+    *,
+    is_active: bool | None,
+    display_order: int | None,
+    db: AsyncSession,
+) -> StorefrontTemplateRow:
+    row = await get_storefront_template_row(template_key, db)
+    if not row:
+        raise HTTPException(status_code=404, detail="Storefront template not found")
+    if is_active is not None:
+        row.is_active = is_active
+    if display_order is not None:
+        row.display_order = display_order
+    await db.commit()
+    await db.refresh(row)
+    return row
