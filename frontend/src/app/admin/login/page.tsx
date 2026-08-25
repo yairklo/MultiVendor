@@ -49,8 +49,10 @@ export default function AdminLoginPage() {
         } else if (data.store_role === 'tenant_admin') {
           window.location.assign('/admin/dashboard')
         } else {
-          window.location.assign(tenantSlug ? `/store/${tenantSlug}` : '/marketplace')
+          setError(t('auth.needStoreSlug'))
         }
+      } else {
+        setError(t('auth.loginFailed'))
       }
     } catch (err: any) {
       setError(err.message || t('auth.loginFailed'))
@@ -158,87 +160,6 @@ export default function AdminLoginPage() {
               {t('auth.noStore')}{' '}
               <a href="/signup?as=seller" className="font-medium text-primary hover:underline">
                 {t('auth.signUp')}
-              </a>
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-        <div className="relative z-10 text-sm text-white/40">
-          &copy; {new Date().getFullYear()} Multi-Vendor Platform
-        </div>
-      </div>
-
-      {/* Form panel */}
-      <div className="flex w-full flex-1 items-center justify-center p-4 lg:w-1/2">
-        <div className="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-card shadow-xl shadow-primary/5">
-          <div className="h-1.5 w-full bg-gradient-to-r from-primary to-[oklch(0.62_0.19_300)]" aria-hidden="true" />
-          <div className="p-8">
-            <h1 className="font-heading text-2xl font-bold text-center mb-1 text-foreground">
-              Platform Admin Login
-            </h1>
-            <p className="text-sm text-muted-foreground text-center mb-8">
-              Sign in to manage your store.
-            </p>
-
-            {error && (
-              <div className="mb-4 p-4 bg-destructive/10 text-destructive rounded-lg text-sm">
-                {error}
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium mb-2">Email Address</label>
-                <input
-                  id="email"
-                  type="email"
-                  required
-                  className="w-full px-4 py-3 rounded-lg border border-input bg-background focus:ring-2 focus:ring-ring outline-none transition-all"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  placeholder="admin@example.com"
-                />
-              </div>
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium mb-2">Password</label>
-                <input
-                  id="password"
-                  type="password"
-                  required
-                  className="w-full px-4 py-3 rounded-lg border border-input bg-background focus:ring-2 focus:ring-ring outline-none transition-all"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                />
-              </div>
-              <div>
-                <label htmlFor="tenantSlug" className="block text-sm font-medium mb-2">Store Slug (Optional)</label>
-                <input
-                  id="tenantSlug"
-                  type="text"
-                  className="w-full px-4 py-3 rounded-lg border border-input bg-background focus:ring-2 focus:ring-ring outline-none transition-all"
-                  value={tenantSlug}
-                  onChange={e => setTenantSlug(e.target.value)}
-                  placeholder="e.g. test-tenant (Leave empty for Super Admin)"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-primary text-primary-foreground py-3 rounded-lg font-bold hover:bg-primary/90 active:scale-[0.98] transition-all disabled:opacity-70 disabled:active:scale-100"
-              >
-                {loading ? 'Authenticating...' : 'Sign In'}
-              </button>
-            </form>
-
-            <p className="mt-6 text-center text-sm text-muted-foreground">
-              Don&apos;t have a store yet?{' '}
-              <a href="/signup?as=seller" className="font-medium text-primary hover:underline">
-                Sign up
               </a>
             </p>
           </div>

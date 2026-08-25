@@ -33,7 +33,7 @@ export function StorefrontLanguageSwitcher({
       aria-label="Language"
       value={langs.includes(lang) ? lang : langs[0]}
       onChange={(e) => setLang(e.target.value)}
-      className={`cursor-pointer bg-transparent text-sm font-medium outline-none ${className}`}
+      className={`pointer-events-auto cursor-pointer bg-transparent text-sm font-medium outline-none ${className}`}
     >
       {langs.map((code) => (
         <option key={code} value={code}>

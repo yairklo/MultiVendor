@@ -7,11 +7,11 @@ import {
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, Pencil, Columns2, Ungroup } from 'lucide-react'
-import { MouseEvent as ReactMouseEvent, useRef, useState } from 'react'
+import { MouseEvent as ReactMouseEvent, useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { DispatchedAction, Section, StorePageSchema } from '@/lib/ai/types'
 import { renderSections } from '@/components/storefront/PageRenderer'
 import { resolveDesignVariantClasses } from '@/lib/design-tokens'
-import { SectionPropertiesEditor } from './SectionPropertiesEditor'
+import { usePreviewChrome } from './PreviewCanvas'
 import { useStorefrontTheme } from '@/context/StorefrontThemeContext'
 import { isRtlLang } from '@/lib/languages'
 
@@ -265,11 +265,49 @@ function TwoColumnLayoutEditor({
   )
 }
 
+function findSection(sections: Section[], id: string): Section | undefined {
+  for (const sec of sections) {
+    if (sec.id === id) return sec
+    if (sec.children) {
+      const found = findSection(sec.children, id)
+      if (found) return found
+    }
+    if (sec.zones) {
+      for (const zone of Object.values(sec.zones)) {
+        if (zone) {
+          const found = findSection(zone, id)
+          if (found) return found
+        }
+      }
+    }
+  }
+  return undefined
+}
+
+function patchSectionRecursively(sections: Section[], id: string, patch: Partial<Section>): Section[] {
+  return sections.map((sec) => {
+    if (sec.id === id) {
+      return { ...sec, ...patch }
+    }
+    if (sec.children) {
+      return { ...sec, children: patchSectionRecursively(sec.children, id, patch) }
+    }
+    if (sec.zones) {
+      const newZones: Record<string, Section[] | undefined> = {}
+      for (const [zoneName, zoneSections] of Object.entries(sec.zones)) {
+        if (zoneSections) {
+          newZones[zoneName] = patchSectionRecursively(zoneSections, id, patch)
+        }
+      }
+      return { ...sec, zones: newZones }
+    }
+    return sec
+  })
+}
+
 export function DraggablePageEditor({
   page,
   onChange,
-  onSave,
-  saving,
   onAction,
   tenantSlug,
   showTypeLabels = false,
@@ -278,8 +316,6 @@ export function DraggablePageEditor({
   page: StorePageSchema | null
   /** Called with the full, reordered top-level sections array — the caller owns persistence timing. */
   onChange: (sections: Section[]) => void
-  onSave: () => void
-  saving: boolean
   onAction?: (action: DispatchedAction) => void
   tenantSlug?: string
   showTypeLabels?: boolean
@@ -287,112 +323,71 @@ export function DraggablePageEditor({
 }) {
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null)
   const { lang } = useStorefrontTheme()
+  const chrome = usePreviewChrome()
+  const pageRef = useRef(page)
+  pageRef.current = page
+  const onChangeRef = useRef(onChange)
+  onChangeRef.current = onChange
+  const onAskAIRef = useRef(onAskAI)
+  onAskAIRef.current = onAskAI
+
+  const closeEditor = useCallback(() => {
+    setEditingSectionId(null)
+  }, [])
+
+  useLayoutEffect(() => {
+    if (!chrome) return
+    const currentPage = pageRef.current
+    if (!currentPage || !editingSectionId) {
+      chrome.setPropertiesSession(null)
+      return
+    }
+    const section = findSection(currentPage.sections, editingSectionId)
+    if (!section) {
+      chrome.setPropertiesSession(null)
+      return
+    }
+    chrome.setPropertiesSession({
+      section,
+      onChange: (patch) => {
+        const latest = pageRef.current
+        if (!latest) return
+        onChangeRef.current(patchSectionRecursively(latest.sections, editingSectionId, patch))
+      },
+      onClose: closeEditor,
+      onAskAI: (id, prompt) => onAskAIRef.current?.(id, prompt),
+    })
+  }, [chrome, closeEditor, editingSectionId, page])
+
+  useLayoutEffect(() => {
+    return () => chrome?.setPropertiesSession(null)
+  }, [chrome])
 
   if (!page) {
     return <div className="p-8 text-center text-muted-foreground">Loading page…</div>
-  }
-
-  // Find the currently edited section recursively
-  const findSection = (sections: Section[], id: string): Section | undefined => {
-    for (const sec of sections) {
-      if (sec.id === id) return sec
-      if (sec.children) {
-        const found = findSection(sec.children, id)
-        if (found) return found
-      }
-      if (sec.zones) {
-        for (const zone of Object.values(sec.zones)) {
-          if (zone) {
-            const found = findSection(zone, id)
-            if (found) return found
-          }
-        }
-      }
-    }
-    return undefined
-  }
-
-  const editingSection = editingSectionId ? findSection(page.sections, editingSectionId) : null
-
-  // Update a nested section
-  const patchSectionRecursively = (sections: Section[], id: string, patch: Partial<Section>): Section[] => {
-    return sections.map((sec) => {
-      if (sec.id === id) {
-        return { ...sec, ...patch }
-      }
-      if (sec.children) {
-        return { ...sec, children: patchSectionRecursively(sec.children, id, patch) }
-      }
-      if (sec.zones) {
-        const newZones: any = {}
-        for (const [zoneName, zoneSections] of Object.entries(sec.zones)) {
-          if (zoneSections) {
-            newZones[zoneName] = patchSectionRecursively(zoneSections, id, patch)
-          }
-        }
-        return { ...sec, zones: newZones }
-      }
-      return sec
-    })
   }
 
   const patchSection = (id: string, patch: Partial<Section>) => {
     onChange(patchSectionRecursively(page.sections, id, patch))
   }
 
-  const handleSectionPatch = (patch: Partial<Section>) => {
-    if (!editingSectionId) return
-    patchSection(editingSectionId, patch)
-  }
-
   return (
-    // dir is forced to ltr here regardless of the previewed store's language -- this row lays
-    // out the admin's OWN editing chrome (section list vs. properties panel), not customer-facing
-    // content. Letting it inherit dir="rtl" from PreviewWrapper (set when the Hebrew tab is active)
-    // reverses this flex row's visual order, so the properties panel jumps from the right side to
-    // the left -- reads as "the panel disappeared" since nobody expects it to relocate. The actual
-    // section content one level in re-applies the real preview language below so WYSIWYG RTL
-    // rendering of the store's own text is unaffected.
-    <div className="flex w-full" dir="ltr">
-      <div className="flex-1 px-4" dir={isRtlLang(lang) ? 'rtl' : 'ltr'}>
-        <div className="flex flex-col gap-3">
-          <div className="sticky top-0 z-30 flex items-center justify-between bg-muted/95 py-2 backdrop-blur">
-            <p className="text-xs text-muted-foreground">Use the toolbar on each section to reorder or edit.</p>
-            <button
-              type="button"
-              onClick={onSave}
-              disabled={saving}
-              className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
-            >
-              {saving ? 'Saving…' : 'Save Layout'}
-            </button>
-          </div>
-          <DraggableSectionList 
-            sections={page.sections} 
-            onChange={onChange} 
-            opts={{
-              onAction,
-              tenantSlug,
-              showTypeLabels,
-              onEditSection: (id) => setEditingSectionId(id),
-              onInlineEdit: patchSection,
-            }}
-          />
-        </div>
+    // dir is forced to ltr for the editor chrome wrapper; section content
+    // re-applies the preview language one level in for WYSIWYG RTL.
+    <div className="w-full" dir="ltr">
+      <div dir={isRtlLang(lang) ? 'rtl' : 'ltr'}>
+        <DraggableSectionList 
+          sections={page.sections} 
+          onChange={onChange} 
+          opts={{
+            onAction,
+            tenantSlug,
+            showTypeLabels,
+            onEditSection: (id) => setEditingSectionId(id),
+            onInlineEdit: patchSection,
+          }}
+        />
       </div>
-      
-      {editingSection && (
-        <div className="w-[350px] shrink-0 border-l border-border">
-          <SectionPropertiesEditor
-            section={editingSection}
-            onChange={handleSectionPatch}
-            onClose={() => setEditingSectionId(null)}
-            onAskAI={(id, prompt) => {
-              if (onAskAI) onAskAI(id, prompt)
-            }}
-          />
-        </div>
-      )}
     </div>
   )
 }

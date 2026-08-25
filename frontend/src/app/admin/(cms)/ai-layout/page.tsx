@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { UploadCloud } from 'lucide-react'
+import { UploadCloud, Save } from 'lucide-react'
 import { DraggablePageEditor } from '@/components/admin/ai/DraggablePageEditor'
 import { ContextBadge } from '@/components/admin/ai/ContextBadge'
 import { ChatDrawer } from '@/components/admin/ai/ChatDrawer'
@@ -16,6 +16,7 @@ import { isRtlLang } from '@/lib/languages'
 import { StorefrontHeader } from '@/components/storefront/StorefrontHeader'
 import { StorefrontFooter } from '@/components/storefront/StorefrontFooter'
 import { useUiLocale } from '@/context/UiLocaleContext'
+import { PreviewCanvas } from '@/components/admin/ai/PreviewCanvas'
 import { DispatchedAction, Section, StorePageSchema, StorePageSummary, StorePageVersionSummary } from '@/lib/ai/types'
 
 export default function AiLayoutPage() {
@@ -254,8 +255,8 @@ export default function AiLayoutPage() {
   }
 
   return (
-    <div className="flex h-full flex-col gap-4">
-      <h1 className="text-3xl font-bold text-gray-900">{t('aiLayout.assistantTitle')}</h1>
+    <div className="flex h-full min-h-0 flex-col gap-4">
+      <h1 className="shrink-0 text-3xl font-bold text-gray-900">{t('aiLayout.assistantTitle')}</h1>
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex-1">
@@ -268,6 +269,15 @@ export default function AiLayoutPage() {
           revertingId={revertingId}
           publishedAt={page?.published_at}
         />
+        <button
+          type="button"
+          onClick={handleSaveLayout}
+          disabled={savingLayout || !page}
+          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground shadow-sm transition-all duration-150 hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100"
+        >
+          <Save className="h-4 w-4" />
+          {savingLayout ? t('aiLayout.savingLayout') : t('aiLayout.saveLayout')}
+        </button>
         <button
           type="button"
           onClick={handlePublish}
@@ -287,21 +297,21 @@ export default function AiLayoutPage() {
         </div>
       )}
 
-      <div className="grid flex-1 grid-cols-1 gap-4 overflow-hidden lg:grid-cols-[1fr_380px]">
-        <div className="overflow-y-auto rounded-xl border border-gray-100 bg-gray-50 flex flex-col shadow-inner">
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-hidden lg:grid-cols-[1fr_380px]">
+        <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-muted/40 shadow-inner">
           <StorefrontThemeProvider tenantSlug={tenantSlug} isAdminPreview>
-            <PreviewWrapper
-              tenantSlug={tenantSlug}
-              page={page}
-              handleSend={handleSend}
-              handleSectionsReorder={handleSectionsReorder}
-              handleSaveLayout={handleSaveLayout}
-              savingLayout={savingLayout}
-              handleAction={handleAction}
-            />
+            <PreviewCanvas>
+              <PreviewWrapper
+                tenantSlug={tenantSlug}
+                page={page}
+                handleSend={handleSend}
+                handleSectionsReorder={handleSectionsReorder}
+                handleAction={handleAction}
+              />
+            </PreviewCanvas>
           </StorefrontThemeProvider>
         </div>
-        <div className="min-h-[400px]">
+        <div className="flex h-full min-h-[400px] min-w-0 flex-col lg:min-h-0">
           <ChatDrawer
             messages={messages}
             onSend={handleSend}
@@ -317,10 +327,10 @@ export default function AiLayoutPage() {
   )
 }
 
-function PreviewWrapper({ tenantSlug, page, handleSend, handleSectionsReorder, handleSaveLayout, savingLayout, handleAction }: any) {
+function PreviewWrapper({ tenantSlug, page, handleSend, handleSectionsReorder, handleAction }: any) {
   const { lang } = useStorefrontTheme()
   return (
-    <div dir={isRtlLang(lang) ? 'rtl' : 'ltr'} className="flex-1 flex flex-col h-full w-full">
+    <div dir={isRtlLang(lang) ? 'rtl' : 'ltr'} className="flex w-full flex-col bg-background">
       <div className="pointer-events-none sticky top-0 z-10 opacity-75 grayscale-[0.2]">
         <StorefrontHeader tenantSlug={tenantSlug} storeName={tenantSlug} isLoggedIn={false} />
       </div>
@@ -332,8 +342,6 @@ function PreviewWrapper({ tenantSlug, page, handleSend, handleSectionsReorder, h
           onAskAI={(id, prompt) => handleSend("For the section with ID '" + id + "': " + prompt)}
           page={page}
           onChange={handleSectionsReorder}
-          onSave={handleSaveLayout}
-          saving={savingLayout}
           tenantSlug={tenantSlug}
           onAction={handleAction}
           showTypeLabels
