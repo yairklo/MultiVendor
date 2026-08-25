@@ -38,7 +38,7 @@ export function AdminMobileNav({
             className="absolute inset-0 bg-black/40 duration-200 animate-in fade-in-0"
             onClick={() => setOpen(false)}
           />
-          <div className="relative flex h-full w-64 flex-col bg-sidebar shadow-xl duration-200 animate-in slide-in-from-left">
+          <div className="relative flex h-full w-64 flex-col bg-sidebar shadow-xl duration-200 animate-in ltr:slide-in-from-left rtl:slide-in-from-right">
             <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4">
               <h1 className="font-heading text-lg font-bold text-sidebar-foreground">{title}</h1>
               <button
