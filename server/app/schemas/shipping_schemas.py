@@ -23,6 +23,10 @@ class TenantShippingConfigCreate(BaseModel):
     sender_street: str
     sender_house_number: str
     is_default: bool = False
+    # Opt-in: dispatch this courier automatically the moment an order is
+    # marked 'processing' (paid), instead of waiting for a manual "Fulfill"
+    # click. Off by default -- see TenantShippingConfig.auto_fulfill.
+    auto_fulfill: bool = False
     model_config = ConfigDict(json_schema_extra={
         "example": {
             "provider": "hfd",
@@ -33,6 +37,7 @@ class TenantShippingConfigCreate(BaseModel):
             "sender_street": "הרצל",
             "sender_house_number": "1",
             "is_default": True,
+            "auto_fulfill": False,
         }
     })
 
@@ -45,6 +50,7 @@ class TenantShippingConfigResponse(BaseModel):
     provider: ShippingProviderCode
     is_active: bool
     is_default: bool
+    auto_fulfill: bool
     created_at: datetime
     updated_at: Optional[datetime] = None
 

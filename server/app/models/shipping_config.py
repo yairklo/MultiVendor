@@ -34,6 +34,14 @@ class TenantShippingConfig(TenantScoped, Base):
     sender_house_number = Column(String(20), nullable=False)
     is_active = Column(Boolean, nullable=False, default=True)
     is_default = Column(Boolean, nullable=False, default=False)
+    # Opt-in: when true, an order is dispatched to this courier automatically
+    # the moment it's marked 'processing' (paid) -- see
+    # shipping_service.maybe_auto_fulfill_order and its call sites in
+    # order_service.py. Off by default: a vendor who wants to review/pack
+    # before a courier is booked should not be surprised by an automatic
+    # shipment. Only the tenant's is_default config is ever considered for
+    # auto-fulfillment, same as the manual endpoint's no-override path.
+    auto_fulfill = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 

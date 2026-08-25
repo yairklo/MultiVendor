@@ -51,6 +51,10 @@ class MarketplaceCartItemResponse(BaseModel):
     quantity: int
     total_price: Decimal
     image_url: Optional[str] = None
+    # Lets the checkout page decide whether to show the shipping-address
+    # form at all -- mirrors the single-store checkout's use of this same
+    # field (see checkout/page.tsx's isDigitalOnly).
+    product_type: str
 
 class MarketplaceCartResponse(BaseModel):
     cart_id: UUID

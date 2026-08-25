@@ -307,6 +307,14 @@ async def checkout_service(
             
     if not is_entirely_digital and not req.shipping_address:
         raise HTTPException(status_code=400, detail="Shipping address is required for physical goods")
+    # NOTE: deliberately not requiring city/phone/street here even though
+    # fulfillment needs them (see shipping_service.missing_shipping_address_fields)
+    # -- checkout is meant to stay permissive for callers that don't care
+    # about courier fulfillment; the real gate is fulfill_order_service /
+    # maybe_auto_fulfill_order, which reject an unfulfillable order with a
+    # clear, itemized error instead of silently mis-shipping it. The
+    # storefront checkout form (frontend/src/app/checkout/page.tsx) now
+    # collects these fields on its own for the normal path.
 
     shipping_fee = Decimal("0.00")
     if req.shipping_method_id and not is_entirely_digital:

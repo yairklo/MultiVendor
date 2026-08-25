@@ -18,6 +18,7 @@ export interface MarketplaceCartItem {
   quantity: number
   total_price: number
   image_url?: string | null
+  product_type: string
 }
 
 export interface MarketplaceCart {

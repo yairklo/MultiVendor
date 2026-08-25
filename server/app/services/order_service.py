@@ -15,6 +15,7 @@ from app.schemas.auth_schemas import CustomerSummaryResponse
 from app.db.tenant_context import platform_plane
 from app.services.payments import get_payment_provider, get_or_create_payment_intent
 from app.services.payments.base import amount_matches
+from app.services.shipping_service import maybe_auto_fulfill_order
 
 logger = logging.getLogger(__name__)
 
@@ -296,6 +297,7 @@ async def pay_order_service(
         order.status = 'processing'
         await db.commit()
         await db.refresh(order)
+        await maybe_auto_fulfill_order(order.id, order.tenant_id, db)
         return _order_to_response(order)
 
     # Real gateway: start (or, on a retried call, reuse) a payment and hand
@@ -355,6 +357,7 @@ async def mark_order_paid_by_payment_intent(
         if order.status == 'pending_payment':
             order.status = 'processing'
             await db.commit()
+            await maybe_auto_fulfill_order(order.id, order.tenant_id, db)
         elif order.status == 'expired':
             # cleanup_abandoned_checkouts already canceled this order's
             # PaymentIntent before expiring it and releasing its stock -- a
@@ -385,10 +388,12 @@ async def mark_order_paid_by_payment_intent(
 
     sub_orders_result = await db.execute(select(Order).where(Order.master_order_id == master_order.id))
     any_updated = False
+    newly_processing: list[tuple[int, int]] = []  # (order_id, tenant_id)
     for sub_order in sub_orders_result.scalars().all():
         if sub_order.status == 'pending_payment':
             sub_order.status = 'processing'
             any_updated = True
+            newly_processing.append((sub_order.id, sub_order.tenant_id))
         elif sub_order.status == 'expired':
             logger.error(
                 "payment_intent %s succeeded for master_order %s but sub-order %s is already "
@@ -397,6 +402,8 @@ async def mark_order_paid_by_payment_intent(
             )
     if any_updated:
         await db.commit()
+        for sub_order_id, sub_order_tenant_id in newly_processing:
+            await maybe_auto_fulfill_order(sub_order_id, sub_order_tenant_id, db)
     return True
 
 async def get_customer_insights_service(tenant_slug: str, db: AsyncSession, top_n: int = 5) -> dict:
