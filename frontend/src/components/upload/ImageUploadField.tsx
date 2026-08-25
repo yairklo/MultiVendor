@@ -5,20 +5,25 @@ import { Label } from '@/components/ui/label'
 import { useUploads } from '@/hooks/useUploads'
 import { ApiError } from '@/lib/api/apiClient'
 import { resolveImageUrl } from '@/lib/media'
+import { useUiLocale } from '@/context/UiLocaleContext'
 
 interface ImageUploadFieldProps {
   value: string
   onChange: (url: string) => void
   label?: string
+  id?: string
+  hint?: string
 }
 
 /** Uploads a file immediately on selection and writes the returned URL into `value`/`onChange` -- the same plain string the "Image URL" field already uses, so no product schema changes were needed to support this. */
-export function ImageUploadField({ value, onChange, label = 'Product Image' }: ImageUploadFieldProps) {
+export function ImageUploadField({ value, onChange, label, id = 'image-upload-file', hint }: ImageUploadFieldProps) {
   const { uploadImage } = useUploads()
+  const { t } = useUiLocale()
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isDragOver, setIsDragOver] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const displayLabel = label ?? t('products.uploadImage')
 
   const handleFile = async (file: File) => {
     setError(null)
@@ -27,7 +32,7 @@ export function ImageUploadField({ value, onChange, label = 'Product Image' }: I
       const { url } = await uploadImage(file)
       onChange(url)
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Upload failed')
+      setError(err instanceof ApiError ? err.message : t('common.uploadFailed'))
     } finally {
       setIsUploading(false)
     }
@@ -35,7 +40,8 @@ export function ImageUploadField({ value, onChange, label = 'Product Image' }: I
 
   return (
     <div>
-      <Label htmlFor="product-image-file">{label}</Label>
+      <Label htmlFor={id}>{displayLabel}</Label>
+      {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
       <div
         onDragOver={(e) => { e.preventDefault(); setIsDragOver(true) }}
         onDragLeave={() => setIsDragOver(false)}
@@ -46,24 +52,24 @@ export function ImageUploadField({ value, onChange, label = 'Product Image' }: I
           if (file) handleFile(file)
         }}
         onClick={() => inputRef.current?.click()}
-        className={`mt-1 flex cursor-pointer items-center gap-4 rounded-lg border border-dashed p-4 transition-colors ${
-          isDragOver ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
+        className={`mt-1 flex cursor-pointer items-center gap-4 rounded-lg border border-dashed p-4 transition-colors duration-150 ${
+          isDragOver ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
         }`}
       >
         {value ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={resolveImageUrl(value)} alt="Preview" className="h-16 w-16 rounded-md border border-gray-100 object-cover" />
+          <img src={resolveImageUrl(value)} alt="" className="h-16 w-16 rounded-md border border-border object-cover" />
         ) : (
-          <div className="flex h-16 w-16 items-center justify-center rounded-md bg-gray-100 text-xs text-gray-400">
-            No image
+          <div className="flex h-16 w-16 items-center justify-center rounded-md bg-muted text-xs text-muted-foreground">
+            {t('upload.noImage')}
           </div>
         )}
-        <div className="text-sm text-gray-500">
-          {isUploading ? 'Uploading…' : 'Click or drag an image here (JPG, PNG, WEBP, GIF · max 5MB)'}
+        <div className="text-sm text-muted-foreground">
+          {isUploading ? t('upload.uploading') : t('upload.dropHint')}
         </div>
         <input
           ref={inputRef}
-          id="product-image-file"
+          id={id}
           type="file"
           accept="image/*"
           className="hidden"
@@ -74,7 +80,7 @@ export function ImageUploadField({ value, onChange, label = 'Product Image' }: I
           }}
         />
       </div>
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
     </div>
   )
 }

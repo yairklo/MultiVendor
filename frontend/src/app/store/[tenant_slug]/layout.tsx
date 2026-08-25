@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { StorefrontThemeProvider } from '@/context/StorefrontThemeContext'
 import { StorefrontHeader } from '@/components/storefront/StorefrontHeader'
 import { StorefrontFooter } from '@/components/storefront/StorefrontFooter'
+import { StorefrontBrandBackdrop } from '@/components/storefront/StorefrontBrandBackdrop'
 
 function displayName(slug: string): string {
   return slug
@@ -32,11 +33,13 @@ export default async function StorefrontLayout({
 
   return (
     <StorefrontThemeProvider tenantSlug={tenantSlug}>
-      <div className="flex min-h-screen flex-col">
-        <StorefrontHeader tenantSlug={tenantSlug} storeName={storeName} isLoggedIn={isLoggedIn} />
-        <main className="flex-1">{children}</main>
-        <StorefrontFooter tenantSlug={tenantSlug} storeName={storeName} />
-      </div>
+      <StorefrontBrandBackdrop>
+        <div className="flex min-h-screen flex-col">
+          <StorefrontHeader tenantSlug={tenantSlug} storeName={storeName} isLoggedIn={isLoggedIn} />
+          <main className="flex-1">{children}</main>
+          <StorefrontFooter tenantSlug={tenantSlug} storeName={storeName} />
+        </div>
+      </StorefrontBrandBackdrop>
     </StorefrontThemeProvider>
   )
 }

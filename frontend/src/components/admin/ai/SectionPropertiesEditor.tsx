@@ -90,7 +90,7 @@ function FontFields({
  * canvas alongside this panel in that language (WYSIWYG: you edit what you see). */
 function LanguageTabs({
   languages, active, onChange,
-}: { languages: string[]; active: string; onChange: (lang: 'en' | 'he') => void }) {
+}: { languages: string[]; active: string; onChange: (lang: string) => void }) {
   if (languages.length <= 1) return null
   return (
     <div className="mb-1 flex gap-1 rounded-md bg-muted p-1">
@@ -103,7 +103,7 @@ function LanguageTabs({
             active === l ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
           }`}
         >
-          {l}
+          {l.toUpperCase()}
         </button>
       ))}
     </div>

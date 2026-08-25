@@ -3,6 +3,7 @@
 import { AlertTriangle, Paperclip, X } from 'lucide-react'
 import { FormEvent, KeyboardEvent, useRef, useState } from 'react'
 import { ChatMessage } from '@/lib/ai/types'
+import { useUiLocale } from '@/context/UiLocaleContext'
 
 export function ChatDrawer({
   messages,
@@ -12,13 +13,8 @@ export function ChatDrawer({
   onConfirmAction,
   onCancelAction,
   resolvingConfirmationId,
-  title = 'AI Layout & Product Assistant',
-  emptyStateHint = (
-    <>
-      Try: &ldquo;Make the hero banner larger and move the video above the products&rdquo; or &ldquo;add a
-      product called Cool Mug for $15&rdquo;
-    </>
-  ),
+  title,
+  emptyStateHint,
 }: {
   messages: ChatMessage[]
   onSend: (message: string, file?: File | null) => void
@@ -34,6 +30,9 @@ export function ChatDrawer({
   /** Example-prompts shown before the first message — swap for context (page editor vs. general copilot). */
   emptyStateHint?: React.ReactNode
 }) {
+  const { t } = useUiLocale()
+  const resolvedTitle = title === undefined ? t('aiLayout.assistantTitle') : title
+  const resolvedHint = emptyStateHint === undefined ? t('aiLayout.emptyHint') : emptyStateHint
   const [draft, setDraft] = useState('')
   const [attachedFile, setAttachedFile] = useState<File | null>(null)
   const [isDragOver, setIsDragOver] = useState(false)
@@ -75,11 +74,11 @@ export function ChatDrawer({
     >
       {isDragOver && (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-primary/10 text-sm font-medium text-primary">
-          Drop an image or .xlsx file to attach it
+          {t('aiLayout.dropFile')}
         </div>
       )}
-      <div className={`flex items-center border-b border-border px-4 py-3 ${title ? 'justify-between' : 'justify-end'}`}>
-        {title && <h3 className="font-bold text-foreground">{title}</h3>}
+      <div className={`flex items-center border-b border-border px-4 py-3 ${resolvedTitle ? 'justify-between' : 'justify-end'}`}>
+        {resolvedTitle && <h3 className="font-bold text-foreground">{resolvedTitle}</h3>}
         {onNewConversation && messages.length > 0 && (
           <button
             type="button"
@@ -87,14 +86,14 @@ export function ChatDrawer({
             disabled={isBusy}
             className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
           >
-            New conversation
+            {t('aiLayout.newConversation')}
           </button>
         )}
       </div>
 
       <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
         {messages.length === 0 && (
-          <div className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">{emptyStateHint}</div>
+          <div className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">{resolvedHint}</div>
         )}
         {messages.map((m, i) => (
           <div key={i} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
@@ -107,7 +106,7 @@ export function ChatDrawer({
             </div>
             {m.toolCalls && m.toolCalls.length > 0 && (
               <details className="mt-1 text-xs text-muted-foreground">
-                <summary className="cursor-pointer">{m.toolCalls.length} tool call(s)</summary>
+                <summary className="cursor-pointer">{t('aiLayout.toolCalls', { count: m.toolCalls.length })}</summary>
                 <ul className="mt-1 space-y-0.5 pl-3">
                   {m.toolCalls.map((tc, j) => (
                     <li key={j}>
@@ -130,7 +129,7 @@ export function ChatDrawer({
                     disabled={resolvingConfirmationId === m.pendingConfirmation.id}
                     className="rounded-lg border border-amber-300 px-3 py-1.5 text-xs font-semibold text-amber-800 transition-colors hover:bg-amber-100 disabled:opacity-50"
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button
                     type="button"
@@ -138,14 +137,14 @@ export function ChatDrawer({
                     disabled={resolvingConfirmationId === m.pendingConfirmation.id}
                     className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-amber-700 disabled:opacity-50"
                   >
-                    {resolvingConfirmationId === m.pendingConfirmation.id ? 'Working…' : 'Confirm'}
+                    {resolvingConfirmationId === m.pendingConfirmation.id ? t('common.working') : t('common.confirm')}
                   </button>
                 </div>
               </div>
             )}
           </div>
         ))}
-        {isBusy && <div className="text-sm text-muted-foreground">Thinking…</div>}
+        {isBusy && <div className="text-sm text-muted-foreground">{t('common.thinking')}</div>}
       </div>
 
       <form className="flex flex-col gap-2 border-t border-border p-3" onSubmit={handleSubmit}>
@@ -157,7 +156,7 @@ export function ChatDrawer({
               type="button"
               onClick={() => setAttachedFile(null)}
               className="text-muted-foreground transition-colors hover:text-foreground"
-              aria-label="Remove attachment"
+              aria-label={t('aiLayout.removeAttachment')}
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -179,7 +178,7 @@ export function ChatDrawer({
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={isBusy}
-          title="Attach an image or .xlsx spreadsheet"
+          title={t('aiLayout.attachTitle')}
           className="self-end rounded-lg border border-border px-3 py-2 text-muted-foreground transition-colors hover:bg-muted disabled:opacity-50"
         >
           <Paperclip className="h-4 w-4" />
@@ -188,7 +187,7 @@ export function ChatDrawer({
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Describe a layout change or a product to add… (Shift+Enter for a new line)"
+          placeholder={t('aiLayout.placeholder')}
           disabled={isBusy}
           rows={2}
           className="flex-1 max-h-32 min-h-[2.5rem] resize-y overflow-y-auto rounded-lg border border-border px-3 py-2 text-sm outline-none transition-colors focus:ring-2 focus:ring-ring disabled:opacity-50"
@@ -198,7 +197,7 @@ export function ChatDrawer({
           disabled={isBusy || (!draft.trim() && !attachedFile)}
           className="self-end rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
         >
-          Send
+          {t('common.send')}
         </button>
         </div>
       </form>

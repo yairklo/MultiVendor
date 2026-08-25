@@ -13,6 +13,7 @@ import { renderSections } from '@/components/storefront/PageRenderer'
 import { resolveDesignVariantClasses } from '@/lib/design-tokens'
 import { SectionPropertiesEditor } from './SectionPropertiesEditor'
 import { useStorefrontTheme } from '@/context/StorefrontThemeContext'
+import { isRtlLang } from '@/lib/languages'
 
 type RenderOpts = {
   onAction?: (action: DispatchedAction) => void
@@ -353,7 +354,7 @@ export function DraggablePageEditor({
     // section content one level in re-applies the real preview language below so WYSIWYG RTL
     // rendering of the store's own text is unaffected.
     <div className="flex w-full" dir="ltr">
-      <div className="flex-1 px-4" dir={lang === 'he' ? 'rtl' : 'ltr'}>
+      <div className="flex-1 px-4" dir={isRtlLang(lang) ? 'rtl' : 'ltr'}>
         <div className="flex flex-col gap-3">
           <div className="sticky top-0 z-30 flex items-center justify-between bg-muted/95 py-2 backdrop-blur">
             <p className="text-xs text-muted-foreground">Use the toolbar on each section to reorder or edit.</p>

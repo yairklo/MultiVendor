@@ -25,6 +25,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ImageUploadField } from '@/components/upload/ImageUploadField'
 import { resolveImageUrl } from '@/lib/media'
+import { useUiLocale } from '@/context/UiLocaleContext'
+import { useStorefrontTheme } from '@/context/StorefrontThemeContext'
+import { extraLanguageCodes, languageDisplayName } from '@/lib/languages'
 
 const formSchema = z.object({
   name_en: z.string().min(2, { message: 'English name must be at least 2 characters.' }),
@@ -41,6 +44,11 @@ const formSchema = z.object({
 
 export default function NewProductPage() {
   const router = useRouter()
+  const { t, locale } = useUiLocale()
+  const { supportedLanguages } = useStorefrontTheme()
+  const extraLangs = extraLanguageCodes(supportedLanguages)
+  const [extraNames, setExtraNames] = useState<Record<string, string>>({})
+  const [extraDescs, setExtraDescs] = useState<Record<string, string>>({})
   const { createProduct } = useProducts()
   const { fetchCategories } = useCategories()
   const [categories, setCategories] = useState<any[]>([])
@@ -75,10 +83,14 @@ export default function NewProductPage() {
     setLimitReached(false)
     try {
       // Transform flat form data to match backend ProductCreateRequest schema
+      const name: Record<string, string> = { en: values.name_en, he: values.name_he || values.name_en }
       const descriptionEn = values.description_en?.trim()
       const descriptionHe = values.description_he?.trim()
+      for (const lang of extraLangs) {
+        name[lang] = extraNames[lang]?.trim() || values.name_he || values.name_en
+      }
       const payload: any = {
-        name: { en: values.name_en, he: values.name_he || values.name_en },
+        name,
         slug: values.slug,
         base_price: values.base_price,
         category_id: values.category_id || undefined,
@@ -93,8 +105,12 @@ export default function NewProductPage() {
         ]
       }
 
-      if (descriptionEn || descriptionHe) {
-        payload.description = { en: descriptionEn || '', he: descriptionHe || descriptionEn || '' }
+      if (descriptionEn || descriptionHe || extraLangs.some((l) => extraDescs[l]?.trim())) {
+        const description: Record<string, string> = { en: descriptionEn || '', he: descriptionHe || descriptionEn || '' }
+        for (const lang of extraLangs) {
+          description[lang] = extraDescs[lang]?.trim() || descriptionHe || descriptionEn || ''
+        }
+        payload.description = description
       }
       
       await createProduct(payload)
@@ -103,7 +119,7 @@ export default function NewProductPage() {
       if (err instanceof ApiError && err.status === 403) {
         setLimitReached(true)
       } else {
-        setError(err.message || 'Failed to create product')
+        setError(err.message || t('products.createFailed'))
       }
     } finally {
       setLoading(false)
@@ -114,9 +130,9 @@ export default function NewProductPage() {
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center mb-6 space-x-4">
         <Link href="/admin/products" className={buttonVariants({ variant: 'ghost' })}>
-          &larr; Back
+          &larr; {t('common.back')}
         </Link>
-        <h1 className="text-3xl font-bold text-gray-900">Add New Product</h1>
+        <h1 className="text-3xl font-bold text-gray-900">{t('products.addNew')}</h1>
       </div>
 
       {error && (
@@ -127,9 +143,9 @@ export default function NewProductPage() {
 
       {limitReached && (
         <div data-testid="upgrade-prompt" className="mb-6 p-4 bg-amber-50 text-amber-800 rounded-lg border border-amber-200 flex items-center justify-between gap-4">
-          <span>You&apos;ve reached your plan&apos;s product limit. Upgrade your plan to add more products.</span>
+          <span>{t('products.limitReached')}</span>
           <Link href="/admin/settings" className={buttonVariants({ variant: 'default', size: 'sm' })}>
-            Upgrade Plan
+            {t('products.upgradePlan')}
           </Link>
         </div>
       )}
@@ -143,7 +159,7 @@ export default function NewProductPage() {
                 name="name_en"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Product Name (English)</FormLabel>
+                    <FormLabel>{t('products.nameIn', { language: languageDisplayName('en', locale) })}</FormLabel>
                     <FormControl>
                       <Input placeholder="e.g. Vintage T-Shirt" {...field} />
                     </FormControl>
@@ -156,7 +172,7 @@ export default function NewProductPage() {
                 name="name_he"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Product Name (Hebrew)</FormLabel>
+                    <FormLabel>{t('products.nameIn', { language: languageDisplayName('he', locale) })}</FormLabel>
                     <FormControl>
                       <Input placeholder="e.g. חולצת וינטג'" {...field} />
                     </FormControl>
@@ -165,13 +181,26 @@ export default function NewProductPage() {
                 )}
               />
             </div>
-            
+            {extraLangs.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {extraLangs.map((lang) => (
+                  <div key={`name-${lang}`}>
+                    <label className="text-sm font-medium">{t('products.nameIn', { language: languageDisplayName(lang, locale) })}</label>
+                    <Input
+                      className="mt-2"
+                      value={extraNames[lang] || ''}
+                      onChange={(e) => setExtraNames((prev) => ({ ...prev, [lang]: e.target.value }))}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
             <FormField
               control={form.control}
               name="slug"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Slug</FormLabel>
+                  <FormLabel>{t('products.slug')}</FormLabel>
                   <FormControl>
                     <Input placeholder="e.g. vintage-tshirt" {...field} />
                   </FormControl>
@@ -186,7 +215,7 @@ export default function NewProductPage() {
                 name="description_en"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description (English)</FormLabel>
+                    <FormLabel>{t('products.descriptionIn', { language: languageDisplayName('en', locale) })}</FormLabel>
                     <FormControl>
                       <Input placeholder="Description..." {...field} />
                     </FormControl>
@@ -199,7 +228,7 @@ export default function NewProductPage() {
                 name="description_he"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description (Hebrew)</FormLabel>
+                    <FormLabel>{t('products.descriptionIn', { language: languageDisplayName('he', locale) })}</FormLabel>
                     <FormControl>
                       <Input placeholder="תיאור..." {...field} />
                     </FormControl>
@@ -208,13 +237,27 @@ export default function NewProductPage() {
                 )}
               />
             </div>
+            {extraLangs.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {extraLangs.map((lang) => (
+                  <div key={`desc-${lang}`}>
+                    <label className="text-sm font-medium">{t('products.descriptionIn', { language: languageDisplayName(lang, locale) })}</label>
+                    <Input
+                      className="mt-2"
+                      value={extraDescs[lang] || ''}
+                      onChange={(e) => setExtraDescs((prev) => ({ ...prev, [lang]: e.target.value }))}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
 
             <FormField
               control={form.control}
               name="image_url"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Image URL</FormLabel>
+                  <FormLabel>{t('products.imageUrl')}</FormLabel>
                   <FormControl>
                     <Input placeholder="https://example.com/image.jpg" {...field} />
                   </FormControl>
@@ -232,7 +275,6 @@ export default function NewProductPage() {
             />
 
             <ImageUploadField
-              label="Upload Image File"
               value={form.watch('image_url') || ''}
               onChange={(url) => form.setValue('image_url', url, { shouldDirty: true })}
             />
@@ -243,7 +285,7 @@ export default function NewProductPage() {
                 name="base_price"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Base Price ($)</FormLabel>
+                    <FormLabel>{t('products.basePrice')}</FormLabel>
                     <FormControl>
                       <Input type="number" step="0.01" {...field} />
                     </FormControl>
@@ -257,7 +299,7 @@ export default function NewProductPage() {
                 name="stock_quantity"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Initial Stock Quantity</FormLabel>
+                    <FormLabel>{t('products.initialStock')}</FormLabel>
                     <FormControl>
                       <Input type="number" {...field} />
                     </FormControl>
@@ -271,17 +313,17 @@ export default function NewProductPage() {
                 name="category_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Category (Optional)</FormLabel>
+                    <FormLabel>{t('products.category')}</FormLabel>
                     <FormControl>
                       <select
                         className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
                         value={field.value ?? ''}
                         onChange={e => field.onChange(e.target.value ? Number(e.target.value) : null)}
                       >
-                        <option value="">No category</option>
+                        <option value="">{t('products.noCategory')}</option>
                         {categories.map(cat => (
                           <option key={cat.id} value={cat.id}>
-                            {typeof cat.name === 'object' ? (cat.name?.en || cat.name?.he || 'Unnamed') : cat.name}
+                            {typeof cat.name === 'object' ? (cat.name?.[locale] || cat.name?.he || cat.name?.en || t('products.unnamed')) : cat.name}
                           </option>
                         ))}
                       </select>
@@ -306,9 +348,9 @@ export default function NewProductPage() {
                     />
                   </FormControl>
                   <div className="space-y-1 leading-none">
-                    <FormLabel>Active</FormLabel>
+                    <FormLabel>{t('products.active')}</FormLabel>
                     <p className="text-sm text-muted-foreground">
-                      This product will be visible on the public storefront.
+                      {t('products.activeHint')}
                     </p>
                   </div>
                 </FormItem>
@@ -316,7 +358,7 @@ export default function NewProductPage() {
             />
 
             <Button type="submit" disabled={loading} className="w-full">
-              {loading ? 'Saving...' : 'Save Product'}
+              {loading ? t('products.saving') : t('products.saveProduct')}
             </Button>
           </form>
         </Form>

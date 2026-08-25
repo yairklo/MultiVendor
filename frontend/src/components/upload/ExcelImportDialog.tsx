@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/table'
 import { ApiError } from '@/lib/api/apiClient'
 import { ImportPreviewResult, ImportRowPreview, ImportSummary } from '@/hooks/useUploads'
+import { useUiLocale } from '@/context/UiLocaleContext'
 
 interface ExcelImportDialogProps {
   open: boolean
@@ -32,6 +33,7 @@ type Step = 'select' | 'preview' | 'summary'
 export function ExcelImportDialog({
   open, onOpenChange, title, preview, commit, onDownloadTemplate, onImported,
 }: ExcelImportDialogProps) {
+  const { t } = useUiLocale()
   const [step, setStep] = useState<Step>('select')
   const [isBusy, setIsBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -54,7 +56,7 @@ export function ExcelImportDialog({
       setPreviewResult(result)
       setStep('preview')
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to parse file')
+      setError(err instanceof ApiError ? err.message : t('import.parseFailed'))
     } finally {
       setIsBusy(false)
     }
@@ -70,7 +72,7 @@ export function ExcelImportDialog({
       setStep('summary')
       onImported?.()
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Import failed')
+      setError(err instanceof ApiError ? err.message : t('import.importFailed'))
     } finally {
       setIsBusy(false)
     }
@@ -93,14 +95,14 @@ export function ExcelImportDialog({
                 onClick={onDownloadTemplate}
                 className="text-sm text-blue-600 underline underline-offset-2"
               >
-                Download template
+                {t('import.downloadTemplate')}
               </button>
             )}
             <div
               onClick={() => inputRef.current?.click()}
               className="cursor-pointer rounded-lg border border-dashed border-gray-300 p-8 text-center text-sm text-gray-500 hover:border-gray-400"
             >
-              {isBusy ? 'Reading file…' : 'Click to choose an .xlsx file'}
+              {isBusy ? t('import.reading') : t('import.chooseFile')}
               <input
                 ref={inputRef}
                 type="file"
@@ -119,18 +121,18 @@ export function ExcelImportDialog({
         {step === 'preview' && previewResult && (
           <div className="space-y-3">
             <p className="text-sm text-gray-600">
-              {previewResult.valid_count} of {previewResult.total_count} row(s) are valid and will be imported.
+              {t('import.previewValid', { valid: previewResult.valid_count, total: previewResult.total_count })}
             </p>
             <div className="max-h-80 overflow-auto rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Row</TableHead>
-                    <TableHead>SKU</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>Stock</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>{t('import.row')}</TableHead>
+                    <TableHead>{t('import.sku')}</TableHead>
+                    <TableHead>{t('import.name')}</TableHead>
+                    <TableHead>{t('import.price')}</TableHead>
+                    <TableHead>{t('import.stock')}</TableHead>
+                    <TableHead>{t('common.status')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -152,13 +154,13 @@ export function ExcelImportDialog({
 
         {step === 'summary' && summary && (
           <div className="space-y-2 text-sm">
-            <p>Created: <strong>{summary.created_count}</strong></p>
-            <p>Updated: <strong>{summary.updated_count}</strong></p>
-            <p>Failed: <strong>{summary.failed_count}</strong></p>
+            <p>{t('import.created')}: <strong>{summary.created_count}</strong></p>
+            <p>{t('import.updated')}: <strong>{summary.updated_count}</strong></p>
+            <p>{t('import.failed')}: <strong>{summary.failed_count}</strong></p>
             {summary.failed.length > 0 && (
               <ul className="max-h-40 list-disc space-y-1 overflow-auto pl-5 text-red-600">
                 {summary.failed.map((f) => (
-                  <li key={f.row_number}>Row {f.row_number}{f.sku ? ` (${f.sku})` : ''}: {f.error}</li>
+                  <li key={f.row_number}>{t('import.rowError', { row: f.row_number })}{f.sku ? ` (${f.sku})` : ''}: {f.error}</li>
                 ))}
               </ul>
             )}
@@ -168,14 +170,14 @@ export function ExcelImportDialog({
         <DialogFooter>
           {step === 'preview' && (
             <>
-              <Button variant="outline" onClick={reset} disabled={isBusy}>Back</Button>
+              <Button variant="outline" onClick={reset} disabled={isBusy}>{t('common.back')}</Button>
               <Button onClick={handleConfirm} disabled={isBusy || previewResult?.valid_count === 0}>
-                {isBusy ? 'Importing…' : `Import ${previewResult?.valid_count ?? 0} row(s)`}
+                {isBusy ? t('import.importing') : t('import.importRows', { count: previewResult?.valid_count ?? 0 })}
               </Button>
             </>
           )}
           {step === 'summary' && (
-            <Button onClick={() => onOpenChange(false)}>Done</Button>
+            <Button onClick={() => onOpenChange(false)}>{t('common.done')}</Button>
           )}
         </DialogFooter>
       </DialogContent>

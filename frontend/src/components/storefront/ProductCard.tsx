@@ -35,7 +35,7 @@ export function ProductCard({
   styleVariant?: CardStyle
   /** Defaults to the storefront's current language (see StorefrontThemeContext) when omitted --
    * callers only need to pass this explicitly to override it. */
-  lang?: 'en' | 'he'
+  lang?: string
 }) {
   const { addItem } = useCart()
   const { theme, lang: contextLang } = useStorefrontTheme()
@@ -43,7 +43,7 @@ export function ProductCard({
   const [quantity, setQuantity] = useState(1)
   const [adding, setAdding] = useState(false)
   const resolvedLang = lang ?? contextLang
-  const t = STRINGS[resolvedLang]
+  const t = STRINGS[resolvedLang as keyof typeof STRINGS] || STRINGS.en
   const name = resolveI18nText(product.name, resolvedLang)
 
   const stock = totalStock(product.variants)

@@ -48,6 +48,7 @@ CREATE TABLE tenant_settings (
     allow_unverified_reviews BOOLEAN DEFAULT TRUE,
     template_key VARCHAR(50) NULL,
     draft_template_key VARCHAR(50) NULL,
+    nav_items JSON NULL,
     FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 

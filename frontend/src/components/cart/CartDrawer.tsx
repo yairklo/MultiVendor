@@ -5,10 +5,12 @@ import { useRouter } from 'next/navigation'
 import { useCart } from '@/context/CartContext'
 import { useCurrency } from '@/hooks/useCurrency'
 import { resolveImageUrl } from '@/lib/media'
+import { useUiLocale } from '@/context/UiLocaleContext'
 
 export function CartDrawer() {
   const { cart, isOpen, closeDrawer, incrementItem, decrementItem, removeItem } = useCart()
   const { formatCurrency } = useCurrency()
+  const { t } = useUiLocale()
   const router = useRouter()
 
   if (!isOpen) return null
@@ -26,9 +28,9 @@ export function CartDrawer() {
         className="relative flex h-full w-full max-w-md flex-col bg-card shadow-xl animate-in slide-in-from-right duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]"
       >
         <div className="flex items-center justify-between border-b border-border p-4">
-          <h2 className="text-xl font-bold text-foreground">Your Cart</h2>
+          <h2 className="text-xl font-bold text-foreground">{t('cart.title')}</h2>
           <button
-            aria-label="Close cart"
+            aria-label={t('cart.close')}
             onClick={closeDrawer}
             className="text-2xl leading-none text-muted-foreground transition-colors hover:text-foreground"
           >
@@ -38,7 +40,7 @@ export function CartDrawer() {
 
         <div className="flex-1 overflow-auto p-4 space-y-4">
           {(!cart || cart.items.length === 0) && (
-            <p className="text-center py-8 text-muted-foreground">Your cart is empty.</p>
+            <p className="text-center py-8 text-muted-foreground">{t('cart.empty')}</p>
           )}
           {cart?.items.map(item => (
             <div key={item.id} data-testid="cart-item" className="flex gap-3 border-b border-border pb-4">
@@ -50,7 +52,7 @@ export function CartDrawer() {
                   aria-label={item.product_name}
                   className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center text-[10px] text-muted-foreground flex-shrink-0"
                 >
-                  No image
+                        {t('common.noImage')}
                 </div>
               )}
               <div className="flex-1 min-w-0">
@@ -58,7 +60,7 @@ export function CartDrawer() {
                 <div className="text-muted-foreground">{formatCurrency(Number(item.unit_price))}</div>
                 <div className="flex items-center gap-2 mt-2">
                   <button
-                    aria-label="Decrease quantity"
+                    aria-label={t('cart.decrease')}
                     onClick={() => decrementItem(item.id)}
                     className="w-7 h-7 border border-border rounded-lg text-foreground transition-colors hover:bg-muted"
                   >
@@ -66,18 +68,18 @@ export function CartDrawer() {
                   </button>
                   <span className="w-6 text-center">{item.quantity}</span>
                   <button
-                    aria-label="Increase quantity"
+                    aria-label={t('cart.increase')}
                     onClick={() => incrementItem(item.id)}
                     className="w-7 h-7 border border-border rounded-lg text-foreground transition-colors hover:bg-muted"
                   >
                     +
                   </button>
                   <button
-                    aria-label="Remove item"
+                    aria-label={t('cart.remove')}
                     onClick={() => removeItem(item.id)}
                     className="ml-auto text-sm font-medium text-destructive transition-colors hover:underline"
                   >
-                    Remove
+                    {t('cart.removeLabel')}
                   </button>
                 </div>
               </div>
@@ -89,14 +91,14 @@ export function CartDrawer() {
         {cart && cart.items.length > 0 && (
           <div className="border-t border-border p-4 space-y-3">
             <div className="flex justify-between font-bold text-lg text-foreground">
-              <span>Subtotal</span>
+              <span>{t('cart.subtotal')}</span>
               <span data-testid="cart-subtotal">{formatCurrency(Number(cart.subtotal))}</span>
             </div>
             <button
               onClick={handleCheckout}
               className="w-full rounded-xl bg-primary py-3 font-bold text-primary-foreground transition-colors duration-150 hover:bg-primary/90 active:scale-[0.98]"
             >
-              Proceed to Checkout
+              {t('cart.checkout')}
             </button>
           </div>
         )}

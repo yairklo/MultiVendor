@@ -28,5 +28,5 @@ export default async function StorefrontPage({
   // untouched stores are unaffected.
   const aiPage = await getTenantHomeLayout(tenantSlug)
 
-  return <CatalogListing tenantSlug={tenantSlug} aiPage={aiPage} />
+  return <CatalogListing tenantSlug={tenantSlug} aiPage={aiPage} showBrandBanner />
 }

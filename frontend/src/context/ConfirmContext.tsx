@@ -10,6 +10,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { useUiLocale } from '@/context/UiLocaleContext'
 
 interface ConfirmOptions {
   title: string
@@ -26,6 +27,7 @@ interface ConfirmContextValue {
 const ConfirmContext = createContext<ConfirmContextValue | null>(null)
 
 export function ConfirmProvider({ children }: { children: React.ReactNode }) {
+  const { t } = useUiLocale()
   const [open, setOpen] = useState(false)
   const [options, setOptions] = useState<ConfirmOptions | null>(null)
   const resolverRef = useRef<((value: boolean) => void) | null>(null)
@@ -55,13 +57,13 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => settle(false)}>
-              {options?.cancelLabel || 'Cancel'}
+              {options?.cancelLabel || t('confirm.cancel')}
             </Button>
             <Button
               variant={options?.variant === 'destructive' ? 'destructive' : 'default'}
               onClick={() => settle(true)}
             >
-              {options?.confirmLabel || 'Confirm'}
+              {options?.confirmLabel || t('confirm.confirm')}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -27,12 +27,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { totalStock, stockLevel, stockLevelLabel, stockLevelClass } from '@/lib/stock'
+import { totalStock, stockLevel, stockLevelClass } from '@/lib/stock'
 import { PaginationControls, PaginationMeta } from '@/components/ui/pagination-controls'
 import { TableRowSkeleton } from '@/components/ui/skeleton'
 import { ExcelImportDialog } from '@/components/upload/ExcelImportDialog'
 import { useUploads } from '@/hooks/useUploads'
 import { resolveImageUrl } from '@/lib/media'
+import { useUiLocale } from '@/context/UiLocaleContext'
+import { resolveI18nText } from '@/lib/i18n-text'
 
 export function ProductsPageClient({
   initialProducts,
@@ -47,6 +49,7 @@ export function ProductsPageClient({
   const { confirm } = useConfirm()
   const { fetchCategories } = useCategories()
   const { formatCurrency } = useCurrency()
+  const { t, locale } = useUiLocale()
   const { previewProductsImport, commitProductsImport, downloadImportTemplate } = useUploads()
   const [products, setProducts] = useState<any[]>(initialProducts)
   const [categories, setCategories] = useState<any[]>([])
@@ -110,9 +113,9 @@ export function ProductsPageClient({
   const handleBulkDelete = async () => {
     if (selectedIds.length === 0) return
     const ok = await confirm({
-      title: `Delete ${selectedIds.length} products?`,
-      description: 'This cannot be undone.',
-      confirmLabel: 'Delete All',
+      title: t('products.bulkDeleteConfirm', { count: selectedIds.length }),
+      description: t('common.cannotUndo'),
+      confirmLabel: t('products.deleteAll'),
       variant: 'destructive',
     })
     if (!ok) return
@@ -120,44 +123,44 @@ export function ProductsPageClient({
       await Promise.all(selectedIds.map(id => deleteProduct(id)))
       setSelectedIds([])
       await loadProducts()
-      showToast('Products deleted', 'success')
+      showToast(t('products.deletedPlural'), 'success')
     } catch (e: any) {
-      showToast(e.message || 'Failed to delete some products', 'error')
+      showToast(e.message || t('products.deleteSomeFailed'), 'error')
     }
   }
 
   const handleDelete = async (id: number) => {
     const ok = await confirm({
-      title: 'Delete this product?',
-      description: 'This cannot be undone.',
-      confirmLabel: 'Delete',
+      title: t('products.deleteConfirm'),
+      description: t('common.cannotUndo'),
+      confirmLabel: t('common.delete'),
       variant: 'destructive',
     })
     if (!ok) return
     try {
       await deleteProduct(id)
       await loadProducts()
-      showToast('Product deleted', 'success')
+      showToast(t('products.deleted'), 'success')
     } catch (e: any) {
-      showToast(e.message || 'Failed to delete product', 'error')
+      showToast(e.message || t('products.deleteFailed'), 'error')
     }
   }
 
   return (
     <div>
       <div className="flex justify-between items-center mb-8">
-        <h1 className="font-heading text-3xl font-bold text-foreground">Products</h1>
+        <h1 className="font-heading text-3xl font-bold text-foreground">{t('products.title')}</h1>
         <div className="flex space-x-3">
           {selectedIds.length > 0 && (
             <Button variant="destructive" onClick={handleBulkDelete}>
-              Delete Selected ({selectedIds.length})
+              {t('products.deleteSelected', { count: selectedIds.length })}
             </Button>
           )}
           <Button variant="outline" onClick={() => setIsImportOpen(true)}>
-            Import from Excel
+            {t('products.importExcel')}
           </Button>
           <Link href="/admin/products/new" className={buttonVariants()}>
-            + Add Product
+            {t('products.add')}
           </Link>
         </div>
       </div>
@@ -165,7 +168,7 @@ export function ProductsPageClient({
       <ExcelImportDialog
         open={isImportOpen}
         onOpenChange={setIsImportOpen}
-        title="Import Products / Inventory"
+        title={t('products.importTitle')}
         preview={previewProductsImport}
         commit={commitProductsImport}
         onDownloadTemplate={downloadImportTemplate}
@@ -174,7 +177,7 @@ export function ProductsPageClient({
 
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <Input
-          placeholder="Search products..."
+          placeholder={t('products.searchPlaceholder')}
           value={search}
           onChange={e => setSearch(e.target.value)}
           className="max-w-xs"
@@ -184,13 +187,13 @@ export function ProductsPageClient({
           onValueChange={(value) => setCategoryId(value)}
         >
           <SelectTrigger className="w-full sm:max-w-xs">
-            <SelectValue placeholder="All Categories" />
+            <SelectValue placeholder={t('products.allCategories')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={null}>All Categories</SelectItem>
+            <SelectItem value={null}>{t('products.allCategories')}</SelectItem>
             {categories.map(cat => (
               <SelectItem key={cat.id} value={cat.id}>
-                {typeof cat.name === 'object' ? (cat.name?.en || cat.name?.he || 'Unnamed') : cat.name}
+                {typeof cat.name === 'object' ? (cat.name?.[locale] || cat.name?.en || cat.name?.he || t('products.unnamed')) : cat.name}
               </SelectItem>
             ))}
           </SelectContent>
@@ -210,11 +213,11 @@ export function ProductsPageClient({
                 />
               </TableHead>
               <TableHead className="w-16"></TableHead>
-              <TableHead>Product Name</TableHead>
-              <TableHead>Price</TableHead>
-              <TableHead>Stock</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>{t('products.name')}</TableHead>
+              <TableHead>{t('products.basePrice')}</TableHead>
+              <TableHead>{t('products.stock')}</TableHead>
+              <TableHead>{t('common.status')}</TableHead>
+              <TableHead className="text-right">{t('common.actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -222,7 +225,7 @@ export function ProductsPageClient({
               Array.from({ length: 5 }, (_, i) => <TableRowSkeleton key={i} columns={6} />)
             ) : products.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No products found.</TableCell>
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{t('products.noProducts')}</TableCell>
               </TableRow>
             ) : (
               products.map(product => {
@@ -243,21 +246,21 @@ export function ProductsPageClient({
                       // eslint-disable-next-line @next/next/no-img-element -- arbitrary vendor URL, no host allowlist
                       <img
                         src={resolveImageUrl(product.primary_image_url || product.images[0])}
-                        alt={typeof product.name === 'object' ? (product.name?.en || 'Product') : product.name}
+                        alt={resolveI18nText(product.name, locale) || t('products.unnamed')}
                         className="w-10 h-10 object-cover rounded"
                       />
                     ) : (
                       <div className="w-10 h-10 bg-muted rounded flex items-center justify-center text-muted-foreground text-[10px] text-center leading-tight">
-                        No image
+                        {t('common.noImage')}
                       </div>
                     )}
                   </TableCell>
                   <TableCell>
                     <div className="font-bold">
-                      {typeof product.name === 'object' ? (product.name?.he || product.name?.en || 'Unnamed') : product.name}
+                      {resolveI18nText(product.name, locale) || t('products.unnamed')}
                     </div>
                     <div className="text-sm text-muted-foreground truncate max-w-xs">
-                      {typeof product.description === 'object' ? (product.description?.he || product.description?.en || '') : (product.description || '')}
+                      {resolveI18nText(product.description, locale)}
                     </div>
                   </TableCell>
                   <TableCell>{formatCurrency(product.base_price)}</TableCell>
@@ -265,13 +268,13 @@ export function ProductsPageClient({
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{stock}</span>
                       <Badge variant="outline" className={stockLevelClass[level]}>
-                        {stockLevelLabel[level]}
+                        {t(`stock.${level}`)}
                       </Badge>
                     </div>
                   </TableCell>
                   <TableCell>
                     <Badge variant={product.is_active ? 'success' : 'secondary'}>
-                      {product.is_active ? 'Active' : 'Inactive'}
+                      {product.is_active ? t('products.active') : t('products.inactive')}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
@@ -279,9 +282,9 @@ export function ProductsPageClient({
                       href={`/admin/products/${product.id}/edit`}
                       className={buttonVariants({ variant: 'ghost', size: 'sm', className: 'mr-2' })}
                     >
-                      Edit
+                      {t('common.edit')}
                     </Link>
-                    <Button variant="destructive" size="sm" onClick={() => handleDelete(product.id)}>Delete</Button>
+                    <Button variant="destructive" size="sm" onClick={() => handleDelete(product.id)}>{t('common.delete')}</Button>
                   </TableCell>
                 </TableRow>
                 )

@@ -4,9 +4,12 @@ import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { setCookie } from 'cookies-next'
 import { apiClient } from '@/lib/api/apiClient'
+import { useUiLocale } from '@/context/UiLocaleContext'
+import { UiLanguageSwitcher } from '@/components/ui/UiLanguageSwitcher'
 
 export default function CustomerLoginPage() {
   const router = useRouter()
+  const { t } = useUiLocale()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [tenantSlug, setTenantSlug] = useState('test-tenant')
@@ -30,7 +33,7 @@ export default function CustomerLoginPage() {
         router.push(`/store/${tenantSlug}`)
       }
     } catch (err: any) {
-      setError(err.message || 'Login failed. Please check your credentials.')
+      setError(err.message || t('auth.loginFailed'))
     } finally {
       setLoading(false)
     }
@@ -46,13 +49,13 @@ export default function CustomerLoginPage() {
               'radial-gradient(circle at 20% 20%, white 0, transparent 45%), radial-gradient(circle at 80% 70%, white 0, transparent 40%)',
           }}
         />
-        <div className="relative z-10 text-xl font-bold font-heading">MultiVendor</div>
+        <div className="relative z-10 text-xl font-bold font-heading">{t('auth.customerBrand')}</div>
         <div className="relative z-10 space-y-3">
           <h2 className="text-3xl font-bold font-heading leading-tight">
-            Welcome back to your marketplace.
+            {t('auth.customerHeadline')}
           </h2>
           <p className="max-w-sm text-primary-foreground/80">
-            Sign in to track orders, manage your account, and pick up where you left off.
+            {t('auth.customerSub')}
           </p>
         </div>
         <div className="relative z-10 text-xs text-primary-foreground/60">
@@ -62,8 +65,11 @@ export default function CustomerLoginPage() {
 
       <div className="flex items-center justify-center bg-background p-4 md:p-10">
         <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-lg animate-in fade-in-0 zoom-in-95 duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]">
-          <h1 className="text-2xl font-bold mb-1 text-foreground font-heading">Customer Login</h1>
-          <p className="mb-8 text-sm text-muted-foreground">Sign in to continue to your account.</p>
+          <div className="mb-4 flex justify-end">
+            <UiLanguageSwitcher className="text-muted-foreground" />
+          </div>
+          <h1 className="text-2xl font-bold mb-1 text-foreground font-heading">{t('auth.customerTitle')}</h1>
+          <p className="mb-8 text-sm text-muted-foreground">{t('auth.customerSubtitle')}</p>
 
           {error && (
             <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg text-sm">
@@ -73,7 +79,7 @@ export default function CustomerLoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-sm font-medium mb-2 text-foreground">Email Address</label>
+              <label className="block text-sm font-medium mb-2 text-foreground">{t('auth.email')}</label>
               <input
                 type="email"
                 required
@@ -84,7 +90,7 @@ export default function CustomerLoginPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2 text-foreground">Password</label>
+              <label className="block text-sm font-medium mb-2 text-foreground">{t('auth.password')}</label>
               <input
                 type="password"
                 required
@@ -100,14 +106,14 @@ export default function CustomerLoginPage() {
               disabled={loading}
               className="w-full bg-primary text-primary-foreground py-3 rounded-lg font-bold transition-all duration-150 hover:bg-primary/90 active:scale-[0.98] disabled:opacity-70"
             >
-              {loading ? 'Authenticating...' : 'Sign In'}
+              {loading ? t('auth.authenticating') : t('auth.signIn')}
             </button>
           </form>
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
-            Don&apos;t have an account?{' '}
+            {t('auth.noAccount')}{' '}
             <a href="/signup" className="font-medium text-primary hover:underline">
-              Sign up
+              {t('auth.signUp')}
             </a>
           </p>
         </div>

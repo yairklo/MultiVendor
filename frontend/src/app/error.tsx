@@ -2,6 +2,7 @@
 
 import React, { useEffect } from 'react'
 import { AlertTriangle } from 'lucide-react'
+import { useUiLocale } from '@/context/UiLocaleContext'
 
 export default function GlobalError({
   error,
@@ -10,6 +11,7 @@ export default function GlobalError({
   error: Error & { digest?: string }
   reset: () => void
 }) {
+  const { t } = useUiLocale()
   useEffect(() => {
     // Log the error to an error reporting service
     console.error('Global Error Boundary caught:', error)
@@ -24,9 +26,9 @@ export default function GlobalError({
           </div>
         </div>
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900">Something went wrong</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900">{t('errors.somethingWrong')}</h1>
           <p className="text-gray-500">
-            An unexpected error occurred. We've been notified and are looking into it.
+            {t('errors.unexpected')}
           </p>
         </div>
         <div className="pt-4 flex gap-4 justify-center">
@@ -34,13 +36,13 @@ export default function GlobalError({
             onClick={() => reset()}
             className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           >
-            Try again
+            {t('errors.tryAgain')}
           </button>
           <button
             onClick={() => window.location.href = '/'}
             className="inline-flex items-center justify-center rounded-lg bg-white border border-gray-300 px-6 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           >
-            Go Home
+            {t('errors.goHome')}
           </button>
         </div>
       </div>

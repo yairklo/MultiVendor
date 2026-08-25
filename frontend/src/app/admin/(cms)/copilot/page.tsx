@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react'
 import { ChatDrawer } from '@/components/admin/ai/ChatDrawer'
 import { useAiLayout } from '@/hooks/useAiLayout'
 import { useToast } from '@/context/ToastContext'
+import { useUiLocale } from '@/context/UiLocaleContext'
 
 // This chat is not scoped to any page — it's the tenant-wide global copilot.
 // PageContext is `null` throughout: never fake a page identity to satisfy an
@@ -13,6 +14,7 @@ const NO_PAGE_CONTEXT = null
 export default function CopilotPage() {
   const { tenantSlug, fetchConversation, sendChatMessage, clearConversation, confirmPendingAction, cancelPendingAction } = useAiLayout()
   const { showToast } = useToast()
+  const { t } = useUiLocale()
 
   const [messages, setMessages] = useState<any[]>([])
   const [isBusy, setIsBusy] = useState(false)
@@ -65,10 +67,10 @@ export default function CopilotPage() {
     setResolvingConfirmationId(confirmationId)
     try {
       await confirmPendingAction(confirmationId)
-      resolvePendingConfirmationInPlace(confirmationId, '✅ Confirmed — done.')
-      showToast('Action completed.', 'success')
+      resolvePendingConfirmationInPlace(confirmationId, t('aiLayout.confirmedDone'))
+      showToast(t('aiLayout.actionCompleted'), 'success')
     } catch (err: any) {
-      showToast(err.message || 'Failed to confirm action', 'error')
+      showToast(err.message || t('aiLayout.sendFailed'), 'error')
     } finally {
       setResolvingConfirmationId(null)
     }
@@ -78,7 +80,7 @@ export default function CopilotPage() {
     setResolvingConfirmationId(confirmationId)
     try {
       await cancelPendingAction(confirmationId)
-      resolvePendingConfirmationInPlace(confirmationId, '❎ Cancelled — nothing was changed.')
+      resolvePendingConfirmationInPlace(confirmationId, t('aiLayout.cancelledNothing'))
     } catch (err: any) {
       showToast(err.message || 'Failed to cancel action', 'error')
     } finally {
@@ -98,9 +100,9 @@ export default function CopilotPage() {
   return (
     <div className="flex h-full flex-col gap-4 max-w-4xl mx-auto">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">AI Copilot</h1>
+        <h1 className="text-3xl font-bold text-gray-900">{t('copilot.title')}</h1>
         <p className="text-gray-500 mt-2">
-          Your general assistant for managing inventory, viewing orders, and answering questions about your store.
+          {t('copilot.subtitle')}
         </p>
       </div>
 
@@ -114,12 +116,7 @@ export default function CopilotPage() {
           onCancelAction={handleCancelPendingAction}
           resolvingConfirmationId={resolvingConfirmationId}
           title={null}
-          emptyStateHint={
-            <>
-              Try: &ldquo;how many orders came in this week&rdquo; or &ldquo;add a product called Cool Mug for
-              $15&rdquo;
-            </>
-          }
+            emptyStateHint={t('copilot.emptyHint')}
         />
       </div>
     </div>

@@ -22,16 +22,16 @@ const STRINGS = {
  */
 export function MarketplaceProductCard({
   product,
-  lang = 'en',
+  lang = 'he',
   formatCurrency,
 }: {
   product: any
-  lang?: 'en' | 'he'
+  lang?: string
   formatCurrency: (amount: number) => string
 }) {
   const { addItem } = useMarketplaceCart()
   const [adding, setAdding] = useState(false)
-  const t = STRINGS[lang]
+  const t = STRINGS[lang as keyof typeof STRINGS] || STRINGS.en
   const name = resolveI18nText(product.name, lang)
   const image = product.primary_image_url || product.images?.[0]
   const href = `/store/${product.tenant_slug}/products/${product.slug}`

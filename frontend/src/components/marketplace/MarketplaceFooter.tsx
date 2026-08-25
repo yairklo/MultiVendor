@@ -1,9 +1,13 @@
+'use client'
+
 import Link from 'next/link'
 import { Store } from 'lucide-react'
+import { useUiLocale } from '@/context/UiLocaleContext'
 
 /** Cross-vendor equivalent of storefront/StorefrontFooter, styled with the platform's own
  * brand tokens (marketplace has no single tenant theme to read colors from). */
 export function MarketplaceFooter() {
+  const { t } = useUiLocale()
   const year = new Date().getFullYear()
 
   return (
@@ -12,45 +16,45 @@ export function MarketplaceFooter() {
         <div>
           <h3 className="mb-2 flex items-center gap-2 text-lg font-bold font-heading">
             <Store className="h-5 w-5 text-primary" />
-            MultiVendor Marketplace
+            {t('marketplace.brand')}
           </h3>
           <p className="text-sm text-muted-foreground">
-            Products from every store on the platform, in one place.
+            {t('marketplace.subtitle')}
           </p>
         </div>
         <div>
-          <h4 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Shop</h4>
+          <h4 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">{t('marketplace.footerShop')}</h4>
           <ul className="space-y-1 text-sm">
             <li>
               <Link href="/marketplace" className="text-foreground/80 transition-colors hover:text-primary">
-                Browse Marketplace
+                {t('marketplace.browseMarketplace')}
               </Link>
             </li>
             <li>
               <Link href="/marketplace/checkout" className="text-foreground/80 transition-colors hover:text-primary">
-                Checkout
+                {t('marketplace.checkoutLink')}
               </Link>
             </li>
           </ul>
         </div>
         <div>
-          <h4 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Support</h4>
+          <h4 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">{t('marketplace.footerSupport')}</h4>
           <ul className="space-y-1 text-sm">
             <li>
               <Link href="/account/orders" className="text-foreground/80 transition-colors hover:text-primary">
-                My Orders
+                {t('storefront.myOrders')}
               </Link>
             </li>
             <li>
               <Link href="/login" className="text-foreground/80 transition-colors hover:text-primary">
-                Login
+                {t('common.login')}
               </Link>
             </li>
           </ul>
         </div>
       </div>
       <div className="border-t border-border px-4 py-4 text-center text-xs text-muted-foreground">
-        &copy; {year} MultiVendor Marketplace. All rights reserved.
+        &copy; {year} {t('marketplace.brand')}. {t('marketplace.rights')}
       </div>
     </footer>
   )

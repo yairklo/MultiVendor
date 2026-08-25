@@ -8,6 +8,8 @@ import { MarketplaceProductCard } from './MarketplaceProductCard'
 import { PaginationControls, PaginationMeta } from '@/components/ui/pagination-controls'
 import { ProductCardSkeleton } from '@/components/ui/skeleton'
 import { useCurrency } from '@/hooks/useCurrency'
+import { useUiLocale } from '@/context/UiLocaleContext'
+import { isRtlLang } from '@/lib/languages'
 
 const PAGE_SIZE = 12
 
@@ -21,24 +23,6 @@ const gridItemVariants = {
   show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.16, 1, 0.3, 1] as const } },
 }
 
-type Lang = 'en' | 'he'
-
-const strings: Record<Lang, { title: string; subtitle: string; noProducts: string; switcherLabel: string; searchPlaceholder: string }> = {
-  en: {
-    title: 'Marketplace',
-    subtitle: 'Products from every store on the platform, in one place.',
-    noProducts: 'No products found.',
-    switcherLabel: 'עברית',
-    searchPlaceholder: 'Search the marketplace...',
-  },
-  he: {
-    title: 'שוק כללי',
-    subtitle: 'מוצרים מכל החנויות בפלטפורמה, במקום אחד.',
-    noProducts: 'לא נמצאו מוצרים.',
-    switcherLabel: 'English',
-    searchPlaceholder: 'חיפוש בשוק הכללי...',
-  },
-}
 
 /**
  * Cross-store equivalent of storefront/CatalogListing. No category filter --
@@ -54,14 +38,13 @@ export function MarketplaceListing({
   initialMeta?: PaginationMeta | null
 }) {
   const { formatCurrency } = useCurrency()
+  const { t, locale } = useUiLocale()
   const [products, setProducts] = useState<any[]>(initialProducts ?? [])
   const [productsLoading, setProductsLoading] = useState(!initialProducts)
   const [meta, setMeta] = useState<PaginationMeta | null>(initialMeta ?? null)
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [lang, setLang] = useState<Lang>('en')
-  const t = strings[lang]
   const prefersReducedMotion = useReducedMotion()
 
   useEffect(() => {
@@ -96,31 +79,24 @@ export function MarketplaceListing({
   }, [debouncedSearch, page])
 
   return (
-    <div dir={lang === 'he' ? 'rtl' : 'ltr'} className="min-h-full">
+    <div dir={isRtlLang(locale) ? 'rtl' : 'ltr'} className="min-h-full">
       <div className="mx-auto max-w-6xl px-4 py-8 md:px-8">
         <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-foreground font-heading">{t.title}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{t.subtitle}</p>
+            <h1 className="text-2xl font-bold text-foreground font-heading">{t('marketplace.title')}</h1>
+            <p className="mt-1 text-sm text-muted-foreground">{t('marketplace.subtitle')}</p>
           </div>
-          <button
-            data-testid="language-switcher"
-            className="cursor-pointer font-medium text-muted-foreground transition-colors hover:text-primary"
-            onClick={() => setLang((l) => (l === 'en' ? 'he' : 'en'))}
-          >
-            {t.switcherLabel}
-          </button>
         </div>
 
         <div className="relative mb-6 max-w-sm">
-          <Search className="absolute left-3 top-1/2 w-4 h-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="absolute start-3 top-1/2 w-4 h-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={t.searchPlaceholder}
-            aria-label="Search marketplace"
-            className="w-full rounded-lg border border-input bg-card py-2 pl-9 pr-3 outline-none transition-shadow focus:ring-2 focus:ring-ring"
+            placeholder={t('marketplace.searchPlaceholder')}
+            aria-label={t('marketplace.searchAria')}
+            className="w-full rounded-lg border border-input bg-card py-2 ps-9 pe-3 outline-none transition-shadow focus:ring-2 focus:ring-ring"
           />
         </div>
 
@@ -135,11 +111,11 @@ export function MarketplaceListing({
             ? Array.from({ length: 8 }, (_, i) => <ProductCardSkeleton key={i} />)
             : products.map((p) => (
                 <motion.div key={p.id} variants={prefersReducedMotion ? undefined : gridItemVariants}>
-                  <MarketplaceProductCard product={p} lang={lang} formatCurrency={formatCurrency} />
+                  <MarketplaceProductCard product={p} lang={locale} formatCurrency={formatCurrency} />
                 </motion.div>
               ))}
           {!productsLoading && products.length === 0 && (
-            <div className="col-span-full py-12 text-center text-muted-foreground">{t.noProducts}</div>
+            <div className="col-span-full py-12 text-center text-muted-foreground">{t('marketplace.noProducts')}</div>
           )}
         </motion.div>
 

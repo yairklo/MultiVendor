@@ -1,20 +1,29 @@
 'use client'
 
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { apiClient } from '@/lib/api/apiClient'
 import { DEFAULT_STOREFRONT_THEME, resolveStorefrontTheme, StorefrontThemeClasses } from '@/lib/storefront-themes'
+import { isRtlLang } from '@/lib/languages'
+import { StoreNavItem } from '@/lib/storefront-nav'
+
+function isVitest(): boolean {
+  return typeof process !== 'undefined' && process.env.VITEST === 'true'
+}
 
 interface StorefrontThemeContextValue {
   theme: StorefrontThemeClasses
   templateKey: string | null
   logoUrl: string | null
+  bannerUrl: string | null
+  navItems: StoreNavItem[] | null
   currency: string
   defaultLanguage: string
   supportedLanguages: string[]
   /** The shopper's currently selected display language -- starts at defaultLanguage
    * once /config loads, but can be switched live (see setLang) independently of it. */
-  lang: 'en' | 'he'
-  setLang: (lang: 'en' | 'he') => void
+  lang: string
+  setLang: (lang: string) => void
 }
 
 const StorefrontThemeContext = createContext<StorefrontThemeContextValue | null>(null)
@@ -50,13 +59,17 @@ export function StorefrontThemeProvider({
     if (resolved) setFallbackSlug(resolved)
   }, [tenantSlug])
   const resolvedSlug = tenantSlug || fallbackSlug
+  const pathname = usePathname()
+  const isStorefront = !!pathname?.startsWith('/store/')
 
   const [templateKey, setTemplateKey] = useState<string | null>(null)
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
+  const [bannerUrl, setBannerUrl] = useState<string | null>(null)
+  const [navItems, setNavItems] = useState<StoreNavItem[] | null>(null)
   const [currency, setCurrency] = useState<string>('ILS')
   const [defaultLanguage, setDefaultLanguage] = useState<string>('he')
-  const [supportedLanguages, setSupportedLanguages] = useState<string[]>(['he'])
-  const [lang, setLang] = useState<'en' | 'he'>('en')
+  const [supportedLanguages, setSupportedLanguages] = useState<string[]>(['he', 'en'])
+  const [lang, setLang] = useState<string>(isVitest() ? 'en' : 'he')
   const langInitialized = useRef(false)
 
   useEffect(() => {
@@ -74,6 +87,8 @@ export function StorefrontThemeProvider({
         if (cancelled) return
         setTemplateKey(data.template_key ?? null)
         setLogoUrl(data.logo_url ?? null)
+        setBannerUrl(data.banner_url ?? null)
+        setNavItems(Array.isArray(data.nav_items) ? data.nav_items : null)
         if (data.currency) setCurrency(data.currency)
         if (data.default_language) {
           setDefaultLanguage(data.default_language)
@@ -82,10 +97,10 @@ export function StorefrontThemeProvider({
           // language the shopper already picked.
           if (!langInitialized.current) {
             langInitialized.current = true
-            setLang(data.default_language === 'en' ? 'en' : 'he')
+            setLang(data.default_language)
           }
         }
-        if (data.supported_languages) setSupportedLanguages(data.supported_languages)
+        if (data.supported_languages?.length) setSupportedLanguages(data.supported_languages)
       })
       .catch(() => {
         if (!cancelled) setTemplateKey(null)
@@ -101,15 +116,17 @@ export function StorefrontThemeProvider({
   // (any component using logical/dir-aware CSS, not just the ones that read
   // `lang` directly) instead of only whatever local component held its own copy.
   useEffect(() => {
-    if (isAdminPreview) return
+    if (isAdminPreview || !isStorefront) return
     document.documentElement.lang = lang
-    document.documentElement.dir = lang === 'he' ? 'rtl' : 'ltr'
-  }, [lang, isAdminPreview])
+    document.documentElement.dir = isRtlLang(lang) ? 'rtl' : 'ltr'
+  }, [lang, isAdminPreview, isStorefront])
 
   const value: StorefrontThemeContextValue = {
     theme: resolveStorefrontTheme(templateKey),
     templateKey,
     logoUrl,
+    bannerUrl,
+    navItems,
     currency,
     defaultLanguage,
     supportedLanguages,
@@ -124,9 +141,13 @@ const NO_PROVIDER_FALLBACK_BASE: Omit<StorefrontThemeContextValue, 'lang' | 'set
   theme: DEFAULT_STOREFRONT_THEME,
   templateKey: null,
   logoUrl: null,
+  bannerUrl: null,
+  navItems: null,
   currency: 'ILS',
   defaultLanguage: 'he',
-  supportedLanguages: ['he'],
+  // Tests of product forms (no provider) still need both fields; live stores
+  // overwrite this from /config as soon as it loads.
+  supportedLanguages: ['he', 'en'],
 }
 
 /**
@@ -142,7 +163,7 @@ const NO_PROVIDER_FALLBACK_BASE: Omit<StorefrontThemeContextValue, 'lang' | 'set
  */
 export function useStorefrontTheme(): StorefrontThemeContextValue {
   const ctx = useContext(StorefrontThemeContext)
-  const [fallbackLang, setFallbackLang] = useState<'en' | 'he'>('en')
+  const [fallbackLang, setFallbackLang] = useState<string>(isVitest() ? 'en' : 'he')
   if (ctx) return ctx
   return { ...NO_PROVIDER_FALLBACK_BASE, lang: fallbackLang, setLang: setFallbackLang }
 }

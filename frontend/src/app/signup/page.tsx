@@ -4,6 +4,8 @@ import React, { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { setCookie } from 'cookies-next'
 import { apiClient } from '@/lib/api/apiClient'
+import { useUiLocale } from '@/context/UiLocaleContext'
+import { UiLanguageSwitcher } from '@/components/ui/UiLanguageSwitcher'
 
 type SignupMode = 'customer' | 'seller'
 
@@ -26,6 +28,7 @@ export default function SignupPage() {
 
 function SignupForm() {
   const router = useRouter()
+  const { t } = useUiLocale()
   const searchParams = useSearchParams()
   const initialMode: SignupMode = searchParams.get('as') === 'seller' ? 'seller' : 'customer'
   const [mode, setMode] = useState<SignupMode>(initialMode)
@@ -91,7 +94,7 @@ function SignupForm() {
         }
       }
     } catch (err: any) {
-      setError(err.message || 'Registration failed. Please check your details.')
+      setError(err.message || t('auth.registrationFailed'))
     } finally {
       setLoading(false)
     }
@@ -115,13 +118,13 @@ function SignupForm() {
         <div className="relative z-10 max-w-md">
           <h1 className="font-heading text-4xl font-bold leading-tight">
             {mode === 'seller'
-              ? 'Open your store on the marketplace.'
-              : 'Shop every vendor with one account.'}
+              ? t('auth.signupSellerHeadline')
+              : t('auth.signupCustomerHeadline')}
           </h1>
           <p className="mt-4 text-white/70">
             {mode === 'seller'
-              ? 'Launch your storefront in minutes — products, orders, and site design all in one console.'
-              : 'Create an account once and check out across every store on the platform.'}
+              ? t('auth.signupSellerSub')
+              : t('auth.signupCustomerSub')}
           </p>
         </div>
         <div className="relative z-10 text-sm text-white/40">
@@ -134,11 +137,14 @@ function SignupForm() {
         <div className="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-card shadow-xl shadow-primary/5">
           <div className="h-1.5 w-full bg-gradient-to-r from-primary to-[oklch(0.62_0.19_300)]" aria-hidden="true" />
           <div className="p-8">
+            <div className="mb-2 flex justify-end">
+              <UiLanguageSwitcher className="text-muted-foreground" />
+            </div>
             <h1 className="font-heading text-2xl font-bold text-center mb-1 text-foreground">
-              Create your account
+              {t('auth.signupTitle')}
             </h1>
             <p className="text-sm text-muted-foreground text-center mb-6">
-              Sign up as a shopper or start selling.
+              {t('auth.signupSubtitle')}
             </p>
 
             <div className="mb-6 grid grid-cols-2 gap-1 rounded-lg bg-muted p-1">
@@ -151,7 +157,7 @@ function SignupForm() {
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                Customer
+                {t('auth.customer')}
               </button>
               <button
                 type="button"
@@ -162,7 +168,7 @@ function SignupForm() {
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                Seller
+                {t('auth.seller')}
               </button>
             </div>
 
@@ -175,7 +181,7 @@ function SignupForm() {
             {mode === 'customer' ? (
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
-                  <label htmlFor="fullName" className="block text-sm font-medium mb-2">Full Name</label>
+                  <label htmlFor="fullName" className="block text-sm font-medium mb-2">{t('auth.fullName')}</label>
                   <input
                     id="fullName"
                     type="text"
@@ -187,7 +193,7 @@ function SignupForm() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium mb-2">Email Address</label>
+                  <label htmlFor="email" className="block text-sm font-medium mb-2">{t('auth.email')}</label>
                   <input
                     id="email"
                     type="email"
@@ -199,7 +205,7 @@ function SignupForm() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="password" className="block text-sm font-medium mb-2">Password</label>
+                  <label htmlFor="password" className="block text-sm font-medium mb-2">{t('auth.password')}</label>
                   <input
                     id="password"
                     type="password"
@@ -208,7 +214,7 @@ function SignupForm() {
                     className="w-full px-4 py-3 rounded-lg border border-input bg-background focus:ring-2 focus:ring-ring outline-none transition-all"
                     value={password}
                     onChange={e => setPassword(e.target.value)}
-                    placeholder="At least 8 characters"
+                    placeholder={t('auth.passwordHint')}
                   />
                 </div>
 
@@ -217,13 +223,13 @@ function SignupForm() {
                   disabled={loading}
                   className="w-full bg-primary text-primary-foreground py-3 rounded-lg font-bold hover:bg-primary/90 active:scale-[0.98] transition-all disabled:opacity-70 disabled:active:scale-100"
                 >
-                  {loading ? 'Creating account...' : 'Create account'}
+                  {loading ? t('auth.creatingAccount') : t('auth.createAccount')}
                 </button>
               </form>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
-                  <label htmlFor="storeName" className="block text-sm font-medium mb-2">Store Name</label>
+                  <label htmlFor="storeName" className="block text-sm font-medium mb-2">{t('auth.storeName')}</label>
                   <input
                     id="storeName"
                     type="text"
@@ -237,7 +243,7 @@ function SignupForm() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="storeSlug" className="block text-sm font-medium mb-2">Store URL</label>
+                  <label htmlFor="storeSlug" className="block text-sm font-medium mb-2">{t('auth.storeUrl')}</label>
                   <input
                     id="storeSlug"
                     type="text"
@@ -256,7 +262,7 @@ function SignupForm() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="adminFullName" className="block text-sm font-medium mb-2">Your Full Name</label>
+                  <label htmlFor="adminFullName" className="block text-sm font-medium mb-2">{t('auth.yourFullName')}</label>
                   <input
                     id="adminFullName"
                     type="text"
@@ -268,7 +274,7 @@ function SignupForm() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="adminEmail" className="block text-sm font-medium mb-2">Email Address</label>
+                  <label htmlFor="adminEmail" className="block text-sm font-medium mb-2">{t('auth.email')}</label>
                   <input
                     id="adminEmail"
                     type="email"
@@ -280,7 +286,7 @@ function SignupForm() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="adminPassword" className="block text-sm font-medium mb-2">Password</label>
+                  <label htmlFor="adminPassword" className="block text-sm font-medium mb-2">{t('auth.password')}</label>
                   <input
                     id="adminPassword"
                     type="password"
@@ -289,7 +295,7 @@ function SignupForm() {
                     className="w-full px-4 py-3 rounded-lg border border-input bg-background focus:ring-2 focus:ring-ring outline-none transition-all"
                     value={adminPassword}
                     onChange={e => setAdminPassword(e.target.value)}
-                    placeholder="At least 8 characters"
+                    placeholder={t('auth.passwordHint')}
                   />
                 </div>
 
@@ -298,15 +304,15 @@ function SignupForm() {
                   disabled={loading}
                   className="w-full bg-primary text-primary-foreground py-3 rounded-lg font-bold hover:bg-primary/90 active:scale-[0.98] transition-all disabled:opacity-70 disabled:active:scale-100"
                 >
-                  {loading ? 'Creating your store...' : 'Create store'}
+                  {loading ? t('auth.creatingStore') : t('auth.createStore')}
                 </button>
               </form>
             )}
 
             <p className="mt-6 text-center text-sm text-muted-foreground">
-              Already have an account?{' '}
+              {t('auth.hasAccount')}{' '}
               <a href="/login" className="font-medium text-primary hover:underline">
-                Log in
+                {t('auth.logIn')}
               </a>
             </p>
           </div>

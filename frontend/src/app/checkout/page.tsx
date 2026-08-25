@@ -9,13 +9,14 @@ import { useToast } from '@/context/ToastContext'
 import { useCurrency } from '@/hooks/useCurrency'
 import { useRouter } from 'next/navigation'
 import { StripeCardForm } from '@/components/checkout/StripeCardForm'
-
-const shippingOptions = [
-  { id: 1, name: 'Standard Shipping (3-5 days)', price: 5 },
-  { id: 2, name: 'Express Shipping (1-2 days)', price: 15 }
-]
+import { useUiLocale } from '@/context/UiLocaleContext'
 
 export default function CheckoutPage() {
+  const { t } = useUiLocale()
+  const shippingOptions = [
+    { id: 1, name: t('checkout.standardShipping'), price: 5 },
+    { id: 2, name: t('checkout.expressShipping'), price: 15 }
+  ]
   const { cart, loading, clear } = useCart()
   const { formatCurrency } = useCurrency()
   const { payOrder, cancelOrder, fetchOrder } = useOrders()
@@ -60,9 +61,9 @@ export default function CheckoutPage() {
         { method: 'POST' }
       )
       setAppliedCoupon(coupon)
-      showToast(`Coupon "${coupon.code}" applied`, 'success')
+      showToast(t('checkout.couponAppliedToast', { code: coupon.code }), 'success')
     } catch (e: any) {
-      showToast(e.message || 'Invalid or expired coupon', 'error')
+      showToast(e.message || t('checkout.invalidCoupon'), 'error')
     } finally {
       setApplyingCoupon(false)
     }
@@ -107,9 +108,9 @@ export default function CheckoutPage() {
       clear()
     } catch (e: any) {
       if (e.status === 401) {
-        setError('Please log in to complete checkout.')
+        setError(t('checkout.loginToCheckout'))
       } else {
-        setError(e.message || 'Failed to place order.')
+        setError(e.message || t('checkout.placeFailed'))
       }
     } finally {
       setSubmitting(false)
@@ -135,7 +136,7 @@ export default function CheckoutPage() {
         setPaymentDone(true)
       }
     } catch (e: any) {
-      setError(e.message || 'Payment failed.')
+      setError(e.message || t('checkout.paymentFailed'))
     } finally {
       setPayBusy(false)
     }
@@ -149,35 +150,35 @@ export default function CheckoutPage() {
       await cancelOrder(payingOrder.id)
       setPayingOrder(null)
     } catch (e: any) {
-      setError(e.message || 'Failed to cancel order.')
+      setError(e.message || t('checkout.cancelFailed'))
     } finally {
       setPayBusy(false)
     }
   }
 
   if (loading) {
-    return <div className="max-w-4xl mx-auto p-6 text-muted-foreground">Loading your cart...</div>
+    return <div className="max-w-4xl mx-auto p-6 text-muted-foreground">{t('checkout.loadingCart')}</div>
   }
 
   if (payingOrder && paymentDone) {
     return (
       <div className="max-w-4xl mx-auto p-6 bg-background min-h-screen">
-        <h1 className="text-3xl font-bold mb-8 text-foreground border-b border-border pb-4 font-heading">Checkout</h1>
+        <h1 className="text-3xl font-bold mb-8 text-foreground border-b border-border pb-4 font-heading">{t('checkout.title')}</h1>
         <div className="p-4 bg-green-50 text-green-700 rounded-xl border border-green-100 animate-in fade-in-0 zoom-in-95 duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]">
-          Payment successful! Order #{payingOrder.order_number} is now being processed.
+          {t('checkout.paymentSuccess', { number: payingOrder.order_number })}
         </div>
         <div className="mt-6 flex gap-4">
           <button
             onClick={() => router.push('/account/orders')}
             className="bg-primary text-primary-foreground px-6 py-2 rounded-lg font-medium transition-colors duration-150 hover:bg-primary/90 active:scale-[0.98]"
           >
-            View My Orders
+            {t('checkout.viewOrders')}
           </button>
           <button
             onClick={() => router.push(`/store/${activeCart?.tenantSlug}`)}
             className="bg-card border border-border text-foreground px-6 py-2 rounded-lg font-medium transition-colors duration-150 hover:bg-muted active:scale-[0.98]"
           >
-            Continue Shopping
+            {t('checkout.continueShopping')}
           </button>
         </div>
       </div>
@@ -187,20 +188,19 @@ export default function CheckoutPage() {
   if (payingOrder) {
     return (
       <div className="max-w-4xl mx-auto p-6 bg-background min-h-screen">
-        <h1 className="text-3xl font-bold mb-8 text-foreground border-b border-border pb-4 font-heading">Checkout</h1>
+        <h1 className="text-3xl font-bold mb-8 text-foreground border-b border-border pb-4 font-heading">{t('checkout.title')}</h1>
         {error && (
           <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-xl border border-red-100">{error}</div>
         )}
         <div data-testid="pending-payment" className="bg-card p-6 rounded-xl shadow-sm border border-border space-y-4 animate-in fade-in-0 slide-in-from-bottom-2 duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]">
           <div>
-            <h2 className="text-xl font-semibold text-foreground">Order #{payingOrder.order_number} is awaiting payment</h2>
+            <h2 className="text-xl font-semibold text-foreground">{t('checkout.awaitingPayment', { number: payingOrder.order_number })}</h2>
             <p className="text-muted-foreground mt-1">
-              Total: <span className="font-bold text-foreground">{formatCurrency(Number(payingOrder.total_amount))}</span>
+              {t('checkout.total')} <span className="font-bold text-foreground">{formatCurrency(Number(payingOrder.total_amount))}</span>
             </p>
             {!stripePayment && (
               <p className="text-sm text-amber-700 mt-2">
-                This is a development environment — payment is simulated. Unpaid orders are automatically
-                cancelled and their stock released if left pending too long.
+                {t('checkout.mockPaymentHint')}
               </p>
             )}
           </div>
@@ -223,7 +223,7 @@ export default function CheckoutPage() {
                 disabled={payBusy}
                 className="flex-1 bg-primary text-primary-foreground py-3 rounded-xl font-bold transition-all duration-150 hover:bg-primary/90 active:scale-[0.98] disabled:opacity-70"
               >
-                {payBusy ? 'Processing...' : 'Pay Now'}
+                {payBusy ? t('checkout.processing') : t('checkout.payNow')}
               </button>
             )}
             <button
@@ -231,7 +231,7 @@ export default function CheckoutPage() {
               disabled={payBusy}
               className="px-6 py-3 text-destructive border border-destructive/30 rounded-xl font-medium transition-colors duration-150 hover:bg-destructive/10 active:scale-[0.98] disabled:opacity-70"
             >
-              Cancel Order
+              {t('checkout.cancelOrder')}
             </button>
           </div>
         </div>
@@ -242,15 +242,15 @@ export default function CheckoutPage() {
   if (!activeCart || !cart || cart.items.length === 0) {
     return (
       <div className="max-w-4xl mx-auto p-6 bg-background min-h-screen">
-        <h1 className="text-3xl font-bold mb-8 text-foreground border-b border-border pb-4 font-heading">Checkout</h1>
-        <p className="text-muted-foreground">Your cart is empty. Add items from the storefront first.</p>
+        <h1 className="text-3xl font-bold mb-8 text-foreground border-b border-border pb-4 font-heading">{t('checkout.title')}</h1>
+        <p className="text-muted-foreground">{t('checkout.empty')}</p>
       </div>
     )
   }
 
   return (
     <div className="max-w-4xl mx-auto p-6 bg-background min-h-screen">
-      <h1 className="text-3xl font-bold mb-8 text-foreground border-b border-border pb-4 font-heading">Checkout</h1>
+      <h1 className="text-3xl font-bold mb-8 text-foreground border-b border-border pb-4 font-heading">{t('checkout.title')}</h1>
 
       {error && (
         <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-xl border border-red-100">
@@ -261,7 +261,7 @@ export default function CheckoutPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="md:col-span-2 space-y-6">
           <div data-testid="item-summary" className="bg-card p-6 rounded-xl shadow-sm border border-border">
-            <h2 className="text-xl font-semibold mb-4 text-foreground">Item Summary</h2>
+            <h2 className="text-xl font-semibold mb-4 text-foreground">{t('checkout.itemSummary')}</h2>
             {cart.items.map(item => (
               <div key={item.id} className="flex justify-between items-center py-2 border-b border-border last:border-0 text-foreground/80">
                 <span>{item.product_name} &times; {item.quantity}</span>
@@ -272,10 +272,10 @@ export default function CheckoutPage() {
 
           {requiresShippingAddress && (
             <div data-testid="shipping-address-fields" className="bg-card p-6 rounded-xl shadow-sm border border-border">
-              <h2 className="text-xl font-semibold mb-4 text-foreground">Shipping Details</h2>
+              <h2 className="text-xl font-semibold mb-4 text-foreground">{t('checkout.shippingDetails')}</h2>
               <div className="space-y-3">
                 <div>
-                  <label htmlFor="fullName" className="block text-sm font-medium mb-1 text-foreground">Full Name</label>
+                  <label htmlFor="fullName" className="block text-sm font-medium mb-1 text-foreground">{t('checkout.fullName')}</label>
                   <input
                     id="fullName"
                     type="text"
@@ -285,7 +285,7 @@ export default function CheckoutPage() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="checkoutEmail" className="block text-sm font-medium mb-1 text-foreground">Email</label>
+                  <label htmlFor="checkoutEmail" className="block text-sm font-medium mb-1 text-foreground">{t('checkout.email')}</label>
                   <input
                     id="checkoutEmail"
                     type="email"
@@ -295,7 +295,7 @@ export default function CheckoutPage() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="address" className="block text-sm font-medium mb-1 text-foreground">Address</label>
+                  <label htmlFor="address" className="block text-sm font-medium mb-1 text-foreground">{t('checkout.address')}</label>
                   <input
                     id="address"
                     type="text"
@@ -309,7 +309,7 @@ export default function CheckoutPage() {
           )}
 
           <div data-testid="shipping-methods" className="bg-card p-6 rounded-xl shadow-sm border border-border">
-            <h2 className="text-xl font-semibold mb-4 text-foreground">Shipping Methods</h2>
+            <h2 className="text-xl font-semibold mb-4 text-foreground">{t('checkout.shippingMethods')}</h2>
             <div className="space-y-3 text-foreground">
               {shippingOptions.map(option => (
                 <label key={option.id} className="flex items-center space-x-3 p-3 border border-border rounded-lg hover:bg-accent cursor-pointer transition-colors duration-150">
@@ -331,17 +331,17 @@ export default function CheckoutPage() {
 
         <div className="space-y-6">
           <div data-testid="coupon-input" className="bg-card p-6 rounded-xl shadow-sm border border-border">
-            <h2 className="text-xl font-semibold mb-4 text-foreground">Coupon Code</h2>
+            <h2 className="text-xl font-semibold mb-4 text-foreground">{t('checkout.couponCode')}</h2>
             {appliedCoupon ? (
               <div className="flex items-center justify-between bg-green-50 border border-green-100 rounded-lg px-3 py-2">
-                <span className="text-green-700 font-medium">{appliedCoupon.code} applied</span>
-                <button onClick={handleRemoveCoupon} className="text-sm text-destructive hover:underline">Remove</button>
+                <span className="text-green-700 font-medium">{t('checkout.couponApplied', { code: appliedCoupon.code })}</span>
+                <button onClick={handleRemoveCoupon} className="text-sm text-destructive hover:underline">{t('checkout.remove')}</button>
               </div>
             ) : (
               <div className="flex gap-2">
                 <input
                   type="text"
-                  placeholder="Enter code"
+                  placeholder={t('checkout.enterCode')}
                   value={couponInput}
                   onChange={e => setCouponInput(e.target.value)}
                   className="flex-1 border border-input rounded-lg px-3 py-2 focus:ring-2 focus:ring-ring outline-none text-foreground transition-shadow"
@@ -351,7 +351,7 @@ export default function CheckoutPage() {
                   disabled={applyingCoupon || !couponInput.trim()}
                   className="bg-secondary text-secondary-foreground px-4 py-2 rounded-lg font-medium transition-colors duration-150 hover:bg-secondary/70 active:scale-[0.98] disabled:opacity-50"
                 >
-                  {applyingCoupon ? 'Applying...' : 'Apply'}
+                  {applyingCoupon ? t('checkout.applying') : t('checkout.apply')}
                 </button>
               </div>
             )}
@@ -360,23 +360,23 @@ export default function CheckoutPage() {
           <div className="bg-card p-6 rounded-xl shadow-sm border border-border">
             <div className="space-y-2 mb-6">
               <div className="flex justify-between text-muted-foreground">
-                <span>Subtotal:</span>
+                <span>{t('checkout.subtotal')}</span>
                 <span>{formatCurrency(subtotal)}</span>
               </div>
               {appliedCoupon && (
                 <div className="flex justify-between text-green-600">
-                  <span>Discount ({appliedCoupon.code}):</span>
+                  <span>{t('checkout.discount', { code: appliedCoupon.code })}</span>
                   <span>-{formatCurrency(discountAmount)}</span>
                 </div>
               )}
               {requiresShippingAddress && (
                 <div className="flex justify-between text-muted-foreground">
-                  <span>Shipping:</span>
+                  <span>{t('checkout.shipping')}</span>
                   <span>{formatCurrency(shippingCost)}</span>
                 </div>
               )}
               <div className="flex justify-between font-bold text-xl text-foreground pt-2 border-t border-border">
-                <span>Total:</span>
+                <span>{t('checkout.total')}</span>
                 <span>{formatCurrency(total)}</span>
               </div>
             </div>
@@ -385,7 +385,7 @@ export default function CheckoutPage() {
               disabled={submitting}
               className="w-full bg-primary text-primary-foreground py-3 rounded-xl font-bold text-lg shadow-lg hover:bg-primary/90 hover:shadow-xl active:scale-[0.98] transition-all duration-150 disabled:opacity-70"
             >
-              {submitting ? 'Placing Order...' : 'Place Order'}
+              {submitting ? t('checkout.placing') : t('checkout.placeOrder')}
             </button>
           </div>
         </div>

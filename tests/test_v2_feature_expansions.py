@@ -34,6 +34,43 @@ async def test_v2_store_settings_i18n(async_client: AsyncClient, seed_tokens):
     assert "en" in data["supported_languages"]
     assert data["review_moderation_enabled"] is True
 
+
+@pytest.mark.asyncio
+async def test_v2_store_settings_any_language_and_nav(async_client: AsyncClient, seed_tokens):
+    headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+    response = await async_client.put(
+        "/api/v1/admin/store/tenant-a/settings",
+        headers=headers,
+        json={
+            "supported_languages": ["he", "ja", "pt-BR"],
+            "default_language": "ja",
+            "nav_items": [
+                {"id": "home", "enabled": True, "kind": "home", "label": {"ja": "ホーム", "he": "בית"}},
+                {"id": "shop", "enabled": False, "kind": "shop", "label": {"ja": "ショップ"}},
+                {
+                    "id": "instagram",
+                    "enabled": True,
+                    "kind": "custom",
+                    "href": "https://instagram.com/store",
+                    "label": {"ja": "Instagram"},
+                },
+            ],
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["supported_languages"] == ["he", "ja", "pt-BR"]
+    assert data["default_language"] == "ja"
+    assert data["nav_items"][1]["enabled"] is False
+    assert data["nav_items"][2]["href"] == "https://instagram.com/store"
+
+    bad = await async_client.put(
+        "/api/v1/admin/store/tenant-a/settings",
+        headers=headers,
+        json={"supported_languages": ["English"]},
+    )
+    assert bad.status_code == 422
+
 @pytest.mark.asyncio
 async def test_v2_product_i18n_missing_lang_422(async_client: AsyncClient, seed_tokens):
     headers = {"Authorization": seed_tokens["tenant_admin_a"]}

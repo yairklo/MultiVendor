@@ -1,6 +1,23 @@
+import re
 from typing import Any, List
 
 from fastapi import HTTPException
+
+# BCP-47-ish tags: "he", "en", "pt-BR", "zh-Hans". Sellers pick any language they
+# actually sell in — we don't keep a closed allowlist on the backend.
+LANG_CODE_RE = re.compile(r"^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,3}$")
+
+
+def validate_language_codes(codes: List[str]) -> None:
+    if not codes:
+        raise HTTPException(status_code=422, detail="At least one supported language is required")
+    seen: set[str] = set()
+    for code in codes:
+        if not isinstance(code, str) or not LANG_CODE_RE.match(code):
+            raise HTTPException(status_code=422, detail=f"Invalid language code: {code}")
+        if code in seen:
+            raise HTTPException(status_code=422, detail=f"Duplicate language code: {code}")
+        seen.add(code)
 
 
 def validate_i18n(field_dict: Any, supported_langs: List[str], field_name: str) -> None:

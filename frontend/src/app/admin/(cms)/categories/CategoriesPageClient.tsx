@@ -4,6 +4,9 @@ import React, { useState } from 'react'
 import { useCategories } from '@/hooks/useCategories'
 import { useToast } from '@/context/ToastContext'
 import { useConfirm } from '@/context/ConfirmContext'
+import { useUiLocale } from '@/context/UiLocaleContext'
+import { useStorefrontTheme } from '@/context/StorefrontThemeContext'
+import { resolveI18nText } from '@/lib/i18n-text'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import * as z from 'zod'
@@ -36,6 +39,8 @@ export function CategoriesPageClient({ initialCategories }: { initialCategories:
   const { fetchCategories, createCategory, deleteCategory } = useCategories()
   const { showToast } = useToast()
   const { confirm } = useConfirm()
+  const { t, locale } = useUiLocale()
+  const { supportedLanguages } = useStorefrontTheme()
   const [categories, setCategories] = useState<any[]>(initialCategories)
   const [loading, setLoading] = useState(false)
 
@@ -55,16 +60,18 @@ export function CategoriesPageClient({ initialCategories }: { initialCategories:
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true)
     try {
-      const payload = {
-        name: { en: values.name, he: values.name },
-        slug: values.slug
-      }
+      const name: Record<string, string> = {}
+      const langs = supportedLanguages.length ? supportedLanguages : ['en', 'he']
+      for (const lang of langs) name[lang] = values.name
+      if (!name.en) name.en = values.name
+      if (!name.he) name.he = values.name
+      const payload = { name, slug: values.slug }
       await createCategory(payload)
       form.reset()
       await loadCategories()
-      showToast('Category created', 'success')
+      showToast(t('categories.created'), 'success')
     } catch (error: any) {
-      showToast(error.message || 'Failed to create category', 'error')
+      showToast(error.message || t('categories.createFailed'), 'error')
     } finally {
       setLoading(false)
     }
@@ -72,26 +79,26 @@ export function CategoriesPageClient({ initialCategories }: { initialCategories:
 
   const handleDelete = async (id: number) => {
     const ok = await confirm({
-      title: 'Delete this category?',
-      confirmLabel: 'Delete',
+      title: t('categories.deleteConfirm'),
+      confirmLabel: t('common.delete'),
       variant: 'destructive',
     })
     if (!ok) return
     try {
       await deleteCategory(id)
       await loadCategories()
-      showToast('Category deleted', 'success')
+      showToast(t('categories.deleted'), 'success')
     } catch (error: any) {
-      showToast(error.message || 'Failed to delete category', 'error')
+      showToast(error.message || t('categories.deleteFailed'), 'error')
     }
   }
 
   return (
     <div className="max-w-5xl">
-      <h1 className="font-heading text-3xl font-bold mb-8 text-foreground">Categories</h1>
+      <h1 className="font-heading text-3xl font-bold mb-8 text-foreground">{t('categories.title')}</h1>
 
       <div className="bg-card p-6 rounded-xl shadow-sm border border-border mb-8">
-        <h2 className="text-xl font-bold mb-4 text-foreground">Add New Category</h2>
+        <h2 className="text-xl font-bold mb-4 text-foreground">{t('categories.addNew')}</h2>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -100,7 +107,7 @@ export function CategoriesPageClient({ initialCategories }: { initialCategories:
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Name</FormLabel>
+                    <FormLabel>{t('categories.name')}</FormLabel>
                     <FormControl>
                       <Input placeholder="e.g. Electronics" {...field} />
                     </FormControl>
@@ -113,7 +120,7 @@ export function CategoriesPageClient({ initialCategories }: { initialCategories:
                 name="slug"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Slug</FormLabel>
+                    <FormLabel>{t('categories.slug')}</FormLabel>
                     <FormControl>
                       <Input placeholder="e.g. electronics" {...field} />
                     </FormControl>
@@ -123,7 +130,7 @@ export function CategoriesPageClient({ initialCategories }: { initialCategories:
               />
             </div>
             <Button type="submit" disabled={loading}>
-              {loading ? 'Creating...' : 'Create Category'}
+              {loading ? t('common.creating') : t('categories.create')}
             </Button>
           </form>
         </Form>
@@ -133,28 +140,28 @@ export function CategoriesPageClient({ initialCategories }: { initialCategories:
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Category Name</TableHead>
-              <TableHead>Slug</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>{t('categories.categoryName')}</TableHead>
+              <TableHead>{t('categories.slug')}</TableHead>
+              <TableHead className="text-right">{t('common.actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {categories.length === 0 && (
               <TableRow>
                 <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
-                  No categories found.
+                  {t('categories.none')}
                 </TableCell>
               </TableRow>
             )}
             {categories.map((cat) => (
               <TableRow key={cat.id} className="hover:bg-muted/50 transition-colors">
                 <TableCell className="font-medium">
-                  {typeof cat.name === 'object' ? (cat.name?.he || cat.name?.en || 'Unnamed') : cat.name}
+                  {resolveI18nText(cat.name, locale) || t('products.unnamed')}
                 </TableCell>
                 <TableCell>{cat.slug}</TableCell>
                 <TableCell className="text-right">
                   <Button variant="destructive" size="sm" onClick={() => handleDelete(cat.id)}>
-                    Delete
+                    {t('common.delete')}
                   </Button>
                 </TableCell>
               </TableRow>

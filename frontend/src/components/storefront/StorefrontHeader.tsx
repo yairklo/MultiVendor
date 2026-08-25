@@ -6,6 +6,17 @@ import { usePathname } from 'next/navigation'
 import { Menu, ShoppingBag, X } from 'lucide-react'
 import { useCart } from '@/context/CartContext'
 import { useStorefrontTheme } from '@/context/StorefrontThemeContext'
+import { resolveImageUrl } from '@/lib/media'
+import { resolveNavHref, resolveNavLabel, visibleNavItems } from '@/lib/storefront-nav'
+import { he as heDict } from '@/lib/ui-i18n/he'
+import { en as enDict } from '@/lib/ui-i18n/en'
+import { translate } from '@/lib/ui-i18n/translate'
+import { StorefrontLanguageSwitcher } from './StorefrontLanguageSwitcher'
+
+function chromeT(lang: string) {
+  const dict = lang === 'he' || lang.startsWith('he') ? heDict : enDict
+  return (key: string, vars?: Record<string, string | number>) => translate(dict, key, vars)
+}
 
 export function StorefrontHeader({
   tenantSlug,
@@ -19,56 +30,64 @@ export function StorefrontHeader({
    * first render, breaking hydration. */
   isLoggedIn: boolean
 }) {
-  const { theme, lang, setLang } = useStorefrontTheme()
+  const { theme, lang, setLang, logoUrl, navItems, supportedLanguages } = useStorefrontTheme()
   const { cart, openDrawer } = useCart()
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
   const cartCount = cart?.items.reduce((sum, item) => sum + item.quantity, 0) ?? 0
+  const t = chromeT(lang)
+  const items = visibleNavItems(navItems)
 
-  const navItems = [
-    { label: 'Home', href: `/store/${tenantSlug}` },
-    { label: 'Shop', href: `/store/${tenantSlug}/shop` },
-    { label: 'Marketplace', href: `/marketplace` },
-    { label: 'About', href: `/store/${tenantSlug}/pages/about` },
-    { label: 'Contact', href: `/store/${tenantSlug}/pages/contact` },
-  ]
-
-  const isActive = (href: string) => (href === `/store/${tenantSlug}` ? pathname === href : pathname?.startsWith(href))
+  const isActive = (href: string) => {
+    if (href === `/store/${tenantSlug}`) return pathname === href
+    if (href === '/marketplace') return pathname === href || pathname?.startsWith('/marketplace')
+    return pathname?.startsWith(href)
+  }
 
   return (
     <header className={`sticky top-0 z-40 ${theme.headerClass}`}>
       <div className={`mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 md:px-8 ${theme.headerText}`}>
-        <Link href={`/store/${tenantSlug}`} className={`text-xl font-bold transition-opacity hover:opacity-80 ${theme.headingFont}`}>
-          {storeName}
+        <Link href={`/store/${tenantSlug}`} className={`flex items-center gap-2.5 text-xl font-bold transition-opacity hover:opacity-80 ${theme.headingFont}`}>
+          {logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={resolveImageUrl(logoUrl)}
+              alt={storeName}
+              className="h-9 w-auto max-h-9 max-w-[160px] object-contain"
+            />
+          ) : null}
+          <span className={logoUrl ? 'hidden sm:inline' : undefined}>{storeName}</span>
         </Link>
 
         <nav className="hidden items-center gap-6 md:flex">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`text-sm transition-colors ${isActive(item.href) ? theme.navLinkActiveClass : theme.navLinkClass}`}
-            >
-              {item.label}
-            </Link>
-          ))}
+          {items.map((item) => {
+            const href = resolveNavHref(tenantSlug, item)
+            return (
+              <Link
+                key={item.id}
+                href={href}
+                className={`text-sm transition-colors ${isActive(href) ? theme.navLinkActiveClass : theme.navLinkClass}`}
+              >
+                {resolveNavLabel(item, lang)}
+              </Link>
+            )
+          })}
         </nav>
 
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            data-testid="header-language-switcher"
-            onClick={() => setLang(lang === 'en' ? 'he' : 'en')}
-            className={`hidden text-sm md:inline ${theme.navLinkClass}`}
-          >
-            {lang === 'en' ? 'עברית' : 'English'}
-          </button>
+          <StorefrontLanguageSwitcher
+            testId="header-language-switcher"
+            className={`hidden md:inline ${theme.navLinkClass}`}
+            lang={lang}
+            setLang={setLang}
+            supportedLanguages={supportedLanguages}
+          />
           <Link
             data-testid="account-link"
             href={isLoggedIn ? '/account/orders' : '/login'}
             className={`hidden text-sm md:inline ${theme.navLinkClass}`}
           >
-            {isLoggedIn ? 'My Orders' : 'Login'}
+            {isLoggedIn ? t('storefront.myOrders') : t('storefront.login')}
           </Link>
           <button
             type="button"
@@ -77,11 +96,11 @@ export function StorefrontHeader({
             className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold transition-colors duration-150 active:scale-[0.98] ${theme.primaryButtonClass}`}
           >
             <ShoppingBag className="h-4 w-4" />
-            <span>{lang === 'he' ? `עגלה (${cartCount})` : `Cart (${cartCount})`}</span>
+            <span>{t('storefront.cart', { count: cartCount })}</span>
           </button>
           <button
             type="button"
-            aria-label="Toggle menu"
+            aria-label={t('storefront.toggleMenu')}
             className={`md:hidden transition-opacity hover:opacity-70 ${theme.headerText}`}
             onClick={() => setMobileOpen((v) => !v)}
           >
@@ -92,29 +111,28 @@ export function StorefrontHeader({
 
       {mobileOpen && (
         <nav className={`flex flex-col gap-1 border-t border-current/10 px-4 py-3 md:hidden animate-in fade-in-0 slide-in-from-top-2 duration-200 ${theme.headerText}`}>
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setMobileOpen(false)}
-              className={`rounded-lg px-2 py-2 text-sm ${isActive(item.href) ? theme.navLinkActiveClass : theme.navLinkClass}`}
-            >
-              {item.label}
-            </Link>
-          ))}
-          <button
-            type="button"
-            onClick={() => setLang(lang === 'en' ? 'he' : 'en')}
-            className={`rounded-lg px-2 py-2 text-left text-sm ${theme.navLinkClass}`}
-          >
-            {lang === 'en' ? 'עברית' : 'English'}
-          </button>
+          {items.map((item) => {
+            const href = resolveNavHref(tenantSlug, item)
+            return (
+              <Link
+                key={item.id}
+                href={href}
+                onClick={() => setMobileOpen(false)}
+                className={`rounded-lg px-2 py-2 text-sm ${isActive(href) ? theme.navLinkActiveClass : theme.navLinkClass}`}
+              >
+                {resolveNavLabel(item, lang)}
+              </Link>
+            )
+          })}
+          <div className={`rounded-lg px-2 py-2 ${theme.navLinkClass}`}>
+            <StorefrontLanguageSwitcher className="w-full" lang={lang} setLang={setLang} supportedLanguages={supportedLanguages} />
+          </div>
           <Link
             href={isLoggedIn ? '/account/orders' : '/login'}
             onClick={() => setMobileOpen(false)}
             className={`rounded-lg px-2 py-2 text-sm ${theme.navLinkClass}`}
           >
-            {isLoggedIn ? 'My Orders' : 'Login'}
+            {isLoggedIn ? t('storefront.myOrders') : t('storefront.login')}
           </Link>
         </nav>
       )}
