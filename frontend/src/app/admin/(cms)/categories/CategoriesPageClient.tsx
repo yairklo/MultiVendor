@@ -136,13 +136,13 @@ export function CategoriesPageClient({ initialCategories }: { initialCategories:
         </Form>
       </div>
 
-      <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
+      <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>{t('categories.categoryName')}</TableHead>
               <TableHead>{t('categories.slug')}</TableHead>
-              <TableHead className="text-right">{t('common.actions')}</TableHead>
+              <TableHead className="text-end">{t('common.actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -159,7 +159,7 @@ export function CategoriesPageClient({ initialCategories }: { initialCategories:
                   {resolveI18nText(cat.name, locale) || t('products.unnamed')}
                 </TableCell>
                 <TableCell>{cat.slug}</TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-end whitespace-nowrap">
                   <Button variant="destructive" size="sm" onClick={() => handleDelete(cat.id)}>
                     {t('common.delete')}
                   </Button>

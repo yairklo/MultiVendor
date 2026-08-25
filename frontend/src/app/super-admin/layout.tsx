@@ -38,8 +38,14 @@ function NavLinks() {
 }
 
 export default function SuperAdminLayout({ children }: { children: React.ReactNode }) {
+  // The console's copy is English-only (no locale switcher, unlike the
+  // storefront) but the root <html> is dir="rtl" lang="he" for the Hebrew
+  // storefront. Left inherited, that RTL direction flips this layout's flex
+  // order -- the sidebar renders on the right with its border-r drawn at the
+  // outer edge of the screen instead of between the sidebar and content.
+  // Pin this subtree to ltr until the console itself is localized.
   return (
-    <div className="flex min-h-screen bg-background">
+    <div dir="ltr" lang="en" className="flex min-h-screen bg-background">
       <aside className="hidden w-64 flex-col border-r border-sidebar-border bg-sidebar md:flex">
         <div className="flex h-16 items-center gap-2 border-b border-sidebar-border px-6">
           <Shield className="h-5 w-5 text-primary" strokeWidth={2} />
@@ -56,7 +62,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
         </div>
       </aside>
 
-      <main className="flex h-screen flex-1 flex-col overflow-hidden">
+      <main className="flex h-screen min-w-0 flex-1 flex-col overflow-hidden">
         <AdminMobileNav
           title="Platform"
           navContent={<NavLinks />}
@@ -70,7 +76,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
             </AdminLogoutButton>
           }
         />
-        <div className="flex min-h-0 flex-1 flex-col overflow-auto p-6 md:p-8">{children}</div>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto p-6 md:p-8">{children}</div>
       </main>
     </div>
   )

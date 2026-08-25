@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import {
   MarketplaceCart,
   addItemToMarketplaceCart,
@@ -15,6 +15,7 @@ interface MarketplaceCartContextValue {
   cart: MarketplaceCart | null
   loading: boolean
   isOpen: boolean
+  pendingItemIds: Set<number>
   openDrawer: () => void
   closeDrawer: () => void
   addItem: (variantId: number, quantity?: number) => Promise<void>
@@ -36,6 +37,8 @@ export function MarketplaceCartProvider({ children }: { children: React.ReactNod
   const [cart, setCart] = useState<MarketplaceCart | null>(null)
   const [loading, setLoading] = useState(true)
   const [isOpen, setIsOpen] = useState(false)
+  const [pendingItemIds, setPendingItemIds] = useState<Set<number>>(new Set())
+  const pendingRef = useRef<Set<number>>(new Set())
 
   const refresh = useCallback(async () => {
     const active = getActiveMarketplaceCart()
@@ -66,32 +69,50 @@ export function MarketplaceCartProvider({ children }: { children: React.ReactNod
     await refresh()
   }, [refresh])
 
+  const withItemLock = useCallback(async (itemId: number, run: () => Promise<void>) => {
+    if (pendingRef.current.has(itemId)) return
+    pendingRef.current.add(itemId)
+    setPendingItemIds(new Set(pendingRef.current))
+    try {
+      await run()
+    } finally {
+      pendingRef.current.delete(itemId)
+      setPendingItemIds(new Set(pendingRef.current))
+    }
+  }, [])
+
   const incrementItem = useCallback(async (itemId: number) => {
-    const active = getActiveMarketplaceCart()
-    const item = cart?.items.find(i => i.id === itemId)
-    if (!active || !item) return
-    await updateMarketplaceCartItemQuantity(active.cartId, itemId, item.quantity + 1)
-    await refresh()
-  }, [cart, refresh])
+    await withItemLock(itemId, async () => {
+      const active = getActiveMarketplaceCart()
+      const item = cart?.items.find(i => i.id === itemId)
+      if (!active || !item) return
+      await updateMarketplaceCartItemQuantity(active.cartId, itemId, item.quantity + 1)
+      await refresh()
+    })
+  }, [cart, refresh, withItemLock])
 
   const decrementItem = useCallback(async (itemId: number) => {
-    const active = getActiveMarketplaceCart()
-    const item = cart?.items.find(i => i.id === itemId)
-    if (!active || !item) return
-    if (item.quantity <= 1) {
-      await removeMarketplaceCartItem(active.cartId, itemId)
-    } else {
-      await updateMarketplaceCartItemQuantity(active.cartId, itemId, item.quantity - 1)
-    }
-    await refresh()
-  }, [cart, refresh])
+    await withItemLock(itemId, async () => {
+      const active = getActiveMarketplaceCart()
+      const item = cart?.items.find(i => i.id === itemId)
+      if (!active || !item) return
+      if (item.quantity <= 1) {
+        await removeMarketplaceCartItem(active.cartId, itemId)
+      } else {
+        await updateMarketplaceCartItemQuantity(active.cartId, itemId, item.quantity - 1)
+      }
+      await refresh()
+    })
+  }, [cart, refresh, withItemLock])
 
   const removeItem = useCallback(async (itemId: number) => {
-    const active = getActiveMarketplaceCart()
-    if (!active) return
-    await removeMarketplaceCartItem(active.cartId, itemId)
-    await refresh()
-  }, [refresh])
+    await withItemLock(itemId, async () => {
+      const active = getActiveMarketplaceCart()
+      if (!active) return
+      await removeMarketplaceCartItem(active.cartId, itemId)
+      await refresh()
+    })
+  }, [refresh, withItemLock])
 
   const clear = useCallback(() => {
     clearStoredMarketplaceCart()
@@ -102,6 +123,7 @@ export function MarketplaceCartProvider({ children }: { children: React.ReactNod
     cart,
     loading,
     isOpen,
+    pendingItemIds,
     openDrawer: () => setIsOpen(true),
     closeDrawer: () => setIsOpen(false),
     addItem,

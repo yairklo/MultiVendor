@@ -7,11 +7,13 @@ import { useToast } from '@/context/ToastContext'
 import { useConfirm } from '@/context/ConfirmContext'
 import { useCurrency } from '@/hooks/useCurrency'
 import { useUiLocale } from '@/context/UiLocaleContext'
+import { formatUiDateTime } from '@/lib/utils'
+import { resolveImageUrl } from '@/lib/media'
 
 export function OrdersList({ initialOrders, initialError }: { initialOrders: any[]; initialError: string }) {
   const { fetchOrders, cancelOrder, payOrder } = useOrders()
   const { formatCurrency } = useCurrency()
-  const { t } = useUiLocale()
+  const { t, locale } = useUiLocale()
   const { showToast } = useToast()
   const { confirm } = useConfirm()
   const [orders, setOrders] = useState<any[]>(initialOrders)
@@ -88,7 +90,7 @@ export function OrdersList({ initialOrders, initialError }: { initialOrders: any
                 <div className="flex justify-between items-start mb-3">
                   <div>
                     <div className="font-bold">#{order.order_number}</div>
-                    <div className="text-sm text-muted-foreground">{new Date(order.created_at).toLocaleString()}</div>
+                    <div className="text-sm text-muted-foreground">{formatUiDateTime(order.created_at, locale)}</div>
                   </div>
                   <span className={`px-2 py-1 rounded-full text-xs font-semibold ${statusClass[order.status] || 'bg-muted text-muted-foreground'}`}>
                     {statusLabel[order.status] ? t(`orderStatus.${order.status}`) : order.status}
@@ -97,9 +99,21 @@ export function OrdersList({ initialOrders, initialError }: { initialOrders: any
 
                 <div className="space-y-1 mb-3 text-sm text-foreground/80">
                   {order.items?.map((item: any) => (
-                    <div key={item.id} className="flex justify-between">
+                    <div key={item.id} className="flex justify-between gap-3 items-start">
                       <span>{item.product_name} &times; {item.quantity}</span>
-                      <span>{formatCurrency(Number(item.unit_price * item.quantity))}</span>
+                      <div className="flex items-center gap-3 shrink-0">
+                        {item.download_url && (
+                          <a
+                            href={resolveImageUrl(item.download_url)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm font-medium text-primary underline-offset-4 transition-colors duration-150 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+                          >
+                            {t('account.downloadFile')}
+                          </a>
+                        )}
+                        <span>{formatCurrency(Number(item.unit_price * item.quantity))}</span>
+                      </div>
                     </div>
                   ))}
                 </div>

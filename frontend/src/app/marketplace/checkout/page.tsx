@@ -9,6 +9,7 @@ import { useMarketplaceCart } from '@/context/MarketplaceCartContext'
 import { useCurrency } from '@/hooks/useCurrency'
 import { orderStatusClass, orderStatusLabel } from '@/lib/orderStatus'
 import { StripeCardForm } from '@/components/checkout/StripeCardForm'
+import { DigitalDownloads } from '@/components/orders/DigitalDownloads'
 import { useUiLocale } from '@/context/UiLocaleContext'
 
 interface SubOrder {
@@ -18,6 +19,7 @@ interface SubOrder {
   subtotal: number
   total_amount: number
   status: string
+  items?: { id: number; product_name?: string; download_url?: string | null }[]
 }
 
 interface MasterOrder {
@@ -64,7 +66,7 @@ export default function MarketplaceCheckoutPage() {
   const activeCart = getActiveMarketplaceCart()
   const subtotal = cart ? Number(cart.subtotal) : 0
 
-  const isDigitalOnly = !!cart && cart.items.length > 0 && cart.items.every(item => item.product_type !== 'physical')
+  const isDigitalOnly = !!cart && cart.items.length > 0 && cart.items.every(item => item.product_type === 'digital')
   const requiresShippingAddress = !!cart && cart.items.length > 0 && !isDigitalOnly
 
   const handleCheckout = async () => {
@@ -180,6 +182,11 @@ export default function MarketplaceCheckoutPage() {
             </div>
           ))}
         </div>
+        <DigitalDownloads
+          items={masterOrder.sub_orders.flatMap((so) => so.items || [])}
+          heading={t('checkout.downloadsHeading')}
+          label={t('checkout.downloadFile')}
+        />
         <div className="mt-6 flex gap-4">
           <button
             onClick={() => router.push('/account/orders')}
@@ -343,6 +350,11 @@ export default function MarketplaceCheckoutPage() {
                 </div>
               </div>
             </div>
+          )}
+          {isDigitalOnly && (
+            <p className="rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
+              {t('checkout.digitalNoShipping')}
+            </p>
           )}
         </div>
 

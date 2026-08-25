@@ -6,13 +6,67 @@ import { getCookie } from 'cookies-next'
 import { apiClient, ApiError } from '@/lib/api/apiClient'
 import { useCart } from '@/context/CartContext'
 import { useToast } from '@/context/ToastContext'
-import { totalStock } from '@/lib/stock'
+import { totalStock, isDigitalProduct } from '@/lib/stock'
 import { StarRating } from '@/components/ui/star-rating'
 import { Star } from 'lucide-react'
 import { useStorefrontTheme } from '@/context/StorefrontThemeContext'
 import { useCurrency } from '@/hooks/useCurrency'
 import { resolveImageUrl } from '@/lib/media'
 import { resolveI18nText } from '@/lib/i18n-text'
+import { formatUiDate } from '@/lib/utils'
+
+const STRINGS = {
+  en: {
+    backToStore: '← Back to store',
+    noImage: 'No image',
+    outOfStock: 'Out of stock',
+    inStock: (n: number) => `${n} in stock`,
+    digitalDelivery: 'Digital product — delivered instantly, no shipping.',
+    decreaseQuantity: 'Decrease quantity',
+    increaseQuantity: 'Increase quantity',
+    quantity: 'Quantity',
+    adding: 'Adding...',
+    addToCart: 'Add to Cart',
+    reviews: 'Reviews',
+    rateStars: (n: number) => `Rate ${n} stars`,
+    sharePlaceholder: 'Share your thoughts about this product...',
+    submitting: 'Submitting...',
+    submitReview: 'Submit Review',
+    signIn: 'Sign in',
+    signInToReview: 'to write a review.',
+    noReviewsYet: 'No reviews yet.',
+    verifiedPurchase: 'Verified Purchase',
+    reviewWord: (n: number) => (n === 1 ? 'review' : 'reviews'),
+    thanksForReview: 'Thanks for your review!',
+    alreadyReviewed: "You've already reviewed this product.",
+    failedToSubmitReview: 'Failed to submit review',
+  },
+  he: {
+    backToStore: '→ חזרה לחנות',
+    noImage: 'אין תמונה',
+    outOfStock: 'אזל מהמלאי',
+    inStock: (n: number) => `${n} במלאי`,
+    digitalDelivery: 'מוצר דיגיטלי — מסופק מיד, בלי משלוח.',
+    decreaseQuantity: 'הקטנת כמות',
+    increaseQuantity: 'הגדלת כמות',
+    quantity: 'כמות',
+    adding: 'מוסיף…',
+    addToCart: 'הוסף לעגלה',
+    reviews: 'ביקורות',
+    rateStars: (n: number) => `דירוג ${n} כוכבים`,
+    sharePlaceholder: 'שתפו את דעתכם על המוצר...',
+    submitting: 'שולח…',
+    submitReview: 'שליחת ביקורת',
+    signIn: 'התחברות',
+    signInToReview: 'כדי לכתוב ביקורת.',
+    noReviewsYet: 'אין עדיין ביקורות.',
+    verifiedPurchase: 'רכישה מאומתת',
+    reviewWord: (n: number) => (n === 1 ? 'ביקורת' : 'ביקורות'),
+    thanksForReview: 'תודה על הביקורת!',
+    alreadyReviewed: 'כבר כתבתם ביקורת על המוצר הזה.',
+    failedToSubmitReview: 'שליחת הביקורת נכשלה',
+  },
+}
 
 export function ProductDetailView({
   tenantSlug,
@@ -35,6 +89,7 @@ export function ProductDetailView({
   const { showToast } = useToast()
   const { theme, lang } = useStorefrontTheme()
   const { formatCurrency } = useCurrency()
+  const t = STRINGS[lang as keyof typeof STRINGS] || STRINGS.en
 
   const loadReviews = () => {
     apiClient(`/api/v1/store/${tenantSlug}/products/${slug}/reviews`)
@@ -50,15 +105,15 @@ export function ProductDetailView({
         method: 'POST',
         body: JSON.stringify({ product_id: product.id, rating: reviewRating, comment: reviewComment || undefined }),
       })
-      showToast('Thanks for your review!', 'success')
+      showToast(t.thanksForReview, 'success')
       setReviewComment('')
       setReviewRating(5)
       loadReviews()
     } catch (e: any) {
       if (e instanceof ApiError && e.status === 400) {
-        showToast("You've already reviewed this product.", 'error')
+        showToast(t.alreadyReviewed, 'error')
       } else {
-        showToast(e.message || 'Failed to submit review', 'error')
+        showToast(e.message || t.failedToSubmitReview, 'error')
       }
     } finally {
       setSubmittingReview(false)
@@ -66,7 +121,8 @@ export function ProductDetailView({
   }
 
   const stock = totalStock(product.variants)
-  const stockKnown = Number.isFinite(stock)
+  const digital = isDigitalProduct(product)
+  const stockKnown = !digital && Number.isFinite(stock)
   const outOfStock = stockKnown && stock <= 0
   const name = resolveI18nText(product.name, lang)
   const description = resolveI18nText(product.description, lang)
@@ -92,7 +148,7 @@ export function ProductDetailView({
     <div className="p-4 bg-gray-50 min-h-screen text-gray-900">
       <div className="max-w-4xl mx-auto">
         <Link href={`/store/${tenantSlug}`} className="inline-flex items-center text-blue-600 transition-colors hover:text-blue-700 hover:underline">
-          &larr; Back to store
+          {t.backToStore}
         </Link>
 
         <div className="mt-4 bg-white rounded-xl shadow-sm border border-gray-100 p-6 grid grid-cols-1 md:grid-cols-2 gap-8 transition-shadow duration-300 hover:shadow-md">
@@ -101,7 +157,7 @@ export function ProductDetailView({
               <img src={resolveImageUrl(images[0])} alt={name} className="w-full h-80 object-cover rounded-lg" />
             ) : (
               <div className="w-full h-80 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
-                No image
+                {t.noImage}
               </div>
             )}
           </div>
@@ -112,16 +168,18 @@ export function ProductDetailView({
               <div className="flex items-center gap-2 mb-2">
                 <StarRating rating={product.average_rating} />
                 <span className="text-sm text-gray-500">
-                  {product.average_rating} ({product.review_count} review{product.review_count === 1 ? '' : 's'})
+                  {product.average_rating} ({product.review_count} {t.reviewWord(product.review_count)})
                 </span>
               </div>
             )}
             <p className="text-xl text-gray-700 mb-4">{formatCurrency(product.base_price)}</p>
             {description && <p className="text-gray-600 mb-4 leading-relaxed">{description}</p>}
 
-            {stockKnown && (
+            {digital ? (
+              <p className="text-sm mb-4 text-muted-foreground">{t.digitalDelivery}</p>
+            ) : stockKnown && (
               <p className={`text-sm mb-4 ${outOfStock ? 'text-red-600 font-medium' : 'text-gray-400'}`}>
-                {outOfStock ? 'Out of stock' : `${stock} in stock`}
+                {outOfStock ? t.outOfStock : t.inStock(stock)}
               </p>
             )}
 
@@ -129,7 +187,7 @@ export function ProductDetailView({
               <div className="flex items-center gap-2 mb-4">
                 <button
                   type="button"
-                  aria-label="Decrease quantity"
+                  aria-label={t.decreaseQuantity}
                   onClick={() => setQuantity(q => clampQuantity(q - 1))}
                   className="w-8 h-8 border rounded-lg text-gray-700 transition-colors hover:bg-gray-100 active:scale-95"
                 >
@@ -137,7 +195,7 @@ export function ProductDetailView({
                 </button>
                 <input
                   type="number"
-                  aria-label="Quantity"
+                  aria-label={t.quantity}
                   min={1}
                   max={stockKnown ? stock : undefined}
                   value={quantity}
@@ -146,7 +204,7 @@ export function ProductDetailView({
                 />
                 <button
                   type="button"
-                  aria-label="Increase quantity"
+                  aria-label={t.increaseQuantity}
                   onClick={() => setQuantity(q => clampQuantity(q + 1))}
                   className="w-8 h-8 border rounded-lg text-gray-700 transition-colors hover:bg-gray-100 active:scale-95"
                 >
@@ -160,13 +218,13 @@ export function ProductDetailView({
               disabled={outOfStock || adding}
               className={`mt-auto w-full px-4 py-3 font-medium transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${theme.primaryButtonClass}`}
             >
-              {outOfStock ? 'Out of stock' : adding ? 'Adding...' : 'Add to Cart'}
+              {outOfStock ? t.outOfStock : adding ? t.adding : t.addToCart}
             </button>
           </div>
         </div>
 
         <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-xl font-bold mb-4">Reviews</h2>
+          <h2 className="text-xl font-bold mb-4">{t.reviews}</h2>
 
           {getCookie('token') ? (
             <form onSubmit={handleSubmitReview} className="mb-6 pb-6 border-b space-y-3">
@@ -176,7 +234,7 @@ export function ProductDetailView({
                     key={n}
                     type="button"
                     onClick={() => setReviewRating(n)}
-                    aria-label={`Rate ${n} stars`}
+                    aria-label={t.rateStars(n)}
                     className="transition-transform hover:scale-110"
                   >
                     <Star
@@ -190,7 +248,7 @@ export function ProductDetailView({
               <textarea
                 value={reviewComment}
                 onChange={e => setReviewComment(e.target.value)}
-                placeholder="Share your thoughts about this product..."
+                placeholder={t.sharePlaceholder}
                 className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 outline-none transition-shadow"
                 rows={3}
               />
@@ -199,17 +257,17 @@ export function ProductDetailView({
                 disabled={submittingReview}
                 className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium transition-colors duration-150 hover:bg-gray-800 active:scale-[0.98] disabled:opacity-50"
               >
-                {submittingReview ? 'Submitting...' : 'Submit Review'}
+                {submittingReview ? t.submitting : t.submitReview}
               </button>
             </form>
           ) : (
             <p className="text-sm text-gray-500 mb-6 pb-6 border-b">
-              <Link href="/login" className="text-blue-600 transition-colors hover:text-blue-700 hover:underline">Sign in</Link> to write a review.
+              <Link href="/login" className="text-blue-600 transition-colors hover:text-blue-700 hover:underline">{t.signIn}</Link> {t.signInToReview}
             </p>
           )}
 
           {reviews.length === 0 ? (
-            <p className="text-gray-500 text-sm">No reviews yet.</p>
+            <p className="text-gray-500 text-sm">{t.noReviewsYet}</p>
           ) : (
             <div className="space-y-4">
               {reviews.map((r: any) => (
@@ -218,11 +276,11 @@ export function ProductDetailView({
                     <StarRating rating={r.rating} size={14} />
                     <span className="font-medium text-sm">{r.customer_name}</span>
                     {r.is_verified_buyer && (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">Verified Purchase</span>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">{t.verifiedPurchase}</span>
                     )}
                   </div>
                   {r.comment && <p className="text-gray-600 text-sm">{r.comment}</p>}
-                  <p className="text-xs text-gray-400 mt-1">{new Date(r.created_at).toLocaleDateString()}</p>
+                  <p className="text-xs text-gray-400 mt-1">{formatUiDate(r.created_at, lang === 'en' ? 'en' : 'he')}</p>
                 </div>
               ))}
             </div>

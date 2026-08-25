@@ -72,7 +72,7 @@ export function UsersClient({ initialUsers }: { initialUsers: PlatformUser[] }) 
               <TableHead>Stores</TableHead>
               <TableHead>Last login</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead className="text-end">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -106,7 +106,7 @@ export function UsersClient({ initialUsers }: { initialUsers: PlatformUser[] }) 
                     {user.is_active ? 'Active' : 'Disabled'}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-end whitespace-nowrap">
                   {user.role === 'super_admin' ? (
                     <span className="text-xs text-muted-foreground">Protected</span>
                   ) : (

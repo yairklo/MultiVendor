@@ -1,3 +1,5 @@
+import { formatUiDate, formatUiDateTime } from '@/lib/utils'
+
 export type TenantAdmin = {
   id: number
   name: string
@@ -78,6 +80,8 @@ export type AuditLogItem = {
   id: number
   tenant_id: number | null
   user_id: number | null
+  actor_name: string | null
+  actor_email: string | null
   action: string
   resource: string
   ip_address: string | null
@@ -90,23 +94,11 @@ export function formatPlatformMoney(amount: number) {
 }
 
 export function formatDate(value: string | null | undefined) {
-  if (!value) return '—'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '—'
-  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+  return formatUiDate(value, 'en')
 }
 
 export function formatDateTime(value: string | null | undefined) {
-  if (!value) return '—'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '—'
-  return date.toLocaleString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  return formatUiDateTime(value, 'en')
 }
 
 export const nativeSelectClass =

@@ -7,6 +7,7 @@ import { StarRating } from '@/components/ui/star-rating'
 import { resolveI18nText } from '@/lib/i18n-text'
 import { useMarketplaceCart } from '@/context/MarketplaceCartContext'
 import { resolveImageUrl } from '@/lib/media'
+import { isDigitalProduct } from '@/lib/stock'
 
 const STRINGS = {
   en: { addToCart: 'Add to Cart', outOfStock: 'Out of stock', adding: 'Adding…' },
@@ -38,7 +39,7 @@ export function MarketplaceProductCard({
 
   const variant = product.variants?.[0]
   const stockKnown = Number.isFinite(variant?.stock_quantity)
-  const outOfStock = stockKnown && variant.stock_quantity <= 0
+  const outOfStock = !isDigitalProduct(product) && stockKnown && variant.stock_quantity <= 0
 
   const handleAddToCart = async () => {
     if (!variant?.id) return

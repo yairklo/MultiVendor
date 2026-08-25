@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ExternalLink, Plus, Search, Store } from 'lucide-react'
 import { apiClient } from '@/lib/api/apiClient'
 import { useToast } from '@/context/ToastContext'
+import { useConfirm } from '@/context/ConfirmContext'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -43,6 +44,7 @@ export function TenantsClient({
   plans: SubscriptionPlanAdmin[]
 }) {
   const { showToast } = useToast()
+  const { confirm } = useConfirm()
   const [tenants, setTenants] = useState(initialTenants)
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -75,6 +77,16 @@ export function TenantsClient({
 
   async function toggleStatus(tenant: TenantAdmin) {
     const next = tenant.status === 'active' ? 'suspended' : 'active'
+    if (next === 'suspended') {
+      const ok = await confirm({
+        title: `Suspend ${tenant.name}?`,
+        description: 'The store and its storefront will stop accepting orders until it is reactivated.',
+        confirmLabel: 'Suspend store',
+        cancelLabel: 'Cancel',
+        variant: 'destructive',
+      })
+      if (!ok) return
+    }
     setBusyId(tenant.id)
     try {
       await apiClient(`/api/v1/super-admin/tenants/${tenant.id}/status?status=${next}`, { method: 'PATCH' })
@@ -173,7 +185,7 @@ export function TenantsClient({
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="tenant_slug">Slug</Label>
-              <Input id="tenant_slug" value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} required pattern="^[a-z0-9-]+$" placeholder="acme-shop" />
+              <Input id="tenant_slug" value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} required pattern="[a-z0-9-]+" placeholder="acme-shop" />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="tenant_plan">Plan</Label>
@@ -250,7 +262,7 @@ export function TenantsClient({
               <TableHead>Marketplace</TableHead>
               <TableHead>Payouts</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead className="text-end">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -306,7 +318,7 @@ export function TenantsClient({
                 <TableCell>
                   <Badge variant={statusVariant(tenant.status)}>{tenant.status}</Badge>
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-end">
                   <div className="flex justify-end gap-2">
                     {isUsableTenantSlug(tenant.slug) && (
                     <Link

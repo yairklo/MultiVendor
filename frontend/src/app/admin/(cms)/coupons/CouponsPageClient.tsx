@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/table'
 import { useCurrency } from '@/hooks/useCurrency'
 import { useUiLocale } from '@/context/UiLocaleContext'
+import { formatUiDate } from '@/lib/utils'
 
 const formSchema = z.object({
   code: z.string().min(3, 'At least 3 characters').max(20).regex(/^[A-Za-z0-9]+$/, 'Alphanumeric only'),
@@ -41,7 +42,7 @@ const formSchema = z.object({
 export function CouponsPageClient({ initialCoupons }: { initialCoupons: any[] }) {
   const { fetchCoupons, createCoupon, deleteCoupon } = useCoupons()
   const { formatCurrency } = useCurrency()
-  const { t } = useUiLocale()
+  const { t, locale } = useUiLocale()
   const { showToast } = useToast()
   const { confirm } = useConfirm()
   const [coupons, setCoupons] = useState<any[]>(initialCoupons)
@@ -206,7 +207,7 @@ export function CouponsPageClient({ initialCoupons }: { initialCoupons: any[] })
         </Form>
       </div>
 
-      <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
+      <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>
@@ -214,7 +215,7 @@ export function CouponsPageClient({ initialCoupons }: { initialCoupons: any[] })
               <TableHead>{t('coupons.discount')}</TableHead>
               <TableHead>{t('coupons.used')}</TableHead>
               <TableHead>{t('coupons.validUntil')}</TableHead>
-              <TableHead className="text-right">{t('common.actions')}</TableHead>
+              <TableHead className="text-end">{t('common.actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -232,8 +233,8 @@ export function CouponsPageClient({ initialCoupons }: { initialCoupons: any[] })
                   {coupon.discount_type === 'percentage' ? `${coupon.discount_val}%` : formatCurrency(coupon.discount_val)}
                 </TableCell>
                 <TableCell>{coupon.used_count}</TableCell>
-                <TableCell>{new Date(coupon.valid_until).toLocaleDateString()}</TableCell>
-                <TableCell className="text-right">
+                <TableCell>{formatUiDate(coupon.valid_until, locale)}</TableCell>
+                <TableCell className="text-end whitespace-nowrap">
                   <Button variant="destructive" size="sm" onClick={() => handleDelete(coupon.id)}>
                     {t('common.delete')}
                   </Button>

@@ -1,5 +1,5 @@
 import uuid
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal
 from typing import Optional
 from uuid import UUID
 from collections import defaultdict
@@ -12,7 +12,7 @@ from app.core.cart_token import issue_guest_cart_token, verify_guest_cart_token
 from app.db.session import redis_client
 from app.db.tenant_context import platform_plane
 from app.models.tenant import Tenant
-from app.models.catalog import ProductVariant, Product
+from app.models.catalog import ProductVariant, Product, tracks_inventory
 from app.models.order import MarketplaceCartItem, MasterOrder, Order, OrderItem
 from app.models.user import UserStoreMembership
 from app.schemas.marketplace_schemas import (
@@ -20,24 +20,17 @@ from app.schemas.marketplace_schemas import (
     MarketplaceCheckoutRequest, MasterOrderResponse,
 )
 from app.schemas.order_schemas import OrderResponse, OrderItemResponse, PaymentIntentInfo
-from app.services.checkout_service import CartCookieAction
+from app.services.checkout_service import (
+    CartCookieAction, PLATFORM_COMMISSION_RATE, ensure_stock, round2 as _round2,
+)
+from app.services.order_service import ORDER_ITEMS_WITH_FILE, order_item_download_url
 from app.services.payments import get_payment_provider, get_or_create_payment_intent
-
-# Flat platform cut of each vendor's sub-order subtotal. A fixed constant
-# rather than a per-tenant/per-plan rate table -- good enough for the MVP
-# split; making it configurable per tenant is a natural next step, not
-# something the marketplace checkout path needs to block on.
-PLATFORM_COMMISSION_RATE = Decimal("0.10")
 
 
 def _resolve_product_name(name) -> str:
     if isinstance(name, dict):
         return name.get('en') or next(iter(name.values()), '')
     return str(name)
-
-
-def _round2(value: Decimal) -> Decimal:
-    return value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
 async def _marketplace_cart_has_items(cart_id: str, db: AsyncSession) -> bool:
@@ -75,6 +68,7 @@ async def add_to_marketplace_cart_service(
     variant_result = await db.execute(
         select(ProductVariant)
         .join(Product)
+        .options(selectinload(ProductVariant.product))
         .where(
             ProductVariant.id == req.variant_id,
             Product.is_active == True,
@@ -84,8 +78,7 @@ async def add_to_marketplace_cart_service(
     if not variant:
         raise HTTPException(status_code=404, detail="Variant not found or product inactive")
 
-    if variant.stock_quantity < req.quantity:
-        raise HTTPException(status_code=400, detail="Not enough stock")
+    ensure_stock(variant, req.quantity)
 
     item_result = await db.execute(
         select(MarketplaceCartItem).where(
@@ -195,10 +188,14 @@ async def update_marketplace_cart_item_service(
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
 
-    variant_result = await db.execute(select(ProductVariant).where(ProductVariant.id == item.variant_id))
+    variant_result = await db.execute(
+        select(ProductVariant)
+        .options(selectinload(ProductVariant.product))
+        .where(ProductVariant.id == item.variant_id)
+    )
     variant = variant_result.scalar_one_or_none()
-    if variant and variant.stock_quantity < quantity:
-        raise HTTPException(status_code=400, detail="Not enough stock")
+    if variant:
+        ensure_stock(variant, quantity)
 
     item.quantity = quantity
     await db.commit()
@@ -223,6 +220,7 @@ def _order_to_response(order: Order, items: list[OrderItem]) -> OrderResponse:
         items=[OrderItemResponse(
             id=i.id, variant_id=i.variant_id, product_name=i.product_name,
             sku=i.sku, unit_price=i.unit_price, quantity=i.quantity,
+            download_url=order_item_download_url(order, i),
         ) for i in items],
     )
 
@@ -237,7 +235,7 @@ async def get_master_order_service(master_order_id: int, user_id: int, db: Async
         raise HTTPException(status_code=404, detail="Order not found")
 
     orders_result = await db.execute(
-        select(Order).where(Order.master_order_id == master_order_id).options(selectinload(Order.items))
+        select(Order).where(Order.master_order_id == master_order_id).options(ORDER_ITEMS_WITH_FILE)
     )
     sub_orders = orders_result.scalars().all()
 
@@ -265,7 +263,7 @@ async def pay_master_order_service(master_order_id: int, user_id: int, db: Async
         raise HTTPException(status_code=404, detail="Order not found")
 
     orders_result = await db.execute(
-        select(Order).where(Order.master_order_id == master_order_id).options(selectinload(Order.items))
+        select(Order).where(Order.master_order_id == master_order_id).options(ORDER_ITEMS_WITH_FILE)
     )
     sub_orders = orders_result.scalars().all()
     if not sub_orders:
@@ -279,6 +277,10 @@ async def pay_master_order_service(master_order_id: int, user_id: int, db: Async
             if order.status == 'pending_payment':
                 order.status = 'processing'
         await db.commit()
+        orders_result = await db.execute(
+            select(Order).where(Order.master_order_id == master_order_id).options(ORDER_ITEMS_WITH_FILE)
+        )
+        sub_orders = orders_result.scalars().all()
     else:
         # Real gateway: one PaymentIntent for the whole multi-vendor cart,
         # reused on a retried call rather than creating a second one.
@@ -396,8 +398,14 @@ async def marketplace_checkout_service(
                 })
 
             for variant_id, qty in consolidated.items():
-                variant_result = await db.execute(select(ProductVariant).where(ProductVariant.id == variant_id))
+                variant_result = await db.execute(
+                    select(ProductVariant)
+                    .options(selectinload(ProductVariant.product))
+                    .where(ProductVariant.id == variant_id)
+                )
                 variant = variant_result.scalar_one()
+                if not tracks_inventory(variant.product):
+                    continue
                 if variant.stock_quantity < qty:
                     raise HTTPException(status_code=400, detail=f"Not enough stock for variant {variant_id}")
 
@@ -411,9 +419,14 @@ async def marketplace_checkout_service(
             for item in items:
                 consolidated[item.variant_id] += item.quantity
             for variant_id, qty in consolidated.items():
-                variant_result = await db.execute(select(ProductVariant).where(ProductVariant.id == variant_id))
+                variant_result = await db.execute(
+                    select(ProductVariant)
+                    .options(selectinload(ProductVariant.product))
+                    .where(ProductVariant.id == variant_id)
+                )
                 variant = variant_result.scalar_one()
-                variant.stock_quantity -= qty
+                if tracks_inventory(variant.product):
+                    variant.stock_quantity -= qty
 
         total_amount = sum(per_tenant_subtotal.values(), Decimal("0.00"))
 

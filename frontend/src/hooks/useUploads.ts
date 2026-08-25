@@ -44,6 +44,16 @@ export function useUploads() {
     })
   }
 
+  const uploadFile = async (file: File): Promise<{ url: string }> => {
+    if (!tenantSlug) throw new Error('Tenant slug is not resolved')
+    const formData = new FormData()
+    formData.append('file', file)
+    return apiClient(`/api/v1/admin/store/${tenantSlug}/uploads/file`, {
+      method: 'POST',
+      body: formData,
+    })
+  }
+
   const previewProductsImport = async (file: File): Promise<ImportPreviewResult> => {
     const formData = new FormData()
     formData.append('file', file)
@@ -82,5 +92,5 @@ export function useUploads() {
     URL.revokeObjectURL(blobUrl)
   }
 
-  return { uploadImage, previewProductsImport, commitProductsImport, downloadImportTemplate }
+  return { uploadImage, uploadFile, previewProductsImport, commitProductsImport, downloadImportTemplate }
 }

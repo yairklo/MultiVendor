@@ -60,9 +60,9 @@ export function OrdersClient({ initialOrders }: { initialOrders: PlatformOrder[]
               <TableHead>Store</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Placed</TableHead>
-              <TableHead className="text-right">Commission</TableHead>
-              <TableHead className="text-right">Vendor net</TableHead>
-              <TableHead className="text-right">Total</TableHead>
+              <TableHead className="text-end tabular-nums">Commission</TableHead>
+              <TableHead className="text-end tabular-nums">Vendor net</TableHead>
+              <TableHead className="text-end tabular-nums">Total</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -92,9 +92,9 @@ export function OrdersClient({ initialOrders }: { initialOrders: PlatformOrder[]
                   </span>
                 </TableCell>
                 <TableCell className="text-muted-foreground">{formatDateTime(order.created_at)}</TableCell>
-                <TableCell className="text-right">{formatPlatformMoney(order.platform_commission)}</TableCell>
-                <TableCell className="text-right">{formatPlatformMoney(order.vendor_net_payout)}</TableCell>
-                <TableCell className="text-right font-medium">{formatPlatformMoney(order.total_amount)}</TableCell>
+                <TableCell className="text-end tabular-nums">{formatPlatformMoney(order.platform_commission)}</TableCell>
+                <TableCell className="text-end tabular-nums">{formatPlatformMoney(order.vendor_net_payout)}</TableCell>
+                <TableCell className="text-end font-medium tabular-nums">{formatPlatformMoney(order.total_amount)}</TableCell>
               </TableRow>
             ))}
           </TableBody>

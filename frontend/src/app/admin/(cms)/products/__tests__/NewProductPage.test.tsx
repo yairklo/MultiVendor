@@ -6,6 +6,7 @@ import { ApiError } from '@/lib/api/apiClient'
 
 const createProductMock = vi.fn()
 const uploadImageMock = vi.fn()
+const uploadFileMock = vi.fn()
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
@@ -16,7 +17,7 @@ vi.mock('@/hooks/useProducts', () => ({
 }))
 
 vi.mock('@/hooks/useUploads', () => ({
-  useUploads: () => ({ uploadImage: uploadImageMock }),
+  useUploads: () => ({ uploadImage: uploadImageMock, uploadFile: uploadFileMock }),
 }))
 
 describe('NewProductPage subscription limit handling', () => {
@@ -76,6 +77,33 @@ describe('NewProductPage image upload', () => {
     await user.click(screen.getByRole('button', { name: /save product/i }))
 
     expect(createProductMock).toHaveBeenCalledWith(expect.objectContaining({ images: [] }))
+  })
+
+  it('submits product_type digital, zero stock, and the uploaded file URL when the digital checkbox is checked', async () => {
+    uploadFileMock.mockResolvedValueOnce({ url: '/uploads/1/files/abc_ebook.pdf' })
+    createProductMock.mockResolvedValueOnce({ id: 4 })
+    const user = userEvent.setup()
+
+    render(<NewProductPage />)
+
+    await user.type(screen.getByLabelText(/product name \(english\)/i), 'Ebook')
+    await user.type(screen.getByLabelText(/product name \(hebrew\)/i), 'ספר')
+    await user.type(screen.getByLabelText(/slug/i), 'ebook')
+    await user.clear(screen.getByLabelText(/base price/i))
+    await user.type(screen.getByLabelText(/base price/i), '19')
+    await user.click(screen.getByRole('checkbox', { name: /digital product/i }))
+
+    const file = new File(['%PDF-1.1'], 'ebook.pdf', { type: 'application/pdf' })
+    await user.upload(screen.getByLabelText(/product file/i), file)
+    await waitFor(() => expect(uploadFileMock).toHaveBeenCalledWith(file))
+
+    await user.click(screen.getByRole('button', { name: /save product/i }))
+
+    expect(createProductMock).toHaveBeenCalledWith(expect.objectContaining({
+      product_type: 'digital',
+      digital_file_url: '/uploads/1/files/abc_ebook.pdf',
+      variants: [expect.objectContaining({ stock_quantity: 0 })],
+    }))
   })
 
   it('uploads a selected file and includes the returned URL in the images array', async () => {

@@ -13,6 +13,7 @@ import { DollarSign, ShoppingBag, Activity, TrendingUp, Package, Star, ArrowRigh
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { useCurrency } from '@/hooks/useCurrency'
 import { useUiLocale } from '@/context/UiLocaleContext'
+import { formatUiChartDay, formatUiDate } from '@/lib/utils'
 
 const kpiContainerVariants = {
   hidden: {},
@@ -47,7 +48,7 @@ export function DashboardClient({
   const { t, locale } = useUiLocale()
   const prefersReducedMotion = useReducedMotion()
   const chartData = metrics?.data?.map((d: any) => ({
-    date: new Date(d.date).toLocaleDateString(locale === 'he' ? 'he-IL' : 'en-US', { month: 'short', day: 'numeric' }),
+    date: formatUiChartDay(d.date, locale),
     Revenue: d.total_sales,
     Orders: d.order_count
   })) || []
@@ -236,7 +237,7 @@ export function DashboardClient({
                     </Avatar>
                     <div className="ml-4 space-y-1">
                       <p className="text-sm font-medium leading-none">{order.customer_name || t('orders.guest')}</p>
-                      <p className="text-xs text-muted-foreground">{t('dashboard.orderHash', { id: order.id })} &middot; {new Date(order.created_at).toLocaleDateString(locale === 'he' ? 'he-IL' : 'en-US')}</p>
+                      <p className="text-xs text-muted-foreground">{t('dashboard.orderHash', { id: order.id })} &middot; {formatUiDate(order.created_at, locale)}</p>
                     </div>
                     <div className="ml-auto flex items-center space-x-3">
                       <span className="text-sm font-medium">{formatCurrency(Number(order.total_amount))}</span>

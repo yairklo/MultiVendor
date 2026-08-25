@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { setCookie } from 'cookies-next'
-import { apiClient } from '@/lib/api/apiClient'
+import { apiClient, ApiError } from '@/lib/api/apiClient'
 import { useUiLocale } from '@/context/UiLocaleContext'
 import { UiLanguageSwitcher } from '@/components/ui/UiLanguageSwitcher'
 
@@ -55,7 +55,9 @@ export default function AdminLoginPage() {
         setError(t('auth.loginFailed'))
       }
     } catch (err: any) {
-      setError(err.message || t('auth.loginFailed'))
+      // See customer login page for why 401 gets the localized copy instead
+      // of the backend's fixed, untranslated "Invalid credentials" string.
+      setError(err instanceof ApiError && err.status === 401 ? t('auth.loginFailed') : err.message || t('auth.loginFailed'))
     } finally {
       setLoading(false)
     }

@@ -8,6 +8,9 @@ import {
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table'
 import { SuperAdminPageHeader } from './SuperAdminPageHeader'
 import { formatDate, formatPlatformMoney, type PlatformOverview } from './types'
 import { orderStatusClass, orderStatusLabel } from '@/lib/orderStatus'
@@ -135,8 +138,8 @@ export function OverviewClient({ overview }: { overview: PlatformOverview }) {
         </Card>
       </div>
 
-      <Card className="shadow-sm">
-        <CardHeader className="flex flex-row items-center justify-between">
+      <Card className="gap-0 py-0 shadow-sm">
+        <CardHeader className="flex flex-row items-center justify-between px-5 pt-5 pb-4">
           <CardTitle>Latest orders</CardTitle>
           <Link
             href="/super-admin/orders"
@@ -145,38 +148,34 @@ export function OverviewClient({ overview }: { overview: PlatformOverview }) {
             All orders <ArrowRight className="h-4 w-4" />
           </Link>
         </CardHeader>
-        <CardContent>
-          {overview.recent_orders.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">No orders across the platform yet.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border text-left text-muted-foreground">
-                    <th className="pb-2 font-medium">Order</th>
-                    <th className="pb-2 font-medium">Store</th>
-                    <th className="pb-2 font-medium">Status</th>
-                    <th className="pb-2 text-right font-medium">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {overview.recent_orders.map((order) => (
-                    <tr key={order.id} className="border-b border-border/50 last:border-0">
-                      <td className="py-2.5 font-medium">{order.order_number}</td>
-                      <td className="py-2.5 text-muted-foreground">{order.tenant_name}</td>
-                      <td className="py-2.5">
-                        <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${orderStatusClass[order.status] || ''}`}>
-                          {orderStatusLabel[order.status] || order.status}
-                        </span>
-                      </td>
-                      <td className="py-2.5 text-right">{formatPlatformMoney(order.total_amount)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
+        {overview.recent_orders.length === 0 ? (
+          <p className="px-5 pb-8 text-center text-sm text-muted-foreground">No orders across the platform yet.</p>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Order</TableHead>
+                <TableHead>Store</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-end">Total</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {overview.recent_orders.map((order) => (
+                <TableRow key={order.id}>
+                  <TableCell className="font-medium">{order.order_number}</TableCell>
+                  <TableCell className="text-muted-foreground">{order.tenant_name}</TableCell>
+                  <TableCell>
+                    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${orderStatusClass[order.status] || ''}`}>
+                      {orderStatusLabel[order.status] || order.status}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-end tabular-nums">{formatPlatformMoney(order.total_amount)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </Card>
     </div>
   )

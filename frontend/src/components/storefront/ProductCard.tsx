@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useCart } from '@/context/CartContext'
 import { useStorefrontTheme } from '@/context/StorefrontThemeContext'
-import { totalStock } from '@/lib/stock'
+import { totalStock, isDigitalProduct } from '@/lib/stock'
 import { StarRating } from '@/components/ui/star-rating'
 import { resolveCardStyleClasses, CardStyle } from '@/lib/product-card-styles'
 
@@ -48,7 +48,7 @@ export function ProductCard({
 
   const stock = totalStock(product.variants)
   const stockKnown = Number.isFinite(stock)
-  const outOfStock = stockKnown && stock <= 0
+  const outOfStock = !isDigitalProduct(product) && stockKnown && stock <= 0
   const image = product.primary_image_url || product.images?.[0]
 
   const handleAddToCart = async () => {

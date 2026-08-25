@@ -9,7 +9,7 @@ from app.core.config import settings
 from app.models.tenant import Tenant
 from app.models.order import Order, OrderItem, MasterOrder
 from app.models.user import User, UserStoreMembership
-from app.models.catalog import ProductVariant, Product, ProductBundleItem
+from app.models.catalog import ProductVariant, Product, ProductBundleItem, tracks_inventory
 from app.schemas.order_schemas import PaginatedOrderResponse, OrderResponse, OrderItemResponse, PaymentIntentInfo
 from app.schemas.auth_schemas import CustomerSummaryResponse
 from app.db.tenant_context import platform_plane
@@ -20,6 +20,37 @@ from app.services.shipping_service import maybe_auto_fulfill_order
 logger = logging.getLogger(__name__)
 
 PAID_ORDER_STATUSES = ('processing', 'completed')
+PAID_DOWNLOAD_STATUSES = frozenset({'processing', 'shipped', 'completed'})
+
+ORDER_ITEMS_WITH_FILE = (
+    selectinload(Order.items)
+    .selectinload(OrderItem.variant)
+    .selectinload(ProductVariant.product)
+)
+
+
+def order_item_download_url(order: Order, item: OrderItem) -> str | None:
+    if order.status not in PAID_DOWNLOAD_STATUSES:
+        return None
+    variant = getattr(item, "variant", None)
+    product = getattr(variant, "product", None) if variant else None
+    if not product or product.product_type != "digital":
+        return None
+    url = (product.digital_file_url or "").strip()
+    return url or None
+
+
+def _order_item_response(order: Order, item: OrderItem) -> OrderItemResponse:
+    return OrderItemResponse(
+        id=item.id,
+        variant_id=item.variant_id,
+        product_name=item.product_name,
+        sku=item.sku,
+        unit_price=item.unit_price,
+        quantity=item.quantity,
+        download_url=order_item_download_url(order, item),
+    )
+
 
 def _order_to_response(order: Order, customer: User | None = None, tenant_slug: str | None = None) -> OrderResponse:
     return OrderResponse(
@@ -39,14 +70,7 @@ def _order_to_response(order: Order, customer: User | None = None, tenant_slug: 
         order_type=order.order_type,
         shipping_info=order.shipping_json or {},
         created_at=order.created_at,
-        items=[OrderItemResponse(
-            id=i.id,
-            variant_id=i.variant_id,
-            product_name=i.product_name,
-            sku=i.sku,
-            unit_price=i.unit_price,
-            quantity=i.quantity
-        ) for i in order.items]
+        items=[_order_item_response(order, i) for i in order.items]
     )
 
 async def list_tenant_orders_service(
@@ -66,7 +90,7 @@ async def list_tenant_orders_service(
         select(Order, User)
         .join(User, User.id == Order.user_id)
         .where(Order.tenant_id == tenant_id)
-        .options(selectinload(Order.items))
+        .options(ORDER_ITEMS_WITH_FILE)
         .order_by(Order.created_at.desc())
     )
     if status:
@@ -93,7 +117,7 @@ async def get_tenant_order_service(tenant_slug: str, order_id: int, db: AsyncSes
         select(Order, User)
         .join(User, User.id == Order.user_id)
         .where(Order.tenant_id == tenant_id, Order.id == order_id)
-        .options(selectinload(Order.items))
+        .options(ORDER_ITEMS_WITH_FILE)
     )
     row = result.first()
     if not row:
@@ -152,7 +176,7 @@ async def restore_stock_for_order(order: Order, db: AsyncSession):
                 comp_var = comp_var_res.scalar_one_or_none()
                 if comp_var:
                     comp_var.stock_quantity += (item.quantity * comp.quantity)
-        else:
+        elif tracks_inventory(variant.product):
             variant.stock_quantity += item.quantity
 
 
@@ -162,7 +186,7 @@ async def update_order_status_service(tenant_slug: str, order_id: int, status: s
     if not tenant_id:
         raise HTTPException(status_code=404, detail="Tenant not found")
 
-    order_result = await db.execute(select(Order).options(selectinload(Order.items)).where(Order.id == order_id, Order.tenant_id == tenant_id))
+    order_result = await db.execute(select(Order).options(ORDER_ITEMS_WITH_FILE).where(Order.id == order_id, Order.tenant_id == tenant_id))
     order = order_result.scalar_one_or_none()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
@@ -198,7 +222,7 @@ async def list_customer_orders_service(
     total_result = await db.execute(total_query)
     total = total_result.scalar_one()
     
-    query = query.options(selectinload(Order.items))
+    query = query.options(ORDER_ITEMS_WITH_FILE)
     query = query.offset((page - 1) * page_size).limit(page_size)
     result = await db.execute(query)
     orders = result.scalars().all()
@@ -242,7 +266,7 @@ async def get_customer_order_service(
     if tenant_id is not None:
         query = query.where(Order.tenant_id == tenant_id)
 
-    result = await db.execute(query.options(selectinload(Order.items)))
+    result = await db.execute(query.options(ORDER_ITEMS_WITH_FILE))
     order = result.scalar_one_or_none()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
@@ -255,7 +279,7 @@ async def cancel_customer_order_service(
 ):
     tenant_id = await _resolve_optional_tenant_id(tenant_slug, db)
 
-    query = select(Order).options(selectinload(Order.items)).where(Order.id == order_id, Order.user_id == user_id)
+    query = select(Order).options(ORDER_ITEMS_WITH_FILE).where(Order.id == order_id, Order.user_id == user_id)
     if tenant_id is not None:
         query = query.where(Order.tenant_id == tenant_id)
 
@@ -279,7 +303,7 @@ async def pay_order_service(
 ) -> OrderResponse:
     tenant_id = await _resolve_optional_tenant_id(tenant_slug, db)
 
-    query = select(Order).options(selectinload(Order.items)).where(Order.id == order_id, Order.user_id == user_id)
+    query = select(Order).options(ORDER_ITEMS_WITH_FILE).where(Order.id == order_id, Order.user_id == user_id)
     if tenant_id is not None:
         query = query.where(Order.tenant_id == tenant_id)
 
@@ -296,8 +320,11 @@ async def pay_order_service(
         # external call and no webhook involved.
         order.status = 'processing'
         await db.commit()
-        await db.refresh(order)
         await maybe_auto_fulfill_order(order.id, order.tenant_id, db)
+        result = await db.execute(
+            select(Order).options(ORDER_ITEMS_WITH_FILE).where(Order.id == order.id)
+        )
+        order = result.scalar_one()
         return _order_to_response(order)
 
     # Real gateway: start (or, on a retried call, reuse) a payment and hand

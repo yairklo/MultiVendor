@@ -27,7 +27,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { totalStock, stockLevel, stockLevelClass } from '@/lib/stock'
+import { totalStock, stockLevel, stockLevelClass, isDigitalProduct } from '@/lib/stock'
 import { PaginationControls, PaginationMeta } from '@/components/ui/pagination-controls'
 import { TableRowSkeleton } from '@/components/ui/skeleton'
 import { ExcelImportDialog } from '@/components/upload/ExcelImportDialog'
@@ -200,7 +200,7 @@ export function ProductsPageClient({
         </Select>
       </div>
 
-      <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
+      <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>
@@ -214,21 +214,22 @@ export function ProductsPageClient({
               </TableHead>
               <TableHead className="w-16"></TableHead>
               <TableHead>{t('products.name')}</TableHead>
-              <TableHead>{t('products.basePrice')}</TableHead>
+              <TableHead className="text-end">{t('products.basePrice')}</TableHead>
               <TableHead>{t('products.stock')}</TableHead>
               <TableHead>{t('common.status')}</TableHead>
-              <TableHead className="text-right">{t('common.actions')}</TableHead>
+              <TableHead className="text-end">{t('common.actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-              Array.from({ length: 5 }, (_, i) => <TableRowSkeleton key={i} columns={6} />)
+              Array.from({ length: 5 }, (_, i) => <TableRowSkeleton key={i} columns={7} />)
             ) : products.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{t('products.noProducts')}</TableCell>
+                <TableCell colSpan={7} className="py-12 text-center text-muted-foreground">{t('products.noProducts')}</TableCell>
               </TableRow>
             ) : (
               products.map(product => {
+                const digital = isDigitalProduct(product)
                 const stock = totalStock(product.variants)
                 const level = stockLevel(stock)
                 return (
@@ -263,24 +264,28 @@ export function ProductsPageClient({
                       {resolveI18nText(product.description, locale)}
                     </div>
                   </TableCell>
-                  <TableCell>{formatCurrency(product.base_price)}</TableCell>
+                  <TableCell className="text-end tabular-nums">{formatCurrency(product.base_price)}</TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{stock}</span>
-                      <Badge variant="outline" className={stockLevelClass[level]}>
-                        {t(`stock.${level}`)}
-                      </Badge>
-                    </div>
+                    {digital ? (
+                      <Badge variant="secondary">{t('products.digitalProduct')}</Badge>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{stock}</span>
+                        <Badge variant="outline" className={stockLevelClass[level]}>
+                          {t(`stock.${level}`)}
+                        </Badge>
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell>
                     <Badge variant={product.is_active ? 'success' : 'secondary'}>
                       {product.is_active ? t('products.active') : t('products.inactive')}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-end whitespace-nowrap">
                     <Link
                       href={`/admin/products/${product.id}/edit`}
-                      className={buttonVariants({ variant: 'ghost', size: 'sm', className: 'mr-2' })}
+                      className={buttonVariants({ variant: 'ghost', size: 'sm', className: 'me-2' })}
                     >
                       {t('common.edit')}
                     </Link>

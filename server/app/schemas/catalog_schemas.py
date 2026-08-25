@@ -1,8 +1,24 @@
 from typing import Optional, List, Dict, Any, Literal
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from datetime import datetime
 from decimal import Decimal
 from app.schemas.common_schemas import PaginatedResponse, ReviewStatus
+
+
+def normalize_digital_file_url(url: Optional[str]) -> Optional[str]:
+    if url is None:
+        return None
+    stripped = url.strip()
+    if not stripped:
+        return None
+    if len(stripped) > 512:
+        raise ValueError("digital_file_url must be at most 512 characters")
+    lowered = stripped.lower()
+    if lowered.startswith(("javascript:", "data:", "vbscript:")):
+        raise ValueError("Invalid digital_file_url")
+    if stripped.startswith("/") or lowered.startswith(("http://", "https://")):
+        return stripped
+    raise ValueError("digital_file_url must be an http(s) URL or a site-relative path")
 
 class ProductVariantSchema(BaseModel):
     id: Optional[int] = None
@@ -33,7 +49,7 @@ class ProductCreateRequest(BaseModel):
     is_active: bool = True
     show_in_marketplace: bool = False
     product_type: Literal['physical', 'digital', 'service'] = 'physical'
-    digital_file_url: Optional[str] = None
+    digital_file_url: Optional[str] = Field(None, max_length=512)
     download_limit: Optional[int] = None
     is_bundle: bool = False
     bundle_items: Optional[List[ProductBundleItemSchema]] = None
@@ -58,6 +74,11 @@ class ProductCreateRequest(BaseModel):
         }
     })
 
+    @field_validator("digital_file_url")
+    @classmethod
+    def _normalize_digital_file_url(cls, v: Optional[str]) -> Optional[str]:
+        return normalize_digital_file_url(v)
+
 class ProductUpdateRequest(BaseModel):
     category_id: Optional[int] = None
     name: Optional[Dict[str, str]] = None
@@ -66,11 +87,16 @@ class ProductUpdateRequest(BaseModel):
     is_active: Optional[bool] = None
     show_in_marketplace: Optional[bool] = None
     product_type: Optional[Literal['physical', 'digital', 'service']] = None
-    digital_file_url: Optional[str] = None
+    digital_file_url: Optional[str] = Field(None, max_length=512)
     download_limit: Optional[int] = None
     is_bundle: Optional[bool] = None
     bundle_items: Optional[List[ProductBundleItemSchema]] = None
     images: Optional[List[str]] = None
+
+    @field_validator("digital_file_url")
+    @classmethod
+    def _normalize_digital_file_url(cls, v: Optional[str]) -> Optional[str]:
+        return normalize_digital_file_url(v)
 
 class ProductResponse(BaseModel):
     id: int

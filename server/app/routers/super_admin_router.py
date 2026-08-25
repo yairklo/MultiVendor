@@ -90,6 +90,8 @@ class AuditLogItem(BaseModel):
     id: int
     tenant_id: Optional[int] = None
     user_id: Optional[int] = None
+    actor_name: Optional[str] = None
+    actor_email: Optional[str] = None
     action: str
     resource: str
     ip_address: Optional[str] = None

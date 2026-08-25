@@ -70,6 +70,11 @@ describe('ProductCard', () => {
     expect(button).toBeDisabled()
   })
 
+  it('keeps Add to Cart enabled for a digital product even when stock is zero', () => {
+    renderCard({ product_type: 'digital', variants: [{ id: 101, stock_quantity: 0 }] })
+    expect(screen.getByRole('button', { name: 'Add to Cart' })).toBeEnabled()
+  })
+
   it('never emits a card_style class outside the fixed allow-list (AI can restyle, never inject markup)', () => {
     const { container } = renderCard({}, 'framed')
     // framed maps to a specific literal border treatment — proves the settings

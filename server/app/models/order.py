@@ -121,3 +121,4 @@ class OrderItem(TenantScoped, Base):
     quantity = Column(Integer, nullable=False)
     
     order = relationship("Order", back_populates="items")
+    variant = relationship("ProductVariant")
