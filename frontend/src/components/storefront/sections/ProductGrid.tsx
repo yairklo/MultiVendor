@@ -7,6 +7,7 @@ import { ProductCard } from '../ProductCard'
 import { CardStyle } from '@/lib/product-card-styles'
 import { resolveI18nText } from '@/lib/i18n-text'
 import { useStorefrontTheme } from '@/context/StorefrontThemeContext'
+import { isUsableTenantSlug } from '@/lib/tenantSlug'
 
 export function ProductGrid({
   section,
@@ -25,7 +26,7 @@ export function ProductGrid({
   const [products, setProducts] = useState<any[] | null>(null)
 
   useEffect(() => {
-    if (!tenantSlug) {
+    if (!isUsableTenantSlug(tenantSlug)) {
       setProducts(null)
       return
     }

@@ -35,6 +35,7 @@ const StorefrontThemeContext = createContext<StorefrontThemeContextValue | null>
  */
 import { getActiveCart } from '@/lib/cart'
 import { getCookie } from 'cookies-next'
+import { isUsableTenantSlug } from '@/lib/tenantSlug'
 
 export function StorefrontThemeProvider({
   tenantSlug,
@@ -56,7 +57,7 @@ export function StorefrontThemeProvider({
   useEffect(() => {
     if (tenantSlug) return
     const resolved = getCookie('tenantSlug')?.toString() || getActiveCart()?.tenantSlug
-    if (resolved) setFallbackSlug(resolved)
+    if (isUsableTenantSlug(resolved)) setFallbackSlug(resolved)
   }, [tenantSlug])
   const resolvedSlug = tenantSlug || fallbackSlug
   const pathname = usePathname()
@@ -77,7 +78,7 @@ export function StorefrontThemeProvider({
     // above, or an explicit tenantSlug prop that itself came from the still-resolving
     // useTenantSlug hook) — this request is guaranteed to 404 and get re-fired the instant
     // the real slug arrives, so there's no reason to make it at all.
-    if (!resolvedSlug) return
+    if (!isUsableTenantSlug(resolvedSlug)) return
     let cancelled = false
     const endpoint = isAdminPreview
       ? `/api/v1/admin/store/${resolvedSlug}/ai/config`

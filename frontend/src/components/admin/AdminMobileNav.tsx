@@ -8,10 +8,12 @@ export function AdminMobileNav({
   navContent,
   logoutButtonCompact,
   logoutButtonDrawer,
+  title = 'Tenant CMS',
 }: {
   navContent: React.ReactNode
   logoutButtonCompact: React.ReactNode
   logoutButtonDrawer: React.ReactNode
+  title?: string
 }) {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
@@ -26,7 +28,7 @@ export function AdminMobileNav({
         <button aria-label="Open menu" onClick={() => setOpen(true)} className="text-foreground transition-colors duration-150 hover:text-primary">
           <Menu className="w-6 h-6" />
         </button>
-        <h1 className="font-heading text-lg font-bold text-foreground">Tenant CMS</h1>
+        <h1 className="font-heading text-lg font-bold text-foreground">{title}</h1>
         {logoutButtonCompact}
       </header>
 
@@ -38,7 +40,7 @@ export function AdminMobileNav({
           />
           <div className="relative flex h-full w-64 flex-col bg-sidebar shadow-xl duration-200 animate-in slide-in-from-left">
             <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4">
-              <h1 className="font-heading text-lg font-bold text-sidebar-foreground">Tenant CMS</h1>
+              <h1 className="font-heading text-lg font-bold text-sidebar-foreground">{title}</h1>
               <button
                 aria-label="Close menu"
                 onClick={() => setOpen(false)}
