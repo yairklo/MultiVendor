@@ -9,16 +9,12 @@ test.describe('Storefront i18n / RTL', () => {
     const cartHe = page.getByText(/^עגלה \(\d+\)$/);
     const switcher = page.getByTestId('language-switcher');
 
-    // Store default language may already be Hebrew after /config loads.
-    // Normalize to English first so the toggle assertion is deterministic.
     await expect(switcher).toBeVisible();
     await expect(cartEn.or(cartHe)).toBeVisible();
-    if (await cartHe.isVisible()) {
-      await switcher.click();
-    }
+    await switcher.selectOption('en');
     await expect(cartEn).toBeVisible();
 
-    await switcher.click();
+    await switcher.selectOption('he');
 
     await expect(cartHe).toBeVisible();
     const dirValue = await page.evaluate(() => {

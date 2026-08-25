@@ -6,10 +6,12 @@ import { useToast } from '@/context/ToastContext'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { StarRating } from '@/components/ui/star-rating'
+import { useUiLocale } from '@/context/UiLocaleContext'
 
 export function ReviewsPageClient({ initialReviews }: { initialReviews: any[] }) {
   const { fetchReviews, updateReviewStatus } = useReviews()
   const { showToast } = useToast()
+  const { t } = useUiLocale()
   const [reviews, setReviews] = useState<any[]>(initialReviews)
   const [busyId, setBusyId] = useState<number | null>(null)
 
@@ -23,9 +25,9 @@ export function ReviewsPageClient({ initialReviews }: { initialReviews: any[] })
     try {
       await updateReviewStatus(reviewId, status)
       await loadReviews()
-      showToast(status === 'approved' ? 'Review approved' : 'Review rejected', 'success')
+      showToast(status === 'approved' ? t('reviews.approved') : t('reviews.rejected'), 'success')
     } catch (e: any) {
-      showToast(e.message || 'Failed to update review', 'error')
+      showToast(e.message || t('reviews.updateFailed'), 'error')
     } finally {
       setBusyId(null)
     }
@@ -33,11 +35,11 @@ export function ReviewsPageClient({ initialReviews }: { initialReviews: any[] })
 
   return (
     <div>
-      <h1 className="font-heading text-3xl font-bold text-foreground mb-8">Reviews</h1>
+      <h1 className="font-heading text-3xl font-bold text-foreground mb-8">{t('reviews.title')}</h1>
 
       {reviews.length === 0 ? (
         <div className="bg-card p-8 rounded-xl shadow-sm border border-border text-center text-muted-foreground">
-          No reviews yet.
+          {t('reviews.none')}
         </div>
       ) : (
         <div className="space-y-4">
@@ -46,12 +48,12 @@ export function ReviewsPageClient({ initialReviews }: { initialReviews: any[] })
               <div className="flex justify-between items-start mb-2">
                 <div>
                   <div className="font-bold text-foreground">{review.product_name}</div>
-                  <div className="text-sm text-muted-foreground">by {review.customer_name}</div>
+                  <div className="text-sm text-muted-foreground">{t('reviews.by', { name: review.customer_name })}</div>
                 </div>
                 <div className="flex items-center gap-2">
                   <StarRating rating={review.rating} />
                   <Badge variant={review.is_approved ? 'success' : 'warning'}>
-                    {review.is_approved ? 'Approved' : 'Pending'}
+                    {review.is_approved ? t('reviews.approvedBadge') : t('reviews.pending')}
                   </Badge>
                 </div>
               </div>
@@ -64,7 +66,7 @@ export function ReviewsPageClient({ initialReviews }: { initialReviews: any[] })
                   disabled={busyId === review.id || review.is_approved}
                   onClick={() => handleStatus(review.id, 'approved')}
                 >
-                  Approve
+                  {t('reviews.approve')}
                 </Button>
                 <Button
                   size="sm"
@@ -72,7 +74,7 @@ export function ReviewsPageClient({ initialReviews }: { initialReviews: any[] })
                   disabled={busyId === review.id || !review.is_approved}
                   onClick={() => handleStatus(review.id, 'rejected')}
                 >
-                  Reject
+                  {t('reviews.reject')}
                 </Button>
               </div>
             </div>

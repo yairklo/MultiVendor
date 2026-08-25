@@ -6,9 +6,12 @@ import { usePathname } from 'next/navigation'
 import { getCookie } from 'cookies-next'
 import { Menu, ShoppingBag, Store, X } from 'lucide-react'
 import { useMarketplaceCart } from '@/context/MarketplaceCartContext'
+import { useUiLocale } from '@/context/UiLocaleContext'
+import { UiLanguageSwitcher } from '@/components/ui/UiLanguageSwitcher'
 
 export function MarketplaceHeader() {
   const { cart, openDrawer } = useMarketplaceCart()
+  const { t } = useUiLocale()
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
@@ -33,20 +36,21 @@ export function MarketplaceHeader() {
           className="flex items-center gap-2 text-xl font-bold text-foreground font-heading transition-opacity hover:opacity-80"
         >
           <Store className="h-5 w-5 text-primary" />
-          MultiVendor Marketplace
+          {t('marketplace.brand')}
         </Link>
 
         <nav className="hidden items-center gap-6 md:flex">
           <Link href="/marketplace" className={navLinkClass('/marketplace')}>
-            Browse
+            {t('marketplace.browse')}
           </Link>
           <Link
             data-testid="account-link"
             href={isLoggedIn ? '/account/orders' : '/login'}
             className={navLinkClass(isLoggedIn ? '/account/orders' : '/login')}
           >
-            {isLoggedIn ? 'My Orders' : 'Login'}
+            {isLoggedIn ? t('storefront.myOrders') : t('common.login')}
           </Link>
+          <UiLanguageSwitcher className="text-muted-foreground" />
         </nav>
 
         <div className="flex items-center gap-3">
@@ -57,11 +61,11 @@ export function MarketplaceHeader() {
             className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors duration-150 hover:bg-primary/90 active:scale-[0.98]"
           >
             <ShoppingBag className="h-4 w-4" />
-            <span>Cart ({cartCount})</span>
+            <span>{t('marketplace.cart', { count: cartCount })}</span>
           </button>
           <button
             type="button"
-            aria-label="Toggle menu"
+            aria-label={t('storefront.toggleMenu')}
             className="text-foreground md:hidden"
             onClick={() => setMobileOpen((v) => !v)}
           >
@@ -77,15 +81,18 @@ export function MarketplaceHeader() {
             onClick={() => setMobileOpen(false)}
             className={`rounded-lg px-2 py-2 ${navLinkClass('/marketplace')}`}
           >
-            Browse
+            {t('marketplace.browse')}
           </Link>
           <Link
             href={isLoggedIn ? '/account/orders' : '/login'}
             onClick={() => setMobileOpen(false)}
             className={`rounded-lg px-2 py-2 ${navLinkClass(isLoggedIn ? '/account/orders' : '/login')}`}
           >
-            {isLoggedIn ? 'My Orders' : 'Login'}
+            {isLoggedIn ? t('storefront.myOrders') : t('common.login')}
           </Link>
+          <div className="px-2 py-2">
+            <UiLanguageSwitcher />
+          </div>
         </nav>
       )}
     </header>

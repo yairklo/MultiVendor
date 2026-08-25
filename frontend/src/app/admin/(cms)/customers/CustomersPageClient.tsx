@@ -11,30 +11,32 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { useCurrency } from '@/hooks/useCurrency'
+import { useUiLocale } from '@/context/UiLocaleContext'
 
 export function CustomersPageClient({ initialCustomers }: { initialCustomers: any[] }) {
   const { formatCurrency } = useCurrency()
+  const { t } = useUiLocale()
   const customers = initialCustomers
 
   return (
     <div>
-      <h1 className="font-heading text-3xl font-bold text-foreground mb-8">Customers</h1>
+      <h1 className="font-heading text-3xl font-bold text-foreground mb-8">{t('customers.title')}</h1>
 
       <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Customer</TableHead>
-              <TableHead>Joined</TableHead>
-              <TableHead>Orders</TableHead>
-              <TableHead>Total Spent</TableHead>
-              <TableHead>Last Order</TableHead>
+              <TableHead>{t('customers.customer')}</TableHead>
+              <TableHead>{t('customers.joined')}</TableHead>
+              <TableHead>{t('customers.orders')}</TableHead>
+              <TableHead>{t('customers.totalSpent')}</TableHead>
+              <TableHead>{t('customers.lastOrder')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {customers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No customers yet.</TableCell>
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">{t('customers.none')}</TableCell>
               </TableRow>
             ) : (
               customers.map(customer => (

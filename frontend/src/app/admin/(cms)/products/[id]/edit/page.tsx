@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { buttonVariants } from '@/components/ui/button'
 import { ApiError } from '@/lib/api/apiClient'
 import { adminApiClient, getServerTenantSlug } from '@/lib/api/serverApiClient'
+import { pickExtraLangValues } from '@/lib/languages'
 import { EditProductClient } from './EditProductClient'
 
 export default async function EditProductPage({
@@ -56,6 +57,8 @@ export default async function EditProductPage({
         stock_quantity: firstVariant?.stock_quantity ?? 0,
         is_active: product.is_active,
       }}
+      initialExtraNames={pickExtraLangValues(product.name)}
+      initialExtraDescs={pickExtraLangValues(product.description)}
     />
   )
 }

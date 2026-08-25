@@ -7,6 +7,7 @@ import { orderStatusClass, orderStatusLabel } from '@/lib/orderStatus'
 import { useToast } from '@/context/ToastContext'
 import { useCurrency } from '@/hooks/useCurrency'
 import { useTenantSlug } from '@/hooks/useTenantSlug'
+import { useUiLocale } from '@/context/UiLocaleContext'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -30,6 +31,7 @@ export function OrdersPageClient({ initialOrders }: { initialOrders: any[] }) {
   const [exporting, setExporting] = useState(false)
   const [updatingId, setUpdatingId] = useState<number | null>(null)
   const tenantSlug = useTenantSlug()
+  const { t } = useUiLocale()
 
   const fetchOrders = async () => {
     if (!tenantSlug) return
@@ -58,7 +60,7 @@ export function OrdersPageClient({ initialOrders }: { initialOrders: any[] }) {
       URL.revokeObjectURL(url)
     } catch (e) {
       console.error('Failed to export orders CSV:', e)
-      showToast('Failed to export orders.', 'error')
+      showToast(t('orders.exportFailed'), 'error')
     } finally {
       setExporting(false)
     }
@@ -71,10 +73,10 @@ export function OrdersPageClient({ initialOrders }: { initialOrders: any[] }) {
         method: 'PATCH',
       })
       await fetchOrders()
-      showToast(`Order #${orderId} updated to ${orderStatusLabel[status] || status}`, 'success')
+      showToast(t('orders.statusUpdated', { id: orderId, status: t(`orderStatus.${status}`) || status }), 'success')
     } catch (e) {
       console.error('Failed to update order status:', e)
-      showToast('Failed to update order status.', 'error')
+      showToast(t('orders.statusFailed'), 'error')
     } finally {
       setUpdatingId(null)
     }
@@ -83,9 +85,9 @@ export function OrdersPageClient({ initialOrders }: { initialOrders: any[] }) {
   return (
     <div>
       <div className="flex justify-between items-center mb-8">
-        <h1 className="font-heading text-3xl font-bold text-foreground">Store Orders</h1>
+        <h1 className="font-heading text-3xl font-bold text-foreground">{t('orders.title')}</h1>
         <Button onClick={handleExport} disabled={exporting} variant="default">
-          {exporting ? 'Exporting...' : 'Export CSV'}
+          {exporting ? t('orders.exporting') : t('orders.exportCsv')}
         </Button>
       </div>
 
@@ -93,23 +95,23 @@ export function OrdersPageClient({ initialOrders }: { initialOrders: any[] }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Order ID</TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead>Total</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>{t('orders.orderId')}</TableHead>
+              <TableHead>{t('orders.customer')}</TableHead>
+              <TableHead>{t('orders.total')}</TableHead>
+              <TableHead>{t('common.status')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {orders.length === 0 && (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">No orders found.</TableCell>
+                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">{t('orders.noOrders')}</TableCell>
               </TableRow>
             )}
             {orders.map(order => (
               <TableRow key={order.id} className="hover:bg-muted/50 transition-colors">
                 <TableCell className="font-medium">#{order.id}</TableCell>
                 <TableCell>
-                  <div className="font-medium text-foreground">{order.customer_name || 'Guest'}</div>
+                  <div className="font-medium text-foreground">{order.customer_name || t('orders.guest')}</div>
                   {order.customer_email && (
                     <div className="text-sm text-muted-foreground">{order.customer_email}</div>
                   )}
@@ -118,7 +120,7 @@ export function OrdersPageClient({ initialOrders }: { initialOrders: any[] }) {
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <Badge variant="outline" className={orderStatusClass[order.status] || 'bg-muted text-muted-foreground'}>
-                      {orderStatusLabel[order.status] || order.status || 'Pending'}
+                      {orderStatusLabel[order.status] ? t(`orderStatus.${order.status}`) : order.status || t('orderStatus.pending')}
                     </Badge>
                     <select
                       aria-label={`Change status for order ${order.id}`}
@@ -128,10 +130,10 @@ export function OrdersPageClient({ initialOrders }: { initialOrders: any[] }) {
                       className="text-xs border border-input rounded-md px-1.5 py-1 text-muted-foreground bg-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-ring/50 disabled:opacity-50"
                     >
                       {!MANUAL_STATUSES.includes(order.status) && (
-                        <option value="" disabled>{orderStatusLabel[order.status] || order.status}</option>
+                        <option value="" disabled>{orderStatusLabel[order.status] ? t(`orderStatus.${order.status}`) : order.status}</option>
                       )}
                       {MANUAL_STATUSES.map(s => (
-                        <option key={s} value={s}>{orderStatusLabel[s]}</option>
+                        <option key={s} value={s}>{t(`orderStatus.${s}`)}</option>
                       ))}
                     </select>
                   </div>

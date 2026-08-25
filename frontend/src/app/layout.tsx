@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Sora } from "next/font/google";
+import { Geist, Geist_Mono, Sora, Heebo } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/context/CartContext";
 import { CartDrawer } from "@/components/cart/CartDrawer";
 import { ToastProvider } from "@/context/ToastContext";
 import { ConfirmProvider } from "@/context/ConfirmContext";
 import { StorefrontThemeProvider } from "@/context/StorefrontThemeContext";
+import { UiLocaleProvider } from "@/context/UiLocaleContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -21,6 +22,12 @@ const headingFont = Sora({
   variable: "--font-heading-sora",
   weight: ["600", "700", "800"],
   subsets: ["latin"],
+});
+
+const heebo = Heebo({
+  variable: "--font-heebo",
+  subsets: ["latin", "hebrew"],
+  weight: ["400", "500", "600", "700", "800"],
 });
 
 export const metadata: Metadata = {
@@ -39,20 +46,24 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${headingFont.variable} h-full antialiased`}
+      lang="he"
+      dir="rtl"
+      suppressHydrationWarning
+      className={`${geistSans.variable} ${geistMono.variable} ${headingFont.variable} ${heebo.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <ToastProvider>
-          <ConfirmProvider>
-            <CartProvider>
-              <StorefrontThemeProvider>
-                {children}
-                <CartDrawer />
-              </StorefrontThemeProvider>
-            </CartProvider>
-          </ConfirmProvider>
-        </ToastProvider>
+        <UiLocaleProvider>
+          <ToastProvider>
+            <ConfirmProvider>
+              <CartProvider>
+                <StorefrontThemeProvider>
+                  {children}
+                  <CartDrawer />
+                </StorefrontThemeProvider>
+              </CartProvider>
+            </ConfirmProvider>
+          </ToastProvider>
+        </UiLocaleProvider>
       </body>
     </html>
   );

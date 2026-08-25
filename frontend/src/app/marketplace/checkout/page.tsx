@@ -9,6 +9,7 @@ import { useMarketplaceCart } from '@/context/MarketplaceCartContext'
 import { useCurrency } from '@/hooks/useCurrency'
 import { orderStatusClass, orderStatusLabel } from '@/lib/orderStatus'
 import { StripeCardForm } from '@/components/checkout/StripeCardForm'
+import { useUiLocale } from '@/context/UiLocaleContext'
 
 interface SubOrder {
   id: number
@@ -39,6 +40,7 @@ interface MasterOrder {
 export default function MarketplaceCheckoutPage() {
   const { cart, loading, clear } = useMarketplaceCart()
   const { formatCurrency } = useCurrency()
+  const { t } = useUiLocale()
   const router = useRouter()
 
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null)
@@ -86,9 +88,9 @@ export default function MarketplaceCheckoutPage() {
       clear()
     } catch (e: any) {
       if (e.status === 401) {
-        setError('Please log in to complete checkout.')
+        setError(t('checkout.loginToCheckout'))
       } else {
-        setError(e.message || 'Failed to place order.')
+        setError(e.message || t('checkout.placeFailed'))
       }
     } finally {
       setSubmitting(false)
@@ -115,7 +117,7 @@ export default function MarketplaceCheckoutPage() {
         setPaymentDone(true)
       }
     } catch (e: any) {
-      setError(e.message || 'Payment failed.')
+      setError(e.message || t('checkout.paymentFailed'))
     } finally {
       setPayBusy(false)
     }
@@ -124,14 +126,14 @@ export default function MarketplaceCheckoutPage() {
   if (isLoggedIn === false) {
     return (
       <div className="max-w-4xl mx-auto p-6 bg-background min-h-screen">
-        <h1 className="text-3xl font-bold mb-8 text-foreground border-b border-border pb-4 font-heading">Checkout</h1>
+        <h1 className="text-3xl font-bold mb-8 text-foreground border-b border-border pb-4 font-heading">{t('checkout.title')}</h1>
         <div className="bg-card p-6 rounded-xl shadow-sm border border-border">
-          <p className="text-foreground/80">You need to be logged in to check out across the marketplace.</p>
+          <p className="text-foreground/80">{t('checkout.loginRequiredMarketplace')}</p>
           <button
             onClick={() => router.push('/login')}
             className="mt-4 bg-primary text-primary-foreground px-6 py-2 rounded-lg font-medium transition-colors duration-150 hover:bg-primary/90 active:scale-[0.98]"
           >
-            Log In
+            {t('common.login')}
           </button>
         </div>
       </div>
@@ -139,28 +141,27 @@ export default function MarketplaceCheckoutPage() {
   }
 
   if (loading || isLoggedIn === null) {
-    return <div className="max-w-4xl mx-auto p-6 text-muted-foreground">Loading your cart...</div>
+    return <div className="max-w-4xl mx-auto p-6 text-muted-foreground">{t('checkout.loadingCart')}</div>
   }
 
   if (masterOrder && paymentDone) {
     return (
       <div className="max-w-4xl mx-auto p-6 bg-background min-h-screen">
-        <h1 className="text-3xl font-bold mb-8 text-foreground border-b border-border pb-4 font-heading">Checkout</h1>
+        <h1 className="text-3xl font-bold mb-8 text-foreground border-b border-border pb-4 font-heading">{t('checkout.title')}</h1>
         <div className="p-4 bg-green-50 text-green-700 rounded-xl border border-green-100 animate-in fade-in-0 zoom-in-95 duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]">
-          Payment successful! Order #{masterOrder.master_order_number} is now being processed, split across{' '}
-          {masterOrder.sub_orders.length} vendor{masterOrder.sub_orders.length === 1 ? '' : 's'}.
+          {t('checkout.paymentSuccessMarketplace', { number: masterOrder.master_order_number, count: masterOrder.sub_orders.length })}
         </div>
         <div data-testid="master-order-sub-orders" className="mt-6 space-y-3">
           {masterOrder.sub_orders.map(so => (
             <div key={so.id} className="bg-card p-4 rounded-xl shadow-sm border border-border flex items-center justify-between">
               <div>
-                <div className="font-semibold text-foreground">{vendorNames[so.tenant_id] || `Vendor #${so.tenant_id}`}</div>
-                <div className="text-sm text-muted-foreground">Order #{so.order_number}</div>
+                <div className="font-semibold text-foreground">{vendorNames[so.tenant_id] || t('checkout.vendor', { id: so.tenant_id })}</div>
+                <div className="text-sm text-muted-foreground">{t('checkout.orderNumber', { number: so.order_number })}</div>
               </div>
               <div className="text-right">
                 <div className="font-semibold text-foreground">{formatCurrency(Number(so.total_amount))}</div>
                 <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${orderStatusClass[so.status]}`}>
-                  {orderStatusLabel[so.status] || so.status}
+                  {orderStatusLabel[so.status] ? t(`orderStatus.${so.status}`) : so.status}
                 </span>
               </div>
             </div>
@@ -171,13 +172,13 @@ export default function MarketplaceCheckoutPage() {
             onClick={() => router.push('/account/orders')}
             className="bg-primary text-primary-foreground px-6 py-2 rounded-lg font-medium transition-colors duration-150 hover:bg-primary/90 active:scale-[0.98]"
           >
-            View My Orders
+            {t('checkout.viewOrders')}
           </button>
           <button
             onClick={() => router.push('/marketplace')}
             className="bg-card border border-border text-foreground px-6 py-2 rounded-lg font-medium transition-colors duration-150 hover:bg-muted active:scale-[0.98]"
           >
-            Continue Shopping
+            {t('checkout.continueShopping')}
           </button>
         </div>
       </div>
@@ -187,18 +188,17 @@ export default function MarketplaceCheckoutPage() {
   if (masterOrder) {
     return (
       <div className="max-w-4xl mx-auto p-6 bg-background min-h-screen">
-        <h1 className="text-3xl font-bold mb-8 text-foreground border-b border-border pb-4 font-heading">Checkout</h1>
+        <h1 className="text-3xl font-bold mb-8 text-foreground border-b border-border pb-4 font-heading">{t('checkout.title')}</h1>
         {error && <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-xl border border-red-100">{error}</div>}
         <div data-testid="pending-payment" className="bg-card p-6 rounded-xl shadow-sm border border-border space-y-4 animate-in fade-in-0 slide-in-from-bottom-2 duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]">
           <div>
-            <h2 className="text-xl font-semibold text-foreground">Order #{masterOrder.master_order_number} is awaiting payment</h2>
+            <h2 className="text-xl font-semibold text-foreground">{t('checkout.awaitingPayment', { number: masterOrder.master_order_number })}</h2>
             <p className="text-muted-foreground mt-1">
-              Total: <span className="font-bold text-foreground">{formatCurrency(Number(masterOrder.total_amount))}</span>
+              {t('checkout.total')} <span className="font-bold text-foreground">{formatCurrency(Number(masterOrder.total_amount))}</span>
             </p>
             {!stripePayment && (
               <p className="text-sm text-amber-700 mt-2">
-                This is a development environment — payment is simulated. Unpaid orders are automatically
-                cancelled and their stock released if left pending too long.
+                {t('checkout.mockPaymentHint')}
               </p>
             )}
           </div>
@@ -206,8 +206,8 @@ export default function MarketplaceCheckoutPage() {
             {masterOrder.sub_orders.map(so => (
               <div key={so.id} className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
                 <div>
-                  <div className="text-sm font-medium text-foreground">{vendorNames[so.tenant_id] || `Vendor #${so.tenant_id}`}</div>
-                  <div className="text-xs text-muted-foreground">Order #{so.order_number}</div>
+                  <div className="text-sm font-medium text-foreground">{vendorNames[so.tenant_id] || t('checkout.vendor', { id: so.tenant_id })}</div>
+                  <div className="text-xs text-muted-foreground">{t('checkout.orderNumber', { number: so.order_number })}</div>
                 </div>
                 <div className="text-sm font-semibold text-foreground/80">{formatCurrency(Number(so.total_amount))}</div>
               </div>
@@ -231,7 +231,7 @@ export default function MarketplaceCheckoutPage() {
               disabled={payBusy}
               className="w-full bg-primary text-primary-foreground py-3 rounded-xl font-bold transition-all duration-150 hover:bg-primary/90 active:scale-[0.98] disabled:opacity-70"
             >
-              {payBusy ? 'Processing...' : 'Pay Now'}
+              {payBusy ? t('checkout.processing') : t('checkout.payNow')}
             </button>
           )}
         </div>
@@ -242,15 +242,15 @@ export default function MarketplaceCheckoutPage() {
   if (!activeCart || !cart || cart.items.length === 0) {
     return (
       <div className="max-w-4xl mx-auto p-6 bg-background min-h-screen">
-        <h1 className="text-3xl font-bold mb-8 text-foreground border-b border-border pb-4 font-heading">Checkout</h1>
-        <p className="text-muted-foreground">Your marketplace cart is empty. Add items from the marketplace first.</p>
+        <h1 className="text-3xl font-bold mb-8 text-foreground border-b border-border pb-4 font-heading">{t('checkout.title')}</h1>
+        <p className="text-muted-foreground">{t('checkout.emptyMarketplace')}</p>
       </div>
     )
   }
 
   return (
     <div className="max-w-4xl mx-auto p-6 bg-background min-h-screen">
-      <h1 className="text-3xl font-bold mb-8 text-foreground border-b border-border pb-4 font-heading">Checkout</h1>
+      <h1 className="text-3xl font-bold mb-8 text-foreground border-b border-border pb-4 font-heading">{t('checkout.title')}</h1>
 
       {error && <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-xl border border-red-100">{error}</div>}
 
@@ -258,7 +258,7 @@ export default function MarketplaceCheckoutPage() {
         <div className="md:col-span-2 space-y-6">
           <div data-testid="item-summary" className="bg-card p-6 rounded-xl shadow-sm border border-border">
             <h2 className="text-xl font-semibold mb-4 text-foreground">
-              Item Summary &middot; {cart.vendor_count} vendor{cart.vendor_count === 1 ? '' : 's'}
+              {t('checkout.itemSummaryVendors', { count: cart.vendor_count })}
             </h2>
             {cart.items.map(item => (
               <div key={item.id} className="flex justify-between items-center py-2 border-b border-border last:border-0 text-foreground/80">
@@ -270,15 +270,15 @@ export default function MarketplaceCheckoutPage() {
               </div>
             ))}
             <p className="mt-3 text-xs text-muted-foreground">
-              This will be placed as {cart.vendor_count} separate order{cart.vendor_count === 1 ? '' : 's'}, one per vendor.
+              {t('checkout.splitOrders', { count: cart.vendor_count })}
             </p>
           </div>
 
           <div data-testid="shipping-address-fields" className="bg-card p-6 rounded-xl shadow-sm border border-border">
-            <h2 className="text-xl font-semibold mb-4 text-foreground">Shipping Details</h2>
+            <h2 className="text-xl font-semibold mb-4 text-foreground">{t('checkout.shippingDetails')}</h2>
             <div className="space-y-3">
               <div>
-                <label htmlFor="mpFullName" className="block text-sm font-medium mb-1 text-foreground">Full Name</label>
+                <label htmlFor="mpFullName" className="block text-sm font-medium mb-1 text-foreground">{t('checkout.fullName')}</label>
                 <input
                   id="mpFullName"
                   type="text"
@@ -288,7 +288,7 @@ export default function MarketplaceCheckoutPage() {
                 />
               </div>
               <div>
-                <label htmlFor="mpEmail" className="block text-sm font-medium mb-1 text-foreground">Email</label>
+                <label htmlFor="mpEmail" className="block text-sm font-medium mb-1 text-foreground">{t('checkout.email')}</label>
                 <input
                   id="mpEmail"
                   type="email"
@@ -298,7 +298,7 @@ export default function MarketplaceCheckoutPage() {
                 />
               </div>
               <div>
-                <label htmlFor="mpAddress" className="block text-sm font-medium mb-1 text-foreground">Address</label>
+                <label htmlFor="mpAddress" className="block text-sm font-medium mb-1 text-foreground">{t('checkout.address')}</label>
                 <input
                   id="mpAddress"
                   type="text"
@@ -315,11 +315,11 @@ export default function MarketplaceCheckoutPage() {
           <div className="bg-card p-6 rounded-xl shadow-sm border border-border">
             <div className="space-y-2 mb-6">
               <div className="flex justify-between text-muted-foreground">
-                <span>Subtotal:</span>
+                <span>{t('checkout.subtotal')}</span>
                 <span>{formatCurrency(subtotal)}</span>
               </div>
               <div className="flex justify-between font-bold text-xl text-foreground pt-2 border-t border-border">
-                <span>Total:</span>
+                <span>{t('checkout.total')}</span>
                 <span>{formatCurrency(subtotal)}</span>
               </div>
             </div>
@@ -328,7 +328,7 @@ export default function MarketplaceCheckoutPage() {
               disabled={submitting}
               className="w-full bg-primary text-primary-foreground py-3 rounded-xl font-bold text-lg shadow-lg hover:bg-primary/90 hover:shadow-xl active:scale-[0.98] transition-all duration-150 disabled:opacity-70"
             >
-              {submitting ? 'Placing Order...' : 'Place Order'}
+              {submitting ? t('checkout.placing') : t('checkout.placeOrder')}
             </button>
           </div>
         </div>

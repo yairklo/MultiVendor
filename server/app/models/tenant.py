@@ -55,5 +55,8 @@ class TenantSettings(TenantScoped, Base):
     # template doesn't require this to already be set, it just stamps it going forward.
     template_key = Column(String(50), nullable=True)
     draft_template_key = Column(String(50), nullable=True)
+    # Seller-editable storefront navbar. JSON list of {id, enabled, kind, page_key, href, label}.
+    # NULL means "use the platform defaults" (home/shop/marketplace/about/contact).
+    nav_items = Column(JSON, nullable=True)
 
     tenant = relationship("Tenant", back_populates="settings")

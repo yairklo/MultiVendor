@@ -13,6 +13,9 @@ import { useToast } from '@/context/ToastContext'
 import { resolvePageKeyHref } from '@/lib/storefront-nav'
 import { DispatchedAction, StorePageSchema } from '@/lib/ai/types'
 import { useStorefrontTheme } from '@/context/StorefrontThemeContext'
+import { StorefrontLanguageSwitcher } from './StorefrontLanguageSwitcher'
+import { isRtlLang } from '@/lib/languages'
+import { resolveImageUrl } from '@/lib/media'
 
 const PAGE_SIZE = 12
 
@@ -26,11 +29,11 @@ const gridItemVariants = {
   show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.16, 1, 0.3, 1] as const } },
 }
 
-type Lang = 'en' | 'he'
+type CatalogCopy = { noProducts: string; searchPlaceholder: string; allCategories: string }
 
-const strings: Record<Lang, { noProducts: string; switcherLabel: string; searchPlaceholder: string; allCategories: string }> = {
-  en: { noProducts: 'No products found.', switcherLabel: 'עברית', searchPlaceholder: 'Search products...', allCategories: 'All Categories' },
-  he: { noProducts: 'לא נמצאו מוצרים.', switcherLabel: 'English', searchPlaceholder: 'חיפוש מוצרים...', allCategories: 'כל הקטגוריות' },
+const catalogCopy: Record<string, CatalogCopy> = {
+  en: { noProducts: 'No products found.', searchPlaceholder: 'Search products...', allCategories: 'All Categories' },
+  he: { noProducts: 'לא נמצאו מוצרים.', searchPlaceholder: 'חיפוש מוצרים...', allCategories: 'כל הקטגוריות' },
 }
 
 /**
@@ -46,6 +49,7 @@ export function CatalogListing({
   initialProducts,
   initialMeta,
   initialCategories,
+  showBrandBanner = false,
 }: {
   tenantSlug: string
   /** When set, shown instead of the classic grid while the shopper is just browsing (no active search/category filter). */
@@ -54,6 +58,8 @@ export function CatalogListing({
   initialProducts?: any[]
   initialMeta?: PaginationMeta | null
   initialCategories?: any[]
+  /** Home page only — the seller's uploaded banner sits above the catalog / AI layout. */
+  showBrandBanner?: boolean
 }) {
   const router = useRouter()
   const { showToast } = useToast()
@@ -65,8 +71,8 @@ export function CatalogListing({
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [categoryId, setCategoryId] = useState('')
-  const { lang, setLang } = useStorefrontTheme()
-  const t = strings[lang]
+  const { lang, setLang, bannerUrl, supportedLanguages } = useStorefrontTheme()
+  const t = catalogCopy[lang] || catalogCopy.he
   const prefersReducedMotion = useReducedMotion()
 
   function handleAiAction(action: DispatchedAction) {
@@ -145,7 +151,7 @@ export function CatalogListing({
 
   return (
     <div
-      dir={lang === 'he' ? 'rtl' : 'ltr'}
+      dir={isRtlLang(lang) ? 'rtl' : 'ltr'}
       className="min-h-full"
       style={
         showAiPage
@@ -154,17 +160,27 @@ export function CatalogListing({
       }
     >
     <div className="mx-auto max-w-6xl px-4 py-8 md:px-8">
+      {showBrandBanner && bannerUrl && (
+        <div className="mb-8 overflow-hidden rounded-2xl border border-black/5 shadow-sm">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={resolveImageUrl(bannerUrl)}
+            alt=""
+            className="h-48 w-full object-cover md:h-64"
+          />
+        </div>
+      )}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-1 min-w-[240px] flex-wrap items-center gap-3">
           <div className="relative max-w-sm flex-1">
-            <Search className="absolute left-3 top-1/2 w-4 h-4 -translate-y-1/2 text-gray-400" />
+            <Search className="absolute start-3 top-1/2 w-4 h-4 -translate-y-1/2 text-gray-400" />
             <input
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t.searchPlaceholder}
               aria-label="Search products"
-              className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 outline-none focus:ring-2 focus:ring-blue-600"
+              className="w-full rounded-lg border border-gray-200 bg-white py-2 ps-9 pe-3 outline-none focus:ring-2 focus:ring-blue-600"
             />
           </div>
           {categories.length > 0 && (
@@ -177,19 +193,18 @@ export function CatalogListing({
               <option value="">{t.allCategories}</option>
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {typeof c.name === 'object' ? c.name?.[lang] || c.name?.en || c.name?.he : c.name}
+                  {typeof c.name === 'object' ? c.name?.[lang] || c.name?.he || c.name?.en : c.name}
                 </option>
               ))}
             </select>
           )}
         </div>
-        <button
-          data-testid="language-switcher"
-          className="cursor-pointer font-medium text-gray-600 transition-colors hover:text-blue-600"
-          onClick={() => setLang(lang === 'en' ? 'he' : 'en')}
-        >
-          {t.switcherLabel}
-        </button>
+        <StorefrontLanguageSwitcher
+          className="font-medium text-gray-600 transition-colors hover:text-blue-600"
+          lang={lang}
+          setLang={setLang}
+          supportedLanguages={supportedLanguages}
+        />
       </div>
 
       {showAiPage ? (

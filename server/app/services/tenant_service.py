@@ -93,6 +93,12 @@ async def update_store_settings_service(tenant_slug: str, req: TenantSettingsUpd
         db.add(settings)
 
     update_data = req.model_dump(exclude_unset=True)
+    if "default_language" in update_data:
+        langs = update_data.get("supported_languages")
+        if langs is None:
+            langs = settings.supported_languages or ["he"]
+        if update_data["default_language"] not in langs:
+            raise HTTPException(status_code=422, detail="default_language must be one of supported_languages")
     for key, value in update_data.items():
         setattr(settings, key, value)
 

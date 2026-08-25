@@ -27,6 +27,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { useCurrency } from '@/hooks/useCurrency'
+import { useUiLocale } from '@/context/UiLocaleContext'
 
 const formSchema = z.object({
   code: z.string().min(3, 'At least 3 characters').max(20).regex(/^[A-Za-z0-9]+$/, 'Alphanumeric only'),
@@ -40,6 +41,7 @@ const formSchema = z.object({
 export function CouponsPageClient({ initialCoupons }: { initialCoupons: any[] }) {
   const { fetchCoupons, createCoupon, deleteCoupon } = useCoupons()
   const { formatCurrency } = useCurrency()
+  const { t } = useUiLocale()
   const { showToast } = useToast()
   const { confirm } = useConfirm()
   const [coupons, setCoupons] = useState<any[]>(initialCoupons)
@@ -75,9 +77,9 @@ export function CouponsPageClient({ initialCoupons }: { initialCoupons: any[] })
       })
       form.reset()
       await loadCoupons()
-      showToast('Coupon created', 'success')
+      showToast(t('coupons.created'), 'success')
     } catch (error: any) {
-      showToast(error.message || 'Failed to create coupon', 'error')
+      showToast(error.message || t('coupons.createFailed'), 'error')
     } finally {
       setLoading(false)
     }
@@ -85,26 +87,26 @@ export function CouponsPageClient({ initialCoupons }: { initialCoupons: any[] })
 
   const handleDelete = async (id: number) => {
     const ok = await confirm({
-      title: 'Delete this coupon?',
-      confirmLabel: 'Delete',
+      title: t('coupons.deleteConfirm'),
+      confirmLabel: t('common.delete'),
       variant: 'destructive',
     })
     if (!ok) return
     try {
       await deleteCoupon(id)
       await loadCoupons()
-      showToast('Coupon deleted', 'success')
+      showToast(t('coupons.deleted'), 'success')
     } catch (error: any) {
-      showToast(error.message || 'Failed to delete coupon', 'error')
+      showToast(error.message || t('coupons.deleteFailed'), 'error')
     }
   }
 
   return (
     <div className="max-w-5xl">
-      <h1 className="font-heading text-3xl font-bold mb-8 text-foreground">Coupons</h1>
+        <h1 className="font-heading text-3xl font-bold mb-8 text-foreground">{t('coupons.title')}</h1>
 
       <div className="bg-card p-6 rounded-xl shadow-sm border border-border mb-8">
-        <h2 className="text-xl font-bold mb-4 text-foreground">Create New Coupon</h2>
+        <h2 className="text-xl font-bold mb-4 text-foreground">{t('coupons.create')}</h2>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -113,7 +115,7 @@ export function CouponsPageClient({ initialCoupons }: { initialCoupons: any[] })
                 name="code"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Code</FormLabel>
+                    <FormLabel>{t('coupons.code')}</FormLabel>
                     <FormControl>
                       <Input placeholder="e.g. SUMMER10" {...field} />
                     </FormControl>
@@ -126,14 +128,14 @@ export function CouponsPageClient({ initialCoupons }: { initialCoupons: any[] })
                 name="discount_type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Discount Type</FormLabel>
+                    <FormLabel>{t('coupons.discountType')}</FormLabel>
                     <FormControl>
                       <select
                         className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
                         {...field}
                       >
-                        <option value="percentage">Percentage (%)</option>
-                        <option value="fixed">Fixed Amount ($)</option>
+                        <option value="percentage">{t('coupons.percentage')}</option>
+                        <option value="fixed">{t('coupons.fixed')}</option>
                       </select>
                     </FormControl>
                     <FormMessage />
@@ -145,7 +147,7 @@ export function CouponsPageClient({ initialCoupons }: { initialCoupons: any[] })
                 name="discount_val"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Discount Value</FormLabel>
+                    <FormLabel>{t('coupons.discountValue')}</FormLabel>
                     <FormControl>
                       <Input type="number" step="0.01" {...field} />
                     </FormControl>
@@ -161,7 +163,7 @@ export function CouponsPageClient({ initialCoupons }: { initialCoupons: any[] })
                 name="min_order_amt"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Minimum Order ($)</FormLabel>
+                    <FormLabel>{t('coupons.minOrder')}</FormLabel>
                     <FormControl>
                       <Input type="number" step="0.01" {...field} />
                     </FormControl>
@@ -174,7 +176,7 @@ export function CouponsPageClient({ initialCoupons }: { initialCoupons: any[] })
                 name="usage_limit"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Usage Limit</FormLabel>
+                    <FormLabel>{t('coupons.usageLimit')}</FormLabel>
                     <FormControl>
                       <Input type="number" {...field} />
                     </FormControl>
@@ -187,7 +189,7 @@ export function CouponsPageClient({ initialCoupons }: { initialCoupons: any[] })
                 name="valid_until"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Valid Until</FormLabel>
+                    <FormLabel>{t('coupons.validUntil')}</FormLabel>
                     <FormControl>
                       <Input type="date" {...field} />
                     </FormControl>
@@ -198,7 +200,7 @@ export function CouponsPageClient({ initialCoupons }: { initialCoupons: any[] })
             </div>
 
             <Button type="submit" disabled={loading}>
-              {loading ? 'Creating...' : 'Create Coupon'}
+              {loading ? t('common.creating') : t('coupons.createButton')}
             </Button>
           </form>
         </Form>
@@ -208,18 +210,18 @@ export function CouponsPageClient({ initialCoupons }: { initialCoupons: any[] })
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Code</TableHead>
-              <TableHead>Discount</TableHead>
-              <TableHead>Used</TableHead>
-              <TableHead>Valid Until</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>{t('coupons.code')}</TableHead>
+              <TableHead>{t('coupons.discount')}</TableHead>
+              <TableHead>{t('coupons.used')}</TableHead>
+              <TableHead>{t('coupons.validUntil')}</TableHead>
+              <TableHead className="text-right">{t('common.actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {coupons.length === 0 && (
               <TableRow>
                 <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                  No coupons yet.
+                  {t('coupons.none')}
                 </TableCell>
               </TableRow>
             )}
@@ -233,7 +235,7 @@ export function CouponsPageClient({ initialCoupons }: { initialCoupons: any[] })
                 <TableCell>{new Date(coupon.valid_until).toLocaleDateString()}</TableCell>
                 <TableCell className="text-right">
                   <Button variant="destructive" size="sm" onClick={() => handleDelete(coupon.id)}>
-                    Delete
+                    {t('common.delete')}
                   </Button>
                 </TableCell>
               </TableRow>

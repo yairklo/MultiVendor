@@ -100,7 +100,7 @@ describe('CatalogListing', () => {
     await screen.findByTestId('product-grid')
     expect(container.querySelector('[dir]')).toHaveAttribute('dir', 'ltr')
 
-    await user.click(screen.getByTestId('language-switcher'))
+    await user.selectOptions(screen.getByTestId('language-switcher'), 'he')
 
     expect(container.querySelector('[dir]')).toHaveAttribute('dir', 'rtl')
     expect(await screen.findAllByRole('button', { name: 'הוסף לעגלה' })).toHaveLength(2)

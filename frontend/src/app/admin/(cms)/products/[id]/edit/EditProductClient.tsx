@@ -20,6 +20,9 @@ import {
 import { Input } from '@/components/ui/input'
 import { ImageUploadField } from '@/components/upload/ImageUploadField'
 import { resolveImageUrl } from '@/lib/media'
+import { useUiLocale } from '@/context/UiLocaleContext'
+import { useStorefrontTheme } from '@/context/StorefrontThemeContext'
+import { extraLanguageCodes, languageDisplayName } from '@/lib/languages'
 
 const formSchema = z.object({
   name_en: z.string().min(2, { message: 'English name must be at least 2 characters.' }),
@@ -39,15 +42,24 @@ export function EditProductClient({
   initialSlug,
   initialVariant,
   initialValues,
+  initialExtraNames = {},
+  initialExtraDescs = {},
 }: {
   productId: string
   categories: any[]
   initialSlug: string
   initialVariant: any
   initialValues: z.infer<typeof formSchema>
+  initialExtraNames?: Record<string, string>
+  initialExtraDescs?: Record<string, string>
 }) {
   const router = useRouter()
   const { updateProduct, updateVariant } = useProducts()
+  const { t, locale } = useUiLocale()
+  const { supportedLanguages } = useStorefrontTheme()
+  const extraLangs = extraLanguageCodes(supportedLanguages)
+  const [extraNames, setExtraNames] = useState<Record<string, string>>(initialExtraNames)
+  const [extraDescs, setExtraDescs] = useState<Record<string, string>>(initialExtraDescs)
   const [slug] = useState(initialSlug)
   const [variant] = useState<any>(initialVariant)
   const [loading, setLoading] = useState(false)
@@ -64,15 +76,23 @@ export function EditProductClient({
     try {
       const descriptionEn = values.description_en?.trim()
       const descriptionHe = values.description_he?.trim()
+      const name: Record<string, string> = { en: values.name_en, he: values.name_he || values.name_en }
+      for (const lang of extraLangs) {
+        name[lang] = extraNames[lang]?.trim() || values.name_he || values.name_en
+      }
       const payload: any = {
-        name: { en: values.name_en, he: values.name_he || values.name_en },
+        name,
         base_price: values.base_price,
         category_id: values.category_id || undefined,
         is_active: values.is_active,
       }
 
-      if (descriptionEn || descriptionHe) {
-        payload.description = { en: descriptionEn || '', he: descriptionHe || descriptionEn || '' }
+      if (descriptionEn || descriptionHe || extraLangs.some((l) => extraDescs[l]?.trim())) {
+        const description: Record<string, string> = { en: descriptionEn || '', he: descriptionHe || descriptionEn || '' }
+        for (const lang of extraLangs) {
+          description[lang] = extraDescs[lang]?.trim() || descriptionHe || descriptionEn || ''
+        }
+        payload.description = description
       }
 
       // NOTE: server/app/schemas/catalog_schemas.py's ProductUpdateRequest doesn't declare an
@@ -96,7 +116,7 @@ export function EditProductClient({
 
       router.push('/admin/products')
     } catch (err: any) {
-      setError(err.message || 'Failed to update product')
+        setError(err.message || t('products.updateFailed'))
     } finally {
       setLoading(false)
     }
@@ -106,9 +126,9 @@ export function EditProductClient({
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center mb-6 space-x-4">
         <Link href="/admin/products" className={buttonVariants({ variant: 'ghost' })}>
-          &larr; Back
+          &larr; {t('common.back')}
         </Link>
-        <h1 className="text-3xl font-bold text-gray-900">Edit Product</h1>
+        <h1 className="text-3xl font-bold text-gray-900">{t('products.edit')}</h1>
       </div>
 
       {error && (
@@ -126,7 +146,7 @@ export function EditProductClient({
                 name="name_en"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Product Name (English)</FormLabel>
+                    <FormLabel>{t('products.nameIn', { language: languageDisplayName('en', locale) })}</FormLabel>
                     <FormControl>
                       <Input placeholder="e.g. Vintage T-Shirt" {...field} />
                     </FormControl>
@@ -139,7 +159,7 @@ export function EditProductClient({
                 name="name_he"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Product Name (Hebrew)</FormLabel>
+                    <FormLabel>{t('products.nameIn', { language: languageDisplayName('he', locale) })}</FormLabel>
                     <FormControl>
                       <Input placeholder="e.g. חולצת וינטג'" {...field} />
                     </FormControl>
@@ -148,9 +168,23 @@ export function EditProductClient({
                 )}
               />
             </div>
+            {extraLangs.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {extraLangs.map((lang) => (
+                  <div key={`name-${lang}`}>
+                    <label className="text-sm font-medium">{t('products.nameIn', { language: languageDisplayName(lang, locale) })}</label>
+                    <Input
+                      className="mt-2"
+                      value={extraNames[lang] || ''}
+                      onChange={(e) => setExtraNames((prev) => ({ ...prev, [lang]: e.target.value }))}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div>
-              <label className="text-sm font-medium mb-2 block text-gray-500">Slug</label>
+              <label className="text-sm font-medium mb-2 block text-gray-500">{t('products.slug')}</label>
               <Input value={slug} disabled readOnly />
             </div>
 
@@ -160,7 +194,7 @@ export function EditProductClient({
                 name="description_en"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description (English)</FormLabel>
+                    <FormLabel>{t('products.descriptionIn', { language: languageDisplayName('en', locale) })}</FormLabel>
                     <FormControl>
                       <Input placeholder="Description..." {...field} />
                     </FormControl>
@@ -173,7 +207,7 @@ export function EditProductClient({
                 name="description_he"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description (Hebrew)</FormLabel>
+                    <FormLabel>{t('products.descriptionIn', { language: languageDisplayName('he', locale) })}</FormLabel>
                     <FormControl>
                       <Input placeholder="תיאור..." {...field} />
                     </FormControl>
@@ -182,13 +216,27 @@ export function EditProductClient({
                 )}
               />
             </div>
+            {extraLangs.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {extraLangs.map((lang) => (
+                  <div key={`desc-${lang}`}>
+                    <label className="text-sm font-medium">{t('products.descriptionIn', { language: languageDisplayName(lang, locale) })}</label>
+                    <Input
+                      className="mt-2"
+                      value={extraDescs[lang] || ''}
+                      onChange={(e) => setExtraDescs((prev) => ({ ...prev, [lang]: e.target.value }))}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
 
             <FormField
               control={form.control}
               name="image_url"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Image URL</FormLabel>
+                  <FormLabel>{t('products.imageUrl')}</FormLabel>
                   <FormControl>
                     <Input placeholder="https://example.com/image.jpg" {...field} />
                   </FormControl>
@@ -206,7 +254,6 @@ export function EditProductClient({
             />
 
             <ImageUploadField
-              label="Upload Image File"
               value={form.watch('image_url') || ''}
               onChange={(url) => form.setValue('image_url', url, { shouldDirty: true })}
             />
@@ -217,7 +264,7 @@ export function EditProductClient({
                 name="base_price"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Base Price</FormLabel>
+                    <FormLabel>{t('products.basePrice')}</FormLabel>
                     <FormControl>
                       <Input type="number" step="0.01" {...field} />
                     </FormControl>
@@ -231,17 +278,17 @@ export function EditProductClient({
                 name="category_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Category (Optional)</FormLabel>
+                    <FormLabel>{t('products.category')}</FormLabel>
                     <FormControl>
                       <select
                         className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
                         value={field.value ?? ''}
                         onChange={e => field.onChange(e.target.value ? Number(e.target.value) : null)}
                       >
-                        <option value="">No category</option>
+                        <option value="">{t('products.noCategory')}</option>
                         {categories.map(cat => (
                           <option key={cat.id} value={cat.id}>
-                            {typeof cat.name === 'object' ? (cat.name?.en || cat.name?.he || 'Unnamed') : cat.name}
+                            {typeof cat.name === 'object' ? (cat.name?.[locale] || cat.name?.he || cat.name?.en || t('products.unnamed')) : cat.name}
                           </option>
                         ))}
                       </select>
@@ -257,13 +304,13 @@ export function EditProductClient({
               name="stock_quantity"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Stock Quantity</FormLabel>
+                  <FormLabel>{t('products.stock')}</FormLabel>
                   <FormControl>
                     <Input type="number" {...field} disabled={!variant} />
                   </FormControl>
                   {!variant && (
                     <p className="text-sm text-muted-foreground">
-                      This product has no variant to track stock against.
+                      {t('products.noVariantStock')}
                     </p>
                   )}
                   <FormMessage />
@@ -285,9 +332,9 @@ export function EditProductClient({
                     />
                   </FormControl>
                   <div className="space-y-1 leading-none">
-                    <FormLabel>Active</FormLabel>
+                    <FormLabel>{t('products.active')}</FormLabel>
                     <p className="text-sm text-muted-foreground">
-                      This product will be visible on the public storefront.
+                      {t('products.activeHint')}
                     </p>
                   </div>
                 </FormItem>
@@ -295,7 +342,7 @@ export function EditProductClient({
             />
 
             <Button type="submit" disabled={loading} className="w-full">
-              {loading ? 'Saving...' : 'Save Product'}
+              {loading ? t('products.saving') : t('products.saveProduct')}
             </Button>
           </form>
         </Form>
