@@ -154,6 +154,7 @@ async def get_marketplace_cart_service(
             quantity=cart_item.quantity,
             total_price=total_price,
             image_url=image_url,
+            product_type=product.product_type,
         ))
 
     return MarketplaceCartResponse(

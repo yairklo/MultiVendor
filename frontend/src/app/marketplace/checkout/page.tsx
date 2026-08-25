@@ -54,6 +54,8 @@ export default function MarketplaceCheckoutPage() {
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [address, setAddress] = useState('')
+  const [city, setCity] = useState('')
+  const [phone, setPhone] = useState('')
 
   useEffect(() => {
     setIsLoggedIn(!!getCookie('token'))
@@ -62,8 +64,15 @@ export default function MarketplaceCheckoutPage() {
   const activeCart = getActiveMarketplaceCart()
   const subtotal = cart ? Number(cart.subtotal) : 0
 
+  const isDigitalOnly = !!cart && cart.items.length > 0 && cart.items.every(item => item.product_type !== 'physical')
+  const requiresShippingAddress = !!cart && cart.items.length > 0 && !isDigitalOnly
+
   const handleCheckout = async () => {
     if (!activeCart || !cart) return
+    if (requiresShippingAddress && (!fullName.trim() || !city.trim() || !address.trim() || !phone.trim())) {
+      setError(t('checkout.shippingFieldsRequired'))
+      return
+    }
     try {
       setError('')
       setSubmitting(true)
@@ -75,13 +84,17 @@ export default function MarketplaceCheckoutPage() {
       for (const item of cart.items) names[item.tenant_id] = item.tenant_name
       setVendorNames(names)
 
+      const payload: Record<string, unknown> = {
+        cart_id: activeCart.cartId,
+        payment_token: crypto.randomUUID(),
+      }
+      if (requiresShippingAddress) {
+        payload.shipping_address = { full_name: fullName, email, phone, city, address_line_1: address }
+      }
+
       const order: MasterOrder = await apiClient('/api/v1/marketplace/checkout', {
         method: 'POST',
-        body: JSON.stringify({
-          cart_id: activeCart.cartId,
-          payment_token: crypto.randomUUID(),
-          shipping_address: { full_name: fullName, email, address_line_1: address },
-        }),
+        body: JSON.stringify(payload),
       })
 
       setMasterOrder(order)
@@ -274,41 +287,63 @@ export default function MarketplaceCheckoutPage() {
             </p>
           </div>
 
-          <div data-testid="shipping-address-fields" className="bg-card p-6 rounded-xl shadow-sm border border-border">
-            <h2 className="text-xl font-semibold mb-4 text-foreground">{t('checkout.shippingDetails')}</h2>
-            <div className="space-y-3">
-              <div>
-                <label htmlFor="mpFullName" className="block text-sm font-medium mb-1 text-foreground">{t('checkout.fullName')}</label>
-                <input
-                  id="mpFullName"
-                  type="text"
-                  className="w-full border border-input rounded-lg px-3 py-2 focus:ring-2 focus:ring-ring outline-none text-foreground transition-shadow"
-                  value={fullName}
-                  onChange={e => setFullName(e.target.value)}
-                />
-              </div>
-              <div>
-                <label htmlFor="mpEmail" className="block text-sm font-medium mb-1 text-foreground">{t('checkout.email')}</label>
-                <input
-                  id="mpEmail"
-                  type="email"
-                  className="w-full border border-input rounded-lg px-3 py-2 focus:ring-2 focus:ring-ring outline-none text-foreground transition-shadow"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                />
-              </div>
-              <div>
-                <label htmlFor="mpAddress" className="block text-sm font-medium mb-1 text-foreground">{t('checkout.address')}</label>
-                <input
-                  id="mpAddress"
-                  type="text"
-                  className="w-full border border-input rounded-lg px-3 py-2 focus:ring-2 focus:ring-ring outline-none text-foreground transition-shadow"
-                  value={address}
-                  onChange={e => setAddress(e.target.value)}
-                />
+          {requiresShippingAddress && (
+            <div data-testid="shipping-address-fields" className="bg-card p-6 rounded-xl shadow-sm border border-border">
+              <h2 className="text-xl font-semibold mb-4 text-foreground">{t('checkout.shippingDetails')}</h2>
+              <div className="space-y-3">
+                <div>
+                  <label htmlFor="mpFullName" className="block text-sm font-medium mb-1 text-foreground">{t('checkout.fullName')}</label>
+                  <input
+                    id="mpFullName"
+                    type="text"
+                    className="w-full border border-input rounded-lg px-3 py-2 focus:ring-2 focus:ring-ring outline-none text-foreground transition-shadow"
+                    value={fullName}
+                    onChange={e => setFullName(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="mpEmail" className="block text-sm font-medium mb-1 text-foreground">{t('checkout.email')}</label>
+                  <input
+                    id="mpEmail"
+                    type="email"
+                    className="w-full border border-input rounded-lg px-3 py-2 focus:ring-2 focus:ring-ring outline-none text-foreground transition-shadow"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="mpPhone" className="block text-sm font-medium mb-1 text-foreground">{t('checkout.phone')}</label>
+                  <input
+                    id="mpPhone"
+                    type="tel"
+                    className="w-full border border-input rounded-lg px-3 py-2 focus:ring-2 focus:ring-ring outline-none text-foreground transition-shadow"
+                    value={phone}
+                    onChange={e => setPhone(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="mpCity" className="block text-sm font-medium mb-1 text-foreground">{t('checkout.city')}</label>
+                  <input
+                    id="mpCity"
+                    type="text"
+                    className="w-full border border-input rounded-lg px-3 py-2 focus:ring-2 focus:ring-ring outline-none text-foreground transition-shadow"
+                    value={city}
+                    onChange={e => setCity(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="mpAddress" className="block text-sm font-medium mb-1 text-foreground">{t('checkout.address')}</label>
+                  <input
+                    id="mpAddress"
+                    type="text"
+                    className="w-full border border-input rounded-lg px-3 py-2 focus:ring-2 focus:ring-ring outline-none text-foreground transition-shadow"
+                    value={address}
+                    onChange={e => setAddress(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         <div className="space-y-6">
@@ -325,7 +360,7 @@ export default function MarketplaceCheckoutPage() {
             </div>
             <button
               onClick={handleCheckout}
-              disabled={submitting}
+              disabled={submitting || (requiresShippingAddress && (!fullName.trim() || !city.trim() || !address.trim() || !phone.trim()))}
               className="w-full bg-primary text-primary-foreground py-3 rounded-xl font-bold text-lg shadow-lg hover:bg-primary/90 hover:shadow-xl active:scale-[0.98] transition-all duration-150 disabled:opacity-70"
             >
               {submitting ? t('checkout.placing') : t('checkout.placeOrder')}

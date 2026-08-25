@@ -30,6 +30,8 @@ export default function CheckoutPage() {
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [address, setAddress] = useState('')
+  const [city, setCity] = useState('')
+  const [phone, setPhone] = useState('')
   const [couponInput, setCouponInput] = useState('')
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null)
   const [applyingCoupon, setApplyingCoupon] = useState(false)
@@ -77,6 +79,10 @@ export default function CheckoutPage() {
 
   const handleCheckout = async () => {
     if (!activeCart || !cart) return
+    if (requiresShippingAddress && (!fullName.trim() || !city.trim() || !address.trim() || !phone.trim())) {
+      setError(t('checkout.shippingFieldsRequired'))
+      return
+    }
     try {
       setError('')
       setSubmitting(true)
@@ -90,6 +96,8 @@ export default function CheckoutPage() {
         payload.shipping_address = {
           full_name: fullName,
           email,
+          phone,
+          city,
           address_line_1: address,
         }
         payload.shipping_method_id = shippingMethodId
@@ -295,6 +303,26 @@ export default function CheckoutPage() {
                   />
                 </div>
                 <div>
+                  <label htmlFor="checkoutPhone" className="block text-sm font-medium mb-1 text-foreground">{t('checkout.phone')}</label>
+                  <input
+                    id="checkoutPhone"
+                    type="tel"
+                    className="w-full border border-input rounded-lg px-3 py-2 focus:ring-2 focus:ring-ring outline-none text-foreground transition-shadow"
+                    value={phone}
+                    onChange={e => setPhone(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="checkoutCity" className="block text-sm font-medium mb-1 text-foreground">{t('checkout.city')}</label>
+                  <input
+                    id="checkoutCity"
+                    type="text"
+                    className="w-full border border-input rounded-lg px-3 py-2 focus:ring-2 focus:ring-ring outline-none text-foreground transition-shadow"
+                    value={city}
+                    onChange={e => setCity(e.target.value)}
+                  />
+                </div>
+                <div>
                   <label htmlFor="address" className="block text-sm font-medium mb-1 text-foreground">{t('checkout.address')}</label>
                   <input
                     id="address"
@@ -382,7 +410,7 @@ export default function CheckoutPage() {
             </div>
             <button
               onClick={handleCheckout}
-              disabled={submitting}
+              disabled={submitting || (requiresShippingAddress && (!fullName.trim() || !city.trim() || !address.trim() || !phone.trim()))}
               className="w-full bg-primary text-primary-foreground py-3 rounded-xl font-bold text-lg shadow-lg hover:bg-primary/90 hover:shadow-xl active:scale-[0.98] transition-all duration-150 disabled:opacity-70"
             >
               {submitting ? t('checkout.placing') : t('checkout.placeOrder')}

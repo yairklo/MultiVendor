@@ -1,3 +1,4 @@
+import logging
 import re
 from typing import Any
 
@@ -8,9 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from israel_shipping_sdk.exceptions import ShippingException
-from israel_shipping_sdk.models import Address, Contact, Package, ShipmentRequest
+from israel_shipping_sdk.models import Address, Contact, Package, ShipmentRequest, ShipmentResponse
 
 from app.core.crypto import decrypt_json, encrypt_json
+from app.db.tenant_context import unscoped
 from app.models.order import Order
 from app.models.shipping_config import TenantShippingConfig
 from app.models.tenant import Tenant
@@ -22,6 +24,8 @@ from app.schemas.shipping_schemas import (
 )
 from app.services.shipping_provider_factory import build_shipping_provider, validate_credentials
 
+logger = logging.getLogger(__name__)
+
 FULFILLABLE_STATUS = "processing"
 
 # Matches a trailing house/street number, e.g. "הרצל 12" -> ("הרצל", "12"),
@@ -30,6 +34,26 @@ FULFILLABLE_STATUS = "processing"
 # used as a last resort when the caller didn't send a separate house_number
 # -- see _extract_recipient below for why that matters here specifically.
 _TRAILING_NUMBER_RE = re.compile(r"^(.*?)\s*(\d+)\s*$")
+
+
+def missing_shipping_address_fields(data: dict | None) -> list[str]:
+    """Shared by checkout_service.py/marketplace_service.py (fail fast, at
+    order-creation time) and _extract_recipient below (fail late, at
+    fulfillment time -- the safety net for orders placed before this check
+    existed, or via any client that bypasses the storefront). Only checks
+    the fields that are NEVER derivable from anything else (city, phone,
+    some form of street) -- house_number is deliberately not required here
+    since _split_street_and_number can often recover it from a combined
+    "street name + number" field."""
+    data = data or {}
+    missing = []
+    if not data.get("city"):
+        missing.append("city")
+    if not (data.get("phone") or data.get("recipient_phone")):
+        missing.append("phone")
+    if not (data.get("street") or data.get("address_line_1") or data.get("address")):
+        missing.append("street")
+    return missing
 
 
 async def _require_tenant_id(tenant_slug: str, db: AsyncSession) -> int:
@@ -46,6 +70,7 @@ def _config_to_response(config: TenantShippingConfig) -> TenantShippingConfigRes
         provider=config.provider,
         is_active=config.is_active,
         is_default=config.is_default,
+        auto_fulfill=config.auto_fulfill,
         created_at=config.created_at,
         updated_at=config.updated_at,
     )
@@ -98,6 +123,7 @@ async def upsert_tenant_shipping_config_service(
         config.sender_street = req.sender_street
         config.sender_house_number = req.sender_house_number
         config.is_default = req.is_default
+        config.auto_fulfill = req.auto_fulfill
         config.is_active = True
     else:
         config = TenantShippingConfig(
@@ -110,6 +136,7 @@ async def upsert_tenant_shipping_config_service(
             sender_street=req.sender_street,
             sender_house_number=req.sender_house_number,
             is_default=req.is_default,
+            auto_fulfill=req.auto_fulfill,
             is_active=True,
         )
         db.add(config)
@@ -138,11 +165,14 @@ async def delete_tenant_shipping_config_service(
 
 
 async def _resolve_shipping_config(
-    tenant_id: int, provider_override: str | None, db: AsyncSession
+    tenant_id: int, provider_override: str | None, db: AsyncSession, *, require_auto_fulfill: bool = False
 ) -> TenantShippingConfig | None:
     query = select(TenantShippingConfig).where(
         TenantShippingConfig.tenant_id == tenant_id, TenantShippingConfig.is_active == True  # noqa: E712
     )
+    if require_auto_fulfill:
+        query = query.where(TenantShippingConfig.auto_fulfill == True)  # noqa: E712
+
     if provider_override:
         result = await db.execute(query.where(TenantShippingConfig.provider == provider_override))
         return result.scalars().first()
@@ -167,16 +197,21 @@ def _split_street_and_number(raw: str) -> tuple[str, str | None]:
 def _extract_recipient(order: Order, customer: User) -> tuple[Contact, Address]:
     """Maps Order.shipping_json (a free-form dict -- see
     app/schemas/order_schemas.py's CheckoutRequest.shipping_address) onto
-    the SDK's structured Contact/Address. This is deliberately defensive,
-    not a silent best-effort guess: as of this writing, checkout
-    (frontend/src/app/checkout/page.tsx) only ever sends
-    {full_name, email, address_line_1} -- no city, no phone, no house
-    number -- so most real orders will hit the missing-fields error below
-    until checkout is extended to collect them. That gap is called out
-    in the shipping integration's own docs; this function's job is only to
-    fail with a clear, itemized message when it happens, not to paper over
-    it with a fabricated city or phone number."""
+    the SDK's structured Contact/Address. Checkout now validates
+    missing_shipping_address_fields itself before a physical order can even
+    be created (see checkout_service.py / marketplace_service.py), so this
+    is primarily a safety net for orders placed before that check existed."""
     data: dict[str, Any] = order.shipping_json or {}
+
+    missing = missing_shipping_address_fields(data)
+    if missing:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Order #{order.id} is missing required shipping field(s) for courier fulfillment: "
+                f"{', '.join(missing)}. Checkout needs to collect these before this order can be shipped."
+            ),
+        )
 
     name = data.get("full_name") or data.get("name") or data.get("recipient_name") or customer.full_name
     phone = data.get("phone") or data.get("recipient_phone")
@@ -185,21 +220,15 @@ def _extract_recipient(order: Order, customer: User) -> tuple[Contact, Address]:
     street = data.get("street")
     if not street:
         raw_address = data.get("address_line_1") or data.get("address")
-        if raw_address:
-            street, parsed_number = _split_street_and_number(raw_address)
-            house_number = house_number or parsed_number
+        street, parsed_number = _split_street_and_number(raw_address)
+        house_number = house_number or parsed_number
 
-    missing = [
-        field
-        for field, value in (("city", city), ("street", street), ("house_number", house_number), ("phone", phone))
-        if not value
-    ]
-    if missing:
+    if not house_number:
         raise HTTPException(
             status_code=422,
             detail=(
-                f"Order #{order.id} is missing required shipping field(s) for courier fulfillment: "
-                f"{', '.join(missing)}. Checkout needs to collect these before this order can be shipped."
+                f"Order #{order.id} has a street but no recoverable house number "
+                f"('{street}') -- checkout needs to collect house_number separately."
             ),
         )
 
@@ -227,6 +256,26 @@ def _build_shipment_request(order: Order, customer: User, config: TenantShipping
         order_id=order.order_number,
         notes=f"Order {order.order_number}",
     )
+
+
+async def _perform_shipment(order: Order, customer: User, config: TenantShippingConfig) -> ShipmentResponse:
+    """The actual courier call -- raises ShippingException on failure (or an
+    HTTPException from _extract_recipient if the order's address data is
+    unusable). No order mutation and no commit here, so callers with
+    different error-handling needs (fulfill_order_service raises an
+    HTTPException back to its caller; maybe_auto_fulfill_order below must
+    never raise at all) can each decide what to do with a failure."""
+    provider = build_shipping_provider(config.provider, decrypt_json(config.credentials_encrypted))
+    shipment_request = _build_shipment_request(order, customer, config)
+    return await provider.create_shipment(shipment_request)
+
+
+def _apply_shipment_result(order: Order, config: TenantShippingConfig, shipment: ShipmentResponse) -> None:
+    order.tracking_number = shipment.tracking_number
+    order.shipping_label_url = shipment.label_url
+    order.shipping_provider = config.provider
+    order.status = "shipped"
+    order.shipped_at = func.now()
 
 
 async def fulfill_order_service(
@@ -265,27 +314,68 @@ async def fulfill_order_service(
         )
         raise HTTPException(status_code=422, detail=detail)
 
-    provider = build_shipping_provider(config.provider, decrypt_json(config.credentials_encrypted))
-    shipment_request = _build_shipment_request(order, customer, config)
-
     try:
-        result = await provider.create_shipment(shipment_request)
+        shipment = await _perform_shipment(order, customer, config)
     except ShippingException as exc:
         raise HTTPException(
             status_code=502, detail=f"{config.provider} rejected the shipment: {exc}"
         ) from exc
 
-    order.tracking_number = result.tracking_number
-    order.shipping_label_url = result.label_url
-    order.shipping_provider = config.provider
-    order.status = "shipped"
-    order.shipped_at = func.now()
+    _apply_shipment_result(order, config, shipment)
     await db.commit()
 
     return FulfillOrderResponse(
         order_id=order.id,
         status=order.status,
         provider=config.provider,
-        tracking_number=result.tracking_number,
-        label_url=result.label_url,
+        tracking_number=shipment.tracking_number,
+        label_url=shipment.label_url,
     )
+
+
+async def maybe_auto_fulfill_order(order_id: int, tenant_id: int, db: AsyncSession) -> None:
+    """Called right after an order is marked 'processing' (see
+    order_service.pay_order_service / mark_order_paid_by_payment_intent, and
+    marketplace_service's equivalent). Deliberately never raises -- a
+    courier hiccup here must not break payment confirmation, so any failure
+    is logged and left for the vendor to fulfill manually via the existing
+    endpoint, exactly as if auto_fulfill had never been enabled. A no-op
+    for digital orders and for any tenant that hasn't opted a courier into
+    auto_fulfill (the overwhelming majority, since it defaults to False)."""
+    try:
+        # unscoped(): this can be called from contexts with no bound tenant
+        # (e.g. a global customer paying an order without a tenant_slug in
+        # the URL) -- every query below already filters on the exact
+        # tenant_id the order itself belongs to, so this only lifts the
+        # session's "no bound tenant" guard, it doesn't widen what's read.
+        with unscoped():
+            result = await db.execute(
+                select(Order, User)
+                .join(User, User.id == Order.user_id)
+                .options(selectinload(Order.items))
+                .where(Order.id == order_id, Order.tenant_id == tenant_id)
+            )
+            row = result.first()
+            if not row:
+                return
+            order, customer = row
+
+            if order.order_type != "physical" or order.tracking_number:
+                return
+
+            config = await _resolve_shipping_config(tenant_id, None, db, require_auto_fulfill=True)
+            if not config:
+                return
+
+            shipment = await _perform_shipment(order, customer, config)
+            _apply_shipment_result(order, config, shipment)
+            await db.commit()
+            logger.info(
+                "Auto-fulfilled order %s (tenant %s) via %s: tracking %s",
+                order.id, tenant_id, config.provider, shipment.tracking_number,
+            )
+    except Exception:
+        logger.exception(
+            "Auto-fulfillment failed for order %s (tenant %s) -- left for manual fulfillment",
+            order_id, tenant_id,
+        )

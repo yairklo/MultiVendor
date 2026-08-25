@@ -84,6 +84,10 @@ CREATE TABLE tenant_shipping_configs (
     sender_house_number VARCHAR(20) NOT NULL,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     is_default BOOLEAN NOT NULL DEFAULT FALSE,
+    -- When true, an order is dispatched to this courier automatically the
+    -- moment it's marked 'processing' -- see
+    -- shipping_service.maybe_auto_fulfill_order. Off by default.
+    auto_fulfill BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,

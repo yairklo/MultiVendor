@@ -17,6 +17,9 @@ class OrderStatus(str, Enum):
     PENDING = "pending"
     PENDING_PAYMENT = "pending_payment"
     PROCESSING = "processing"
+    # Set by shipping_service once a courier has accepted the shipment
+    # (tracking_number populated) -- sits between PROCESSING and COMPLETED.
+    SHIPPED = "shipped"
     COMPLETED = "completed"
     CANCELLED = "cancelled"
     EXPIRED = "expired"
