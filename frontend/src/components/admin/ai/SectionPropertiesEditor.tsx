@@ -98,7 +98,10 @@ function LanguageTabs({
         <button
           key={l}
           type="button"
-          onClick={() => onChange(l as 'en' | 'he')}
+          onClick={(e) => {
+            e.stopPropagation()
+            onChange(l)
+          }}
           className={`flex-1 rounded px-2 py-1 text-xs font-semibold uppercase transition-colors ${
             active === l ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
           }`}
@@ -639,10 +642,25 @@ export function SectionPropertiesEditor({
   }
 
   return (
-    <div className="flex h-full flex-col border-l border-border bg-card">
+    <div className="flex h-full min-h-0 flex-col bg-card">
       <div className="flex items-center justify-between border-b px-4 py-3">
         <h3 className="font-semibold text-foreground">Edit {section.type.replace('_', ' ')}</h3>
-        <button onClick={onClose} className="text-muted-foreground transition-colors hover:text-foreground">×</button>
+        <button
+          type="button"
+          onPointerDown={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+          }}
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            onClose()
+          }}
+          aria-label="Close"
+          className="rounded-md px-2 py-0.5 text-lg leading-none text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.98]"
+        >
+          ×
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
