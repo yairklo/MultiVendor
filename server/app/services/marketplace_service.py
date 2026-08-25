@@ -1,5 +1,5 @@
 import uuid
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal
 from typing import Optional
 from uuid import UUID
 from collections import defaultdict
@@ -20,24 +20,14 @@ from app.schemas.marketplace_schemas import (
     MarketplaceCheckoutRequest, MasterOrderResponse,
 )
 from app.schemas.order_schemas import OrderResponse, OrderItemResponse, PaymentIntentInfo
-from app.services.checkout_service import CartCookieAction
+from app.services.checkout_service import CartCookieAction, PLATFORM_COMMISSION_RATE, round2 as _round2
 from app.services.payments import get_payment_provider, get_or_create_payment_intent
-
-# Flat platform cut of each vendor's sub-order subtotal. A fixed constant
-# rather than a per-tenant/per-plan rate table -- good enough for the MVP
-# split; making it configurable per tenant is a natural next step, not
-# something the marketplace checkout path needs to block on.
-PLATFORM_COMMISSION_RATE = Decimal("0.10")
 
 
 def _resolve_product_name(name) -> str:
     if isinstance(name, dict):
         return name.get('en') or next(iter(name.values()), '')
     return str(name)
-
-
-def _round2(value: Decimal) -> Decimal:
-    return value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
 async def _marketplace_cart_has_items(cart_id: str, db: AsyncSession) -> bool:

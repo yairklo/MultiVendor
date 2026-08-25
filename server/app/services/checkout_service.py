@@ -2,7 +2,7 @@ import asyncio
 import uuid
 import json
 from dataclasses import dataclass
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Optional
 from uuid import UUID
 from fastapi import HTTPException, status
@@ -21,6 +21,20 @@ from app.schemas.order_schemas import (
     CheckoutRequest, OrderResponse, OrderItemResponse
 )
 from datetime import datetime, timezone
+
+
+# Flat platform cut of a vendor's order subtotal (after discount, before
+# shipping -- shipping passes through to the vendor untouched). Shared with
+# the marketplace checkout path (see marketplace_service.PLATFORM_COMMISSION_RATE,
+# which imports this same constant) so a single-store order and a marketplace
+# sub-order for the same vendor are split identically. A fixed constant
+# rather than a per-tenant/per-plan rate table -- good enough for the MVP
+# split; making it configurable per tenant is a natural next step.
+PLATFORM_COMMISSION_RATE = Decimal("0.10")
+
+
+def round2(value: Decimal) -> Decimal:
+    return value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
 @dataclass
@@ -392,6 +406,15 @@ async def checkout_service(
         if total_amount < Decimal("0.00"):
             total_amount = Decimal("0.00")
 
+        # Commission applies to what the vendor actually earned on the sale
+        # (subtotal net of discount) -- not to shipping, which passes
+        # through to the vendor untouched.
+        commission_base = subtotal - discount_amt
+        if commission_base < Decimal("0.00"):
+            commission_base = Decimal("0.00")
+        platform_commission = round2(commission_base * PLATFORM_COMMISSION_RATE)
+        vendor_net_payout = commission_base - platform_commission + shipping_fee
+
         # Create Order
         order = Order(
             tenant_id=tenant_id,
@@ -403,6 +426,8 @@ async def checkout_service(
             shipping_method_id=req.shipping_method_id if not is_entirely_digital else None,
             shipping_fee=shipping_fee,
             total_amount=total_amount,
+            platform_commission=platform_commission,
+            vendor_net_payout=vendor_net_payout,
             status='pending_payment',
             order_type='digital' if is_entirely_digital else 'physical',
             shipping_json=req.shipping_address if not is_entirely_digital else None
