@@ -31,6 +31,7 @@ export const en: NestedDict = {
     cannotUndo: 'This cannot be undone.',
     thinking: 'Thinking…',
     working: 'Working…',
+    emptyGrid: 'No items in this section.',
   },
   nav: {
     cmsTitle: 'Tenant CMS',

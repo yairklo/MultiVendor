@@ -1,7 +1,10 @@
 import { Section } from '@/lib/ai/types'
 import { resolveDesignVariantClasses } from '@/lib/design-tokens'
 import { renderSections } from '../PageRenderer'
-import { useUiLocale } from '@/context/UiLocaleContext'
+import { useStorefrontTheme } from '@/context/StorefrontThemeContext'
+import { translate } from '@/lib/ui-i18n/translate'
+import { he } from '@/lib/ui-i18n/he'
+import { en } from '@/lib/ui-i18n/en'
 import React from 'react'
 
 const COLUMN_CLASSES: Record<number, string> = {
@@ -10,6 +13,8 @@ const COLUMN_CLASSES: Record<number, string> = {
   3: 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3',
   4: 'grid-cols-2 md:grid-cols-4',
 }
+
+const dictionaries = { he, en } as const
 
 export function GridContainer({
   section,
@@ -26,7 +31,10 @@ export function GridContainer({
   const columnClass = COLUMN_CLASSES[columns] ?? COLUMN_CLASSES[3]
   const containerClass = resolveDesignVariantClasses(section.settings.design_variant)
   const children = section.children ?? []
-  const { t } = useUiLocale()
+  
+  const { lang } = useStorefrontTheme()
+  const currentLang = (lang === 'he' || lang === 'en') ? lang : 'en'
+  const t = (key: string) => translate(dictionaries[currentLang], key)
 
   const isBento = section.settings.bento_grid === true
   

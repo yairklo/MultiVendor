@@ -200,8 +200,8 @@ export function ProductsPageClient({
         </Select>
       </div>
 
-      <div className="bg-card rounded-xl shadow-apple-elevated border border-border overflow-hidden relative max-h-[70vh] overflow-y-auto">
-        <Table>
+      <div className="bg-card rounded-xl shadow-apple-elevated border border-border overflow-hidden relative max-h-[70vh] overflow-y-auto overflow-x-auto">
+        <Table disableOverflow>
           <TableHeader className="sticky top-0 z-10 backdrop-blur-md bg-background/80 border-b border-border/40">
             <TableRow>
               <TableHead className="w-12">
@@ -280,14 +280,15 @@ export function ProductsPageClient({
                     </Badge>
                   </TableCell>
                   <TableCell className="text-end">
-                    <div className="transition-opacity duration-200 focus-within:opacity-100 flex justify-end">
+                    <div className="flex justify-end">
                       <Link
                         href={`/admin/products/${product.id}/edit`}
+                        aria-label={t('common.edit')}
                         className={buttonVariants({ variant: 'ghost', size: 'sm', className: 'me-2' })}
                       >
                         {t('common.edit')}
                       </Link>
-                      <Button variant="destructive" size="sm" onClick={() => handleDelete(product.id)}>{t('common.delete')}</Button>
+                      <Button variant="destructive" size="sm" aria-label={t('common.delete')} onClick={() => handleDelete(product.id)}>{t('common.delete')}</Button>
                     </div>
                   </TableCell>
                 </TableRow>

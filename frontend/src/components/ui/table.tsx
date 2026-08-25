@@ -4,11 +4,15 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-function Table({ className, ...props }: React.ComponentProps<"table">) {
+interface TableProps extends React.ComponentProps<"table"> {
+  disableOverflow?: boolean
+}
+
+function Table({ className, disableOverflow, ...props }: TableProps) {
   return (
     <div
       data-slot="table-container"
-      className="relative w-full overflow-x-auto"
+      className={cn("relative w-full", !disableOverflow && "overflow-x-auto")}
     >
       <table
         data-slot="table"

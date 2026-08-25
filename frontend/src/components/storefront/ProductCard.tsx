@@ -66,7 +66,7 @@ export function ProductCard({
   }
 
   return (
-    <div className={`group flex flex-col p-3 active:scale-[0.98] transition-transform duration-100 ease-spring ${resolveCardStyleClasses(styleVariant)}`}>
+    <div className={`group flex flex-col p-3 motion-safe:active:scale-[0.98] transition-transform duration-100 ease-spring ${resolveCardStyleClasses(styleVariant)}`}>
       <Link href={`/store/${tenantSlug}/products/${product.slug}`} className="mb-2 block overflow-hidden rounded-lg">
         {image ? (
           // eslint-disable-next-line @next/next/no-img-element -- arbitrary vendor-supplied
@@ -75,7 +75,7 @@ export function ProductCard({
           <img
             src={resolveImageUrl(image)}
             alt={name}
-            className="aspect-square w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            className="aspect-square w-full object-cover transition-transform duration-300 motion-safe:group-hover:scale-105"
           />
         ) : (
           <div className="aspect-square w-full bg-gray-100" />
@@ -99,7 +99,7 @@ export function ProductCard({
         type="button"
         disabled={outOfStock || adding}
         onClick={handleAddToCart}
-        className={`mt-3 w-full px-3 py-2 text-xs font-semibold active:scale-[0.98] transition-all duration-100 ease-spring disabled:cursor-not-allowed disabled:opacity-50 ${theme.primaryButtonClass}`}
+        className={`mt-3 w-full px-3 py-2 text-xs font-semibold motion-safe:active:scale-[0.98] transition-all duration-100 ease-spring disabled:cursor-not-allowed disabled:opacity-50 ${theme.primaryButtonClass}`}
       >
         {outOfStock ? t.outOfStock : adding ? t.adding : t.addToCart}
       </button>

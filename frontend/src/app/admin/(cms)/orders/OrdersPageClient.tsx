@@ -91,8 +91,8 @@ export function OrdersPageClient({ initialOrders }: { initialOrders: any[] }) {
         </Button>
       </div>
 
-      <div className="bg-card rounded-xl shadow-apple-elevated border border-border overflow-hidden relative max-h-[70vh] overflow-y-auto">
-        <Table>
+      <div className="bg-card rounded-xl shadow-apple-elevated border border-border overflow-hidden relative max-h-[70vh] overflow-y-auto overflow-x-auto">
+        <Table disableOverflow>
           <TableHeader className="sticky top-0 z-10 backdrop-blur-md bg-background/80 border-b border-border/40">
             <TableRow>
               <TableHead className="w-[120px]">{t('orders.orderId')}</TableHead>
@@ -125,7 +125,7 @@ export function OrdersPageClient({ initialOrders }: { initialOrders: any[] }) {
                     </Badge>
                     <div className="flex items-center justify-end">
                       <select
-                        aria-label={`Change status for order ${order.id}`}
+                        aria-label={t('common.status')}
                         value={MANUAL_STATUSES.includes(order.status) ? order.status : ''}
                         disabled={updatingId === order.id}
                         onChange={e => handleStatusChange(order.id, e.target.value)}

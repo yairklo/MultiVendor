@@ -11,7 +11,7 @@ MediaType = Literal["image", "video"]
 ButtonVariant = Literal["primary", "secondary", "outline"]
 ButtonActionType = Literal["NAVIGATE", "OPEN_MODAL", "ADD_TO_CART", "APPLY_COUPON"]
 DesignVariant = Literal["primary", "accent", "secondary", "muted", "neutral"]
-CardStyle = Literal["default", "framed", "minimal"]
+CardStyle = Literal["default", "framed", "minimal", "glass", "elevated"]
 
 SECTION_TYPES: tuple = (
     "hero_banner", "product_grid", "video_embed", "text_block", "gallery", "button_group", "table",

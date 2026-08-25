@@ -31,6 +31,7 @@ export const he: NestedDict = {
     cannotUndo: 'לא ניתן לבטל פעולה זו.',
     thinking: 'חושב…',
     working: 'עובד…',
+    emptyGrid: 'אין פריטים להצגה במקטע זה.',
   },
   nav: {
     cmsTitle: 'ניהול החנות',
