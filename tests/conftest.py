@@ -23,6 +23,7 @@ os.environ["DB_NAME"] = "multivendor_test"
 # tests regardless of whatever GEMINI_API_KEY a developer has set in their own
 # .env for local use — same principle as the DATABASE_URL override above.
 os.environ["GEMINI_API_KEY"] = ""
+os.environ["VERIFY_REMOTE_IMAGE_URLS"] = "false"
 
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'server'))
 from app.main import app

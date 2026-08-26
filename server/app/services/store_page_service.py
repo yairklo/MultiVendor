@@ -18,6 +18,7 @@ from app.services.storefront_templates import (
     list_all_storefront_templates,
 )
 from app.services.i18n_utils import validate_i18n
+from app.services.image_url_verifier import require_reachable_image_urls
 
 # Scalar (single-string) text fields per section type -- each becomes
 # {"en": "...", "he": "...", ...} instead of a plain string. Array/object
@@ -302,6 +303,30 @@ def _sanitize_sections(
     return sanitized
 
 
+def collect_section_image_urls(sections: List[Dict[str, Any]] | None) -> List[str]:
+    """http(s) and /uploads/ image URLs from media blocks and gallery settings."""
+    urls: List[str] = []
+    for sec in sections or []:
+        if not isinstance(sec, dict):
+            continue
+        media = sec.get("media")
+        if isinstance(media, dict) and (media.get("type") or "image") == "image":
+            url = media.get("url")
+            if isinstance(url, str) and url.strip():
+                urls.append(url.strip())
+        images = (sec.get("settings") or {}).get("images")
+        if isinstance(images, list):
+            urls.extend(u.strip() for u in images if isinstance(u, str) and u.strip())
+        if isinstance(sec.get("children"), list):
+            urls.extend(collect_section_image_urls(sec["children"]))
+        zones = sec.get("zones")
+        if isinstance(zones, dict):
+            for items in zones.values():
+                if isinstance(items, list):
+                    urls.extend(collect_section_image_urls(items))
+    return urls
+
+
 async def _snapshot_version(page: StorePage, db: AsyncSession) -> None:
     """
     Saves the page's state as it is *right now*, before the caller applies a new
@@ -543,6 +568,8 @@ async def upsert_page_sections_service(
     # returned to the AI for retry, rather than persisting and crashing reads.
     for sec in sanitized_sections:
         Section(**sec)
+
+    await require_reachable_image_urls(collect_section_image_urls(sanitized_sections))
 
     result = await db.execute(
         select(StorePage).where(

@@ -833,7 +833,10 @@ async def execute_tool(
         if exc.status_code >= 500:
             raise
         return ToolExecutionResult(
-            tool_name, {"error": exc.detail}, True, error_type="NotFound" if exc.status_code == 404 else "ExecutionFailed"
+            tool_name, {"error": exc.detail}, True,
+            error_type="NotFound" if exc.status_code == 404 else (
+                "ValidationFailed" if exc.status_code == 422 else "ExecutionFailed"
+            ),
         )
     except ValidationError as exc:
         # exc.errors() embeds raw, non-JSON-safe values (e.g. a Decimal in a numeric

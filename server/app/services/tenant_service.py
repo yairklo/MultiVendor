@@ -7,6 +7,7 @@ from app.models.order import Order, OrderItem
 from app.schemas.tenant_schemas import TenantSettingsSchema, TenantUpdateSchema, TenantResponse, TenantSettingsUpdateSchema, TenantMarketplaceVisibilityUpdateSchema
 from app.schemas.ai_schemas import TopSellingProduct
 from app.services.order_service import PAID_ORDER_STATUSES
+from app.services.image_url_verifier import require_reachable_image_urls
 from datetime import datetime, timezone
 import json
 
@@ -93,6 +94,9 @@ async def update_store_settings_service(tenant_slug: str, req: TenantSettingsUpd
         db.add(settings)
 
     update_data = req.model_dump(exclude_unset=True)
+    await require_reachable_image_urls(
+        [update_data.get("logo_url"), update_data.get("banner_url")]
+    )
     if "default_language" in update_data:
         langs = update_data.get("supported_languages")
         if langs is None:
