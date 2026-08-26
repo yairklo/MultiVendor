@@ -25,6 +25,7 @@ import csv
 from fastapi.responses import StreamingResponse
 from typing import Any
 from app.services.i18n_utils import validate_i18n
+from app.services.image_url_verifier import require_reachable_image_urls
 
 async def get_store_config_service(tenant_slug: str, db: AsyncSession, admin_preview: bool = False) -> TenantSettingsSchema:
     result = await db.execute(select(Tenant).where(Tenant.slug == tenant_slug).options(selectinload(Tenant.settings)))
@@ -328,7 +329,9 @@ async def create_product_service(tenant_slug: str, req: ProductCreateRequest, db
     
     if product_count >= plan.max_products:
         raise HTTPException(status_code=403, detail="Maximum number of products reached for this subscription plan")
-        
+
+    await require_reachable_image_urls(req.images)
+
     product = Product(
         tenant_id=tenant.id,
         category_id=req.category_id,
@@ -451,6 +454,7 @@ async def _replace_product_images(
     Mutates product.images in place so expire_on_commit=False sessions still
     serialize the new gallery instead of the deleted rows.
     """
+    await require_reachable_image_urls(image_urls)
     for old_image in list(product.images):
         await db.delete(old_image)
     product.images.clear()

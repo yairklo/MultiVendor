@@ -30,6 +30,10 @@ class Settings(BaseSettings):
     # deterministic mock mode with no external calls until a real key is set.
     GEMINI_API_KEY: str | None = None
     GEMINI_MODEL: str = "gemini-3.5-flash"
+    # When true, product/logo/page image URLs are fetched before save and
+    # rejected unless they actually return an image. Tests turn this off so
+    # placeholder https://images.example.com/... URLs don't hit the network.
+    VERIFY_REMOTE_IMAGE_URLS: bool = True
 
     # "mock" (default) keeps the existing dev-only instant-pay behavior with
     # zero external calls. "stripe" routes /pay through a real PaymentIntent

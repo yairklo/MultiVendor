@@ -284,7 +284,7 @@ ai_tools: List[ToolDefinition] = [
                 },
                 "images": {
                     "type": "array",
-                    "description": "Optional list of real http(s) or /uploads/... image URLs. First is primary. Never invent a URL.",
+                    "description": "Optional list of real http(s) or /uploads/... image URLs. First is primary. Each URL is fetched and must return an image. Never invent a URL.",
                     "items": {"type": "string"},
                 },
             },
@@ -320,7 +320,7 @@ ai_tools: List[ToolDefinition] = [
                             "category_id": {"type": "number"},
                             "image_url": {
                                 "type": "string",
-                                "description": "Real http(s) or /uploads/... image URL. Applied on create and when updating an existing sku. Never invent a URL.",
+                                "description": "Real http(s) or /uploads/... image URL. Fetched and must return an image. Applied on create and when updating an existing sku. Never invent a URL.",
                             },
                         },
                         "required": ["sku", "base_price", "stock_quantity"],
@@ -417,7 +417,7 @@ ai_tools: List[ToolDefinition] = [
                 "is_active": {"type": "boolean"},
                 "images": {
                     "type": "array",
-                    "description": "Full replace of product image URLs. First item is primary. Omit to leave images unchanged; pass [] to clear them.",
+                    "description": "Full replace of product image URLs. First item is primary. Omit to leave images unchanged; pass [] to clear them. Each URL is fetched and must actually return an image — never invent a link.",
                     "items": {"type": "string"},
                 },
             },
