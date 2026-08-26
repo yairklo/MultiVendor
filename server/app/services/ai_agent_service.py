@@ -1,4 +1,3 @@
-import asyncio
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,7 +5,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.services import ai_conversation_service
 from app.services.ai_mock_agent import run_mock_agent
-from app.services.ai_tool_executor import READ_TOOLS, WRITE_TOOLS, ToolGroundingContext, execute_tool
+from app.services.ai_tool_executor import (
+    READ_TOOLS, WRITE_TOOLS, ToolExecutionResult, ToolGroundingContext, execute_tool,
+)
 from app.services.ai_tools import to_gemini_function_declarations
 
 MAX_TOOL_TURNS = 14
@@ -55,7 +56,7 @@ _SYSTEM_INSTRUCTION_TEMPLATE = (
     "{context_instruction}"
     "{ambiguity_instruction}"
     "You may call multiple READ tools in the same turn (list_products, get_product, list_categories, "
-    "list_orders, …) so you can gather context in parallel. Mutation/write tools must run one at a time — "
+    "list_orders, …) so you can gather context together. Mutation/write tools must run one at a time — "
     "never mix a write with other tools in the same turn, and never fire two writes together. Prefer a read "
     "tool before an update when you don't already know the current state. "
     "Never fabricate or guess entity ids (product_id, variant_id, coupon_id, order_id, category_id, "
@@ -69,13 +70,13 @@ _SYSTEM_INSTRUCTION_TEMPLATE = (
     "For sales reports, low-stock lists, or any other multi-row result, reply with a Markdown table — don't just "
     "restate numbers in prose. "
     "delete_product, delete_category, delete_coupon, delete_shipping_config, update_order_status(status="
-    "'cancelled'), apply_storefront_template, publish_page, revert_page_version, and upgrade_subscription "
-    "NEVER complete immediately, no matter how clearly the user asks — calling them only stages the action "
-    "and returns a pending confirmation that renders as a real button in the UI; only the user clicking it "
-    "actually runs it. Never auto-confirm, never auto-publish drafts, never invent image URLs. Tell the user "
-    "plainly what you've staged and that you're waiting on their confirmation — never say it's done until it "
-    "actually is. For anything reversible (archiving, editing, inventory/coupon changes, marking an order "
-    "processing/completed), just do it — don't ask permission first. "
+    "'cancelled'), fulfill_order, apply_storefront_template, publish_page, revert_page_version, and "
+    "upgrade_subscription NEVER complete immediately, no matter how clearly the user asks — calling them "
+    "only stages the action and returns a pending confirmation that renders as a real button in the UI; "
+    "only the user clicking it actually runs it. Never auto-confirm, never auto-publish drafts, never invent "
+    "image URLs. Tell the user plainly what you've staged and that you're waiting on their confirmation — "
+    "never say it's done until it actually is. For anything reversible (archiving, editing, inventory/coupon "
+    "changes, marking an order processing/completed), just do it — don't ask permission first. "
     "To add or change product photos, pass images on update_product (after list_products/get_product) or "
     "image_url on bulk_import_products. Both the create path and an existing-SKU update persist the URL. Only "
     "use real http(s) or /uploads/... links (user-supplied, an attachment URL, or a known public image host) "
@@ -157,6 +158,40 @@ def _is_degenerate_input(message: str) -> bool:
             return True
 
     return False
+
+
+_WRITE_BATCH_ERROR = (
+    "Call exactly one write tool per turn, with no other tools in that turn. "
+    "You may call multiple read tools together."
+)
+
+
+async def _execute_tool_round(
+    function_calls: list, tenant_slug: str, db: AsyncSession, grounding_context: ToolGroundingContext,
+) -> List[ToolExecutionResult]:
+    """
+    Run one Gemini function-call round against a single AsyncSession.
+
+    SQLAlchemy async sessions are not safe for concurrent use, so every tool
+    runs sequentially — even multiple reads. If the model mixed a write with
+    any other tool (or fired two writes), the writes are rejected and any
+    reads still execute so grounding can proceed.
+    """
+    names = [c.name for c in function_calls]
+    write_idxs = {i for i, n in enumerate(names) if n in WRITE_TOOLS}
+    reject_writes = len(write_idxs) > 1 or (bool(write_idxs) and len(function_calls) > 1)
+
+    results: List[ToolExecutionResult] = []
+    for i, call in enumerate(function_calls):
+        if reject_writes and (i in write_idxs or names[i] not in READ_TOOLS):
+            results.append(ToolExecutionResult(
+                call.name, {"error": _WRITE_BATCH_ERROR}, True, error_type="ValidationFailed",
+            ))
+            continue
+        results.append(
+            await execute_tool(call.name, dict(call.args or {}), tenant_slug, db, grounding_context)
+        )
+    return results
 
 
 def _build_system_instruction(page_key: Optional[str], page_type: Optional[str]) -> str:
@@ -343,22 +378,7 @@ async def run_agent_turn(
             result = {"reply": (response.text or "").strip() or "Done.", "tool_calls": tool_calls, "used_provider": "gemini"}
             break
 
-        names = [c.name for c in function_calls]
-        run_parallel = (
-            len(function_calls) > 1
-            and all(n in READ_TOOLS for n in names)
-            and not any(n in WRITE_TOOLS for n in names)
-        )
-        if run_parallel:
-            tool_results = list(await asyncio.gather(*[
-                execute_tool(c.name, dict(c.args or {}), tenant_slug, db, grounding_context)
-                for c in function_calls
-            ]))
-        else:
-            tool_results = [
-                await execute_tool(c.name, dict(c.args or {}), tenant_slug, db, grounding_context)
-                for c in function_calls
-            ]
+        tool_results = await _execute_tool_round(function_calls, tenant_slug, db, grounding_context)
 
         response_parts = []
         round_had_error = False

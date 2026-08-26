@@ -42,6 +42,12 @@ class _ScriptedChat:
         self._history.append(types.Content(role="user", parts=incoming_parts))
 
         step = self._script.pop(0)
+        if "calls" in step:
+            fcs = [types.FunctionCall(name=name, args=args) for name, args in step["calls"]]
+            self._history.append(types.Content(
+                role="model", parts=[types.Part(function_call=fc) for fc in fcs],
+            ))
+            return _FakeResponse(function_calls=fcs, text=None)
         if "call" in step:
             name, args = step["call"]
             fc = types.FunctionCall(name=name, args=args)
@@ -416,3 +422,81 @@ async def test_create_product_passes_through_digital_and_marketplace_fields(db_s
     assert result.output["digital_file_url"] == "/uploads/1/files/ebook.pdf"
     assert result.output["download_limit"] == 3
     assert result.output["images"] == ["https://images.example.com/ebook.png"]
+
+
+@pytest.mark.asyncio
+async def test_mixed_write_and_read_in_one_round_rejects_the_write(db_session, monkeypatch):
+    original = await execute_tool("get_product", {"product_id": 1}, "tenant-a", db_session)
+    original_price = float(original.output["base_price"])
+
+    _patch_gemini(monkeypatch, [
+        {"calls": [
+            ("get_product", {"product_id": 1}),
+            ("update_product", {"product_id": 1, "base_price": 99}),
+        ]},
+        {"text": "I'll update in a separate turn."},
+    ])
+    result = await ai_agent_service.run_agent_turn(
+        db_session, "tenant-a", "look up product 1 and set the price to 99", "home", "static_page"
+    )
+    assert [c["name"] for c in result["tool_calls"]] == ["get_product", "update_product"]
+    assert result["tool_calls"][0]["is_error"] is False
+    assert result["tool_calls"][1]["is_error"] is True
+    assert result["tool_calls"][1]["output"]["error"].startswith("Call exactly one write tool")
+
+    after = await execute_tool("get_product", {"product_id": 1}, "tenant-a", db_session)
+    assert float(after.output["base_price"]) == original_price
+
+
+@pytest.mark.asyncio
+async def test_two_writes_in_one_round_are_both_rejected(db_session, monkeypatch):
+    original = await execute_tool("get_product", {"product_id": 1}, "tenant-a", db_session)
+    original_price = float(original.output["base_price"])
+
+    _patch_gemini(monkeypatch, [
+        {"calls": [
+            ("update_product", {"product_id": 1, "base_price": 11}),
+            ("archive_product", {"product_id": 1}),
+        ]},
+        {"text": "I cannot do both at once."},
+    ])
+    result = await ai_agent_service.run_agent_turn(
+        db_session, "tenant-a", "change the price and archive it", "home", "static_page"
+    )
+    assert all(c["is_error"] for c in result["tool_calls"])
+    after = await execute_tool("get_product", {"product_id": 1}, "tenant-a", db_session)
+    assert float(after.output["base_price"]) == original_price
+    assert after.output["is_active"] is True
+
+
+@pytest.mark.asyncio
+async def test_multiple_reads_in_one_round_run_sequentially_on_one_session(db_session, monkeypatch):
+    _patch_gemini(monkeypatch, [
+        {"calls": [("list_products", {}), ("list_categories", {})]},
+        {"text": "Here is the catalog."},
+    ])
+    result = await ai_agent_service.run_agent_turn(
+        db_session, "tenant-a", "show me products and categories", "home", "static_page"
+    )
+    assert [c["name"] for c in result["tool_calls"]] == ["list_products", "list_categories"]
+    assert result["tool_calls"][0]["is_error"] is False
+    assert result["tool_calls"][1]["is_error"] is False
+    assert isinstance(result["tool_calls"][0]["output"], list)
+
+
+@pytest.mark.asyncio
+async def test_list_products_string_false_does_not_include_inactive(db_session):
+    archived = await execute_tool("archive_product", {"product_id": 1}, "tenant-a", db_session)
+    assert archived.is_error is False
+
+    hidden = await execute_tool(
+        "list_products", {"include_inactive": "false"}, "tenant-a", db_session
+    )
+    assert hidden.is_error is False
+    assert not any(p["id"] == 1 for p in hidden.output)
+
+    shown = await execute_tool(
+        "list_products", {"include_inactive": "true"}, "tenant-a", db_session
+    )
+    assert shown.is_error is False
+    assert any(p["id"] == 1 for p in shown.output)

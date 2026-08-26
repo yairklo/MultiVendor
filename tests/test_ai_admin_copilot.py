@@ -659,7 +659,9 @@ async def test_list_customers_and_store_settings_and_csv_summary(db_session):
     assert export.is_error is False
     assert export.output["report_type"] == "orders"
     assert export.output["row_count"] >= 1
-    assert "csv" not in str(export.output).lower() or "download" in export.output["message"].lower()
+    assert "cannot attach" in export.output["message"].lower()
+    assert "reports" in export.output["message"].lower()
+    assert "csv is ready" not in export.output["message"].lower()
 
 
 @pytest.mark.asyncio
@@ -698,3 +700,81 @@ async def test_update_variant_changes_sku_price_and_stock(db_session):
     assert result.output["stock_quantity"] == 3
     assert result.output["attributes_json"]["size"] == "L"
     assert float(result.output["price_override"]) == 19.5
+
+
+@pytest.mark.asyncio
+async def test_fulfill_order_only_stages_until_confirmed(db_session):
+    from fastapi import HTTPException
+
+    processing = await execute_tool(
+        "update_order_status", {"order_id": 1, "status": "processing"}, "tenant-a", db_session
+    )
+    assert processing.is_error is False
+
+    staged = await execute_tool(
+        "fulfill_order", {"order_id": 1, "provider_override": "hfd"}, "tenant-a", db_session
+    )
+    assert staged.is_error is False
+    assert staged.pending_confirmation is not None
+    assert staged.output["status"] == "confirmation_required"
+
+    details = await execute_tool("get_order_details", {"order_id": 1}, "tenant-a", db_session)
+    assert details.output["status"] == "processing"
+
+    with pytest.raises(HTTPException) as exc:
+        await ai_pending_action_service.confirm_pending_action_service(
+            "tenant-a", staged.pending_confirmation.id, db_session
+        )
+    assert exc.value.status_code == 422
+
+    still_processing = await execute_tool("get_order_details", {"order_id": 1}, "tenant-a", db_session)
+    assert still_processing.output["status"] == "processing"
+
+
+@pytest.mark.asyncio
+async def test_category_parent_id_rejects_self_cross_tenant_and_cycles(db_session):
+    parent = await execute_tool(
+        "create_category",
+        {"name": {"en": "Parent", "he": "הורה"}, "slug": "parent-ai"},
+        "tenant-a",
+        db_session,
+    )
+    assert parent.is_error is False
+    parent_id = parent.output["id"]
+
+    child = await execute_tool(
+        "create_category",
+        {"name": {"en": "Child", "he": "ילד"}, "slug": "child-ai", "parent_id": parent_id},
+        "tenant-a",
+        db_session,
+    )
+    assert child.is_error is False
+    child_id = child.output["id"]
+
+    self_parent = await execute_tool(
+        "update_category", {"category_id": parent_id, "parent_id": parent_id}, "tenant-a", db_session
+    )
+    assert self_parent.is_error is True
+    assert "own parent" in str(self_parent.output).lower()
+
+    cycle = await execute_tool(
+        "update_category", {"category_id": parent_id, "parent_id": child_id}, "tenant-a", db_session
+    )
+    assert cycle.is_error is True
+    assert "cycle" in str(cycle.output).lower()
+
+    other = await execute_tool(
+        "create_category",
+        {"name": {"en": "Other", "he": "אחר"}, "slug": "other-ai"},
+        "tenant-b",
+        db_session,
+    )
+    assert other.is_error is False
+    cross = await execute_tool(
+        "update_category",
+        {"category_id": parent_id, "parent_id": other.output["id"]},
+        "tenant-a",
+        db_session,
+    )
+    assert cross.is_error is True
+    assert "parent" in str(cross.output).lower()

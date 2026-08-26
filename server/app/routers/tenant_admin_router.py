@@ -12,11 +12,11 @@ from app.services.import_service import build_import_template, parse_products_ex
 from app.schemas.import_schemas import ImportPreviewResponse, ImportCommitRequest, ImportSummaryResponse
 from app.schemas.catalog_schemas import (
     ProductCreateRequest, ProductUpdateRequest, ProductResponse,
-    ProductVariantSchema, CategoryCreateRequest, CategoryResponse,
+    ProductVariantSchema, CategoryCreateRequest, CategoryUpdateRequest, CategoryResponse,
     ProductReviewResponse
 )
 from app.schemas.order_schemas import (
-    OrderResponse, CouponCreateRequest, CouponResponse,
+    OrderResponse, CouponCreateRequest, CouponUpdateRequest, CouponResponse,
     OrderStatusUpdateResponse
 )
 from app.schemas.shipping_schemas import (
@@ -31,7 +31,7 @@ from app.schemas.tenant_schemas import (
 from app.schemas.ai_schemas import TopSellingProduct
 from app.schemas.common_schemas import PlanCode
 from app.services.catalog_service import (
-    create_category_service, delete_category_service,
+    create_category_service, update_category_service, delete_category_service,
     create_product_service, get_admin_product_service, update_product_service, delete_product_service,
     add_product_variant_service, update_product_variant_service,
     update_review_status_service, export_orders_csv_service, list_tenant_reviews_service
@@ -46,7 +46,8 @@ from app.services.order_service import (
     list_tenant_customers_service
 )
 from app.services.coupon_service import (
-    list_tenant_coupons_service, create_tenant_coupon_service, delete_tenant_coupon_service
+    list_tenant_coupons_service, create_tenant_coupon_service, update_coupon_service,
+    delete_tenant_coupon_service
 )
 from app.services.shipping_service import (
     list_tenant_shipping_configs_service, upsert_tenant_shipping_config_service,
@@ -114,6 +115,21 @@ async def create_category(
     db: AsyncSession = Depends(get_db)
 ):
     return await create_category_service(tenant_slug, req, db)
+
+@tenant_admin_router.put(
+    "/categories/{category_id}",
+    response_model=CategoryResponse,
+    summary="Update Category",
+    description="Partially update a category's name, slug, or parent. Parent must belong to this store and cannot create a cycle.",
+)
+async def update_category(
+    req: CategoryUpdateRequest,
+    category_id: int = Path(...),
+    tenant_slug: str = Path(...),
+    admin: User = Depends(get_tenant_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    return await update_category_service(tenant_slug, category_id, req, db)
 
 @tenant_admin_router.get("/categories", response_model=list[CategoryResponse])
 async def get_categories(
@@ -502,6 +518,21 @@ async def create_tenant_coupon(
     db: AsyncSession = Depends(get_db)
 ):
     return await create_tenant_coupon_service(tenant_slug, req, db)
+
+@tenant_admin_router.put(
+    "/coupons/{coupon_id}",
+    response_model=CouponResponse,
+    summary="Update Coupon",
+    description="Partially update a coupon. Only fields you send are changed.",
+)
+async def update_tenant_coupon(
+    req: CouponUpdateRequest,
+    coupon_id: int = Path(...),
+    tenant_slug: str = Path(...),
+    admin: User = Depends(get_tenant_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    return await update_coupon_service(tenant_slug, coupon_id, req, db)
 
 @tenant_admin_router.delete('/coupons/{coupon_id}', status_code=status.HTTP_204_NO_CONTENT)
 async def delete_tenant_coupon(

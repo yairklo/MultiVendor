@@ -42,14 +42,14 @@ READ_TOOLS = frozenset({
     "list_products", "get_product", "list_coupons", "list_orders", "get_order_details",
     "get_sales_analytics", "get_customer_insights", "get_inventory_health",
     "list_reviews", "list_customers", "get_store_settings", "list_page_versions",
-    "list_shipping_configs",
+    "list_shipping_configs", "export_orders_csv",
 })
 WRITE_TOOLS = frozenset({
     "update_page_sections", "create_product", "bulk_import_products", "apply_storefront_template",
     "update_product", "archive_product", "delete_product", "update_inventory", "add_product_variant",
     "update_variant", "create_category", "update_category", "delete_category",
     "create_coupon", "toggle_coupon_status", "update_coupon", "delete_coupon",
-    "update_order_status", "fulfill_order", "export_orders_csv",
+    "update_order_status", "fulfill_order",
     "set_review_status", "update_store_settings", "publish_page", "revert_page_version",
     "delete_shipping_config", "upgrade_subscription",
 })
@@ -198,6 +198,23 @@ def _reject_unknown_fields(tool_name: str, raw_input: Dict[str, Any]) -> None:
             f"Unknown field(s) for {tool_name}: {', '.join(sorted(unknown))}. "
             "These cannot be handled — refusing a silent partial write."
         )
+
+
+def _as_bool(value: Any, default: bool = False) -> bool:
+    """Coerce JSON/tool-call booleans so the string \"false\" is not treated as True."""
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return value != 0
+    if isinstance(value, str):
+        lowered = value.strip().lower()
+        if lowered in ("true", "1", "yes"):
+            return True
+        if lowered in ("false", "0", "no", ""):
+            return False
+    return bool(value)
 
 
 def _clamp_limit(raw_value: Any, default: int = DEFAULT_LIST_LIMIT, maximum: int = MAX_LIST_LIMIT) -> int:
@@ -414,7 +431,7 @@ async def execute_tool(
             products = await catalog_service.list_admin_products_service(
                 tenant_slug, db,
                 query=raw_input.get("query"),
-                include_inactive=bool(raw_input.get("include_inactive")),
+                include_inactive=_as_bool(raw_input.get("include_inactive")),
                 category_id=int(raw_input["category_id"]) if raw_input.get("category_id") is not None else None,
                 limit=_clamp_limit(raw_input.get("limit")),
             )
@@ -542,7 +559,9 @@ async def execute_tool(
             if coupon_id is None or is_active is None:
                 raise ValueError("coupon_id and is_active are required")
             _require_grounded(context, "coupon", coupon_id, "list_coupons")
-            coupon = await coupon_service.toggle_coupon_status_service(tenant_slug, int(coupon_id), bool(is_active), db)
+            coupon = await coupon_service.toggle_coupon_status_service(
+                tenant_slug, int(coupon_id), _as_bool(is_active), db
+            )
             return ToolExecutionResult(tool_name, _dump(coupon), False)
 
         if tool_name == "update_coupon":
@@ -629,10 +648,28 @@ async def execute_tool(
             provider_override = raw_input.get("provider_override")
             if provider_override is not None and provider_override not in ("hfd", "lionwheel"):
                 raise ValueError("provider_override must be 'hfd' or 'lionwheel'")
-            result = await shipping_service.fulfill_order_service(
-                tenant_slug, int(order_id), db, provider_override=provider_override
+            order = await order_service.get_tenant_order_service(tenant_slug, int(order_id), db)
+            if order.order_type == "digital":
+                raise ValueError("Digital orders don't need a shipment")
+            if order.status != "processing":
+                raise ValueError(
+                    f"Order must be 'processing' to fulfill (currently '{order.status}')"
+                )
+            courier = provider_override or "the store's default courier"
+            summary = (
+                f"Create a real shipment for order {order.order_number} via {courier}. "
+                "This contacts HFD/Lionwheel and cannot be undone."
             )
-            return ToolExecutionResult(tool_name, _dump(result), False)
+            pending_args: Dict[str, Any] = {"order_id": int(order_id)}
+            if provider_override:
+                pending_args["provider_override"] = provider_override
+            pending = await ai_pending_action_service.create_pending_action_service(
+                tenant_slug, "fulfill_order", pending_args, summary, db
+            )
+            return ToolExecutionResult(
+                tool_name, {"status": "confirmation_required", "summary": summary}, False,
+                pending_confirmation=pending,
+            )
 
         if tool_name == "export_orders_csv":
             summary = await catalog_service.summarize_orders_export_service(tenant_slug, db)

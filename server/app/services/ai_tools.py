@@ -607,9 +607,11 @@ ai_tools: List[ToolDefinition] = [
     {
         "name": "fulfill_order",
         "description": (
-            "Create a shipment for a processing physical order via the store's configured courier "
-            "(HFD or Lionwheel). Optional provider_override must be 'hfd' or 'lionwheel'. Tracking is "
-            "returned by the courier — do not invent a tracking number."
+            "Stage a real courier shipment (HFD or Lionwheel) for a processing physical order. This NEVER "
+            "creates the shipment itself — like delete_product, it only stages a confirmation the human must "
+            "click. Optional provider_override must be 'hfd' or 'lionwheel'. Tracking comes from the courier "
+            "after confirm — do not invent a tracking number, and never tell the user it shipped until they "
+            "confirm."
         ),
         "parameters": {
             "type": "object",
@@ -627,8 +629,8 @@ ai_tools: List[ToolDefinition] = [
     {
         "name": "export_orders_csv",
         "description": (
-            "Trigger an orders CSV export. Returns a short summary (row count and where to download) — "
-            "never dumps the file into this chat."
+            "Summarize this store's orders for export. The assistant cannot attach a CSV file — tell the "
+            "user to download it from Admin → Reports. Returns row_count only; never claim a file was generated."
         ),
         "parameters": {"type": "object", "properties": {}, "required": []},
     },

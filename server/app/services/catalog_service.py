@@ -146,6 +146,36 @@ async def get_public_product_service(tenant_slug: str, product_slug: str, db: As
     review_stats = await _fetch_review_stats([product.id], db)
     return _build_product_response(product, review_stats)
 
+
+_MAX_PARENT_WALK = 50
+
+
+async def _assert_valid_parent(
+    db: AsyncSession, tenant_id: int, parent_id: int | None, *, child_id: int | None = None
+) -> None:
+    if parent_id is None:
+        return
+    if child_id is not None and parent_id == child_id:
+        raise HTTPException(status_code=400, detail="A category cannot be its own parent")
+    parent_result = await db.execute(
+        select(Category).where(Category.id == parent_id, Category.tenant_id == tenant_id)
+    )
+    if parent_result.scalar_one_or_none() is None:
+        raise HTTPException(status_code=404, detail="Parent category not found")
+    seen = {child_id} if child_id is not None else set()
+    current_id: int | None = parent_id
+    for _ in range(_MAX_PARENT_WALK):
+        if current_id is None:
+            return
+        if current_id in seen:
+            raise HTTPException(status_code=400, detail="Category parent would create a cycle")
+        seen.add(current_id)
+        ancestor_result = await db.execute(
+            select(Category.parent_id).where(Category.id == current_id, Category.tenant_id == tenant_id)
+        )
+        current_id = ancestor_result.scalar_one_or_none()
+    raise HTTPException(status_code=400, detail="Category parent would create a cycle")
+
 async def create_category_service(tenant_slug: str, req: CategoryCreateRequest, db: AsyncSession) -> CategoryResponse:
     tenant_result = await db.execute(select(Tenant).where(Tenant.slug == tenant_slug).options(selectinload(Tenant.settings)))
     tenant = tenant_result.scalar_one_or_none()
@@ -154,6 +184,7 @@ async def create_category_service(tenant_slug: str, req: CategoryCreateRequest, 
         
     supported_langs = tenant.settings.supported_languages if tenant.settings and tenant.settings.supported_languages else ["he"]
     validate_i18n(req.name, supported_langs, "name")
+    await _assert_valid_parent(db, tenant.id, req.parent_id)
 
     category = Category(
         tenant_id=tenant.id,
@@ -218,6 +249,7 @@ async def update_category_service(
     if "slug" in updates and updates["slug"] is not None:
         category.slug = updates["slug"]
     if "parent_id" in updates:
+        await _assert_valid_parent(db, tenant.id, updates["parent_id"], child_id=category_id)
         category.parent_id = updates["parent_id"]
 
     await db.commit()
@@ -770,7 +802,10 @@ async def summarize_orders_export_service(tenant_slug: str, db: AsyncSession) ->
         "status": "ok",
         "report_type": "orders",
         "row_count": len(rows),
-        "message": "CSV is ready to download from Admin → Reports (orders export). The file is not included in this response.",
+        "message": (
+            "The assistant cannot attach a CSV file. Export orders from Admin → Reports. "
+            f"This store currently has {len(rows)} order row(s)."
+        ),
     }
 
 

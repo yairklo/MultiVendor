@@ -23,7 +23,7 @@ PENDING_ACTION_TTL_MINUTES = 15
 GATED_TOOLS = (
     "delete_product", "update_order_status", "apply_storefront_template", "update_page_sections",
     "delete_category", "delete_coupon", "publish_page", "revert_page_version",
-    "delete_shipping_config", "upgrade_subscription",
+    "delete_shipping_config", "upgrade_subscription", "fulfill_order",
 )
 
 
@@ -120,6 +120,11 @@ async def confirm_pending_action_service(tenant_slug: str, confirmation_id: str,
             result = await shipping_service.delete_tenant_shipping_config_service(tenant_slug, args["provider"], db)
         elif action.tool_name == "upgrade_subscription":
             result = await tenant_service.upgrade_subscription_service(tenant_slug, args["target_plan_code"], db)
+        elif action.tool_name == "fulfill_order":
+            fulfilled = await shipping_service.fulfill_order_service(
+                tenant_slug, args["order_id"], db, provider_override=args.get("provider_override")
+            )
+            result = fulfilled.model_dump(mode="json")
         else:
             raise HTTPException(status_code=400, detail=f"Unknown pending action tool: {action.tool_name}")
             

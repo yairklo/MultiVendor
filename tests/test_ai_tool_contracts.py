@@ -4,7 +4,7 @@ from app.schemas.catalog_schemas import CategoryCreateRequest, CategoryUpdateReq
 from app.schemas.order_schemas import CouponCreateRequest, CouponUpdateRequest
 from app.schemas.tenant_schemas import TenantSettingsUpdateSchema
 from app.services.ai_pending_action_service import GATED_TOOLS
-from app.services.ai_tool_executor import READ_TOOLS, TOOL_PROPERTIES, WRITE_TOOLS
+from app.services.ai_tool_executor import READ_TOOLS, TOOL_PROPERTIES, WRITE_TOOLS, _as_bool
 from app.services.ai_tools import _SECTION_SCHEMA_DEFS, ai_tools
 
 
@@ -21,6 +21,7 @@ PASSTHROUGH_MODELS = {
 ALWAYS_GATED = {
     "delete_product", "delete_category", "delete_coupon", "delete_shipping_config",
     "publish_page", "revert_page_version", "apply_storefront_template", "upgrade_subscription",
+    "fulfill_order",
 }
 
 
@@ -49,3 +50,23 @@ def test_gated_tools_are_registered_for_human_confirmation():
     for name in ALWAYS_GATED:
         assert name in TOOL_PROPERTIES
         assert name in WRITE_TOOLS
+
+
+def test_export_orders_csv_is_a_read_not_a_write():
+    assert "export_orders_csv" in READ_TOOLS
+    assert "export_orders_csv" not in WRITE_TOOLS
+    assert "export_orders_csv" not in GATED_TOOLS
+
+
+def test_as_bool_does_not_treat_string_false_as_true():
+    assert _as_bool(True) is True
+    assert _as_bool(False) is False
+    assert _as_bool("false") is False
+    assert _as_bool("FALSE") is False
+    assert _as_bool("0") is False
+    assert _as_bool("true") is True
+    assert _as_bool("1") is True
+    assert _as_bool(None) is False
+    assert _as_bool(None, default=True) is True
+    assert _as_bool(0) is False
+    assert _as_bool(1) is True
