@@ -4,6 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 from app.schemas.common_schemas import PlanCode, PaginatedResponse
 from app.services.i18n_utils import LANG_CODE_RE, validate_language_codes
+from app.schemas.catalog_schemas import normalize_asset_url
 
 class TenantRegisterRequest(BaseModel):
     store_name: str = Field(..., min_length=3, max_length=100)
@@ -71,6 +72,11 @@ class TenantSettingsUpdateSchema(BaseModel):
     allow_unverified_reviews: Optional[bool] = None
     template_key: Optional[str] = None
     nav_items: Optional[List[NavItemSchema]] = None
+
+    @field_validator("logo_url", "banner_url")
+    @classmethod
+    def _safe_asset_url(cls, v: Optional[str]) -> Optional[str]:
+        return normalize_asset_url(v, field_name="url", allow_empty=True)
 
     @field_validator("supported_languages")
     @classmethod

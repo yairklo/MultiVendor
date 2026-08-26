@@ -39,6 +39,97 @@ async def test_get_and_update_product_tools_are_scoped_to_tenant(db_session):
 
 
 @pytest.mark.asyncio
+async def test_bulk_import_replaces_image_on_existing_sku(db_session):
+    image_url = "https://images.example.com/mug.jpg"
+    result = await execute_tool(
+        "bulk_import_products",
+        {
+            "rows": [{
+                "sku": "SKU-A1-1",
+                "base_price": 10,
+                "stock_quantity": 10,
+                "image_url": image_url,
+            }]
+        },
+        "tenant-a",
+        db_session,
+    )
+    assert result.is_error is False
+    assert result.output["updated_count"] == 1
+    assert result.output["created_count"] == 0
+    assert result.output["updated"][0]["primary_image_url"] == image_url
+    assert result.output["updated"][0]["product_id"] == 1
+
+    product = await execute_tool("get_product", {"product_id": 1}, "tenant-a", db_session)
+    assert product.is_error is False
+    assert product.output["images"] == [image_url]
+    assert product.output["primary_image_url"] == image_url
+
+
+@pytest.mark.asyncio
+async def test_bulk_import_updates_name_description_and_category_on_existing_sku(db_session):
+    category = await execute_tool(
+        "create_category",
+        {"name": {"en": "Mugs", "he": "ספלים"}, "slug": "mugs"},
+        "tenant-a",
+        db_session,
+    )
+    assert category.is_error is False
+    category_id = category.output["id"]
+
+    result = await execute_tool(
+        "bulk_import_products",
+        {
+            "rows": [{
+                "sku": "SKU-A1-1",
+                "base_price": 12,
+                "stock_quantity": 8,
+                "name_en": "Updated Mug",
+                "name_he": "ספל מעודכן",
+                "description_en": "A nicer mug",
+                "category_id": category_id,
+            }]
+        },
+        "tenant-a",
+        db_session,
+    )
+    assert result.is_error is False
+    assert result.output["updated_count"] == 1
+    assert result.output["failed_count"] == 0
+    updated = result.output["updated"][0]
+    assert updated["name"]["en"] == "Updated Mug"
+    assert updated["description"]["en"] == "A nicer mug"
+    assert updated["category_id"] == category_id
+
+    product = await execute_tool("get_product", {"product_id": 1}, "tenant-a", db_session)
+    assert product.output["name"]["en"] == "Updated Mug"
+    assert product.output["description"]["en"] == "A nicer mug"
+    assert product.output["category_id"] == category_id
+
+
+@pytest.mark.asyncio
+async def test_bulk_import_malicious_image_url_is_a_row_error_not_silent_success(db_session):
+    result = await execute_tool(
+        "bulk_import_products",
+        {
+            "rows": [{
+                "sku": "SKU-A1-1",
+                "base_price": 10,
+                "stock_quantity": 10,
+                "image_url": "javascript:alert(1)",
+            }]
+        },
+        "tenant-a",
+        db_session,
+    )
+    assert result.is_error is False
+    assert result.output["updated_count"] == 0
+    assert result.output["failed_count"] == 1
+    product = await execute_tool("get_product", {"product_id": 1}, "tenant-a", db_session)
+    assert product.output["images"] == []
+
+
+@pytest.mark.asyncio
 async def test_archive_product_deactivates_without_deleting(db_session):
     result = await execute_tool("archive_product", {"product_id": 1}, "tenant-a", db_session)
     assert result.is_error is False
@@ -471,3 +562,219 @@ async def test_apply_templates_router_endpoint_rejects_unknown_key(async_client:
         "/api/v1/admin/store/tenant-a/ai/templates/not-a-real-template/apply", headers=headers
     )
     assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_category_update_and_gated_delete(db_session):
+    created = await execute_tool(
+        "create_category",
+        {"name": {"en": "Hats", "he": "כובעים"}, "slug": "hats"},
+        "tenant-a",
+        db_session,
+    )
+    assert created.is_error is False
+    category_id = created.output["id"]
+
+    updated = await execute_tool(
+        "update_category",
+        {"category_id": category_id, "slug": "hats-updated"},
+        "tenant-a",
+        db_session,
+    )
+    assert updated.is_error is False
+    assert updated.output["slug"] == "hats-updated"
+
+    staged = await execute_tool("delete_category", {"category_id": category_id}, "tenant-a", db_session)
+    assert staged.pending_confirmation is not None
+    listed = await execute_tool("list_categories", {}, "tenant-a", db_session)
+    assert any(c["id"] == category_id for c in listed.output)
+
+    await ai_pending_action_service.confirm_pending_action_service(
+        "tenant-a", staged.pending_confirmation.id, db_session
+    )
+    listed_after = await execute_tool("list_categories", {}, "tenant-a", db_session)
+    assert all(c["id"] != category_id for c in listed_after.output)
+
+
+@pytest.mark.asyncio
+async def test_update_and_gated_delete_coupon(db_session):
+    listed = await execute_tool("list_coupons", {}, "tenant-a", db_session)
+    coupon_id = listed.output[0]["id"]
+    updated = await execute_tool(
+        "update_coupon",
+        {"coupon_id": coupon_id, "discount_val": 25, "min_order_amt": 50},
+        "tenant-a",
+        db_session,
+    )
+    assert updated.is_error is False
+    assert float(updated.output["discount_val"]) == 25
+    assert float(updated.output["min_order_amt"]) == 50
+
+    staged = await execute_tool("delete_coupon", {"coupon_id": coupon_id}, "tenant-a", db_session)
+    assert staged.pending_confirmation is not None
+    await ai_pending_action_service.cancel_pending_action_service(
+        "tenant-a", staged.pending_confirmation.id, db_session
+    )
+    still = await execute_tool("list_coupons", {}, "tenant-a", db_session)
+    assert any(c["id"] == coupon_id for c in still.output)
+
+
+@pytest.mark.asyncio
+async def test_list_reviews_and_set_review_status(db_session):
+    listed = await execute_tool("list_reviews", {}, "tenant-a", db_session)
+    assert listed.is_error is False
+    assert listed.output[0]["id"] == 1
+    assert listed.output[0]["is_approved"] is False
+
+    updated = await execute_tool(
+        "set_review_status", {"review_id": 1, "status": "approved"}, "tenant-a", db_session
+    )
+    assert updated.is_error is False
+    assert updated.output["is_approved"] is True
+
+
+@pytest.mark.asyncio
+async def test_list_customers_and_store_settings_and_csv_summary(db_session):
+    customers = await execute_tool("list_customers", {"query": "customer"}, "tenant-a", db_session)
+    assert customers.is_error is False
+    assert any("customer@" in c["email"] for c in customers.output)
+
+    settings = await execute_tool("get_store_settings", {}, "tenant-a", db_session)
+    assert settings.is_error is False
+    assert "stripe_connect" in settings.output
+    assert "is_connected" in settings.output["stripe_connect"]
+
+    branded = await execute_tool(
+        "update_store_settings",
+        {"currency": "USD", "logo_url": "https://images.example.com/logo.png", "primary_color": "#112233"},
+        "tenant-a",
+        db_session,
+    )
+    assert branded.is_error is False
+    assert branded.output["currency"] == "USD"
+    assert branded.output["logo_url"] == "https://images.example.com/logo.png"
+    assert branded.output["primary_color"] == "#112233"
+
+    export = await execute_tool("export_orders_csv", {}, "tenant-a", db_session)
+    assert export.is_error is False
+    assert export.output["report_type"] == "orders"
+    assert export.output["row_count"] >= 1
+    assert "cannot attach" in export.output["message"].lower()
+    assert "reports" in export.output["message"].lower()
+    assert "csv is ready" not in export.output["message"].lower()
+
+
+@pytest.mark.asyncio
+async def test_publish_page_is_gated_and_does_not_auto_publish(db_session):
+    await execute_tool(
+        "update_page_sections",
+        {
+            "page_key": "home",
+            "page_type": "static_page",
+            "sections": [{"type": "text_block", "settings": {"heading": {"en": "Hi", "he": "שלום"}, "body": {"en": "x", "he": "x"}}}],
+        },
+        "tenant-a",
+        db_session,
+    )
+    targets = await execute_tool("list_page_targets", {}, "tenant-a", db_session)
+    assert any(t["page_key"] == "home" for t in targets.output)
+
+    staged = await execute_tool(
+        "publish_page", {"page_key": "home", "page_type": "static_page"}, "tenant-a", db_session
+    )
+    # Without grounding context, publish is allowed (opt-in grounding) but still gated.
+    assert staged.pending_confirmation is not None
+    assert staged.output["status"] == "confirmation_required"
+
+
+@pytest.mark.asyncio
+async def test_update_variant_changes_sku_price_and_stock(db_session):
+    result = await execute_tool(
+        "update_variant",
+        {"variant_id": 1, "sku": "SKU-A1-NEW", "price_override": 19.5, "stock_quantity": 3, "attributes_json": {"size": "L"}},
+        "tenant-a",
+        db_session,
+    )
+    assert result.is_error is False
+    assert result.output["sku"] == "SKU-A1-NEW"
+    assert result.output["stock_quantity"] == 3
+    assert result.output["attributes_json"]["size"] == "L"
+    assert float(result.output["price_override"]) == 19.5
+
+
+@pytest.mark.asyncio
+async def test_fulfill_order_only_stages_until_confirmed(db_session):
+    from fastapi import HTTPException
+
+    processing = await execute_tool(
+        "update_order_status", {"order_id": 1, "status": "processing"}, "tenant-a", db_session
+    )
+    assert processing.is_error is False
+
+    staged = await execute_tool(
+        "fulfill_order", {"order_id": 1, "provider_override": "hfd"}, "tenant-a", db_session
+    )
+    assert staged.is_error is False
+    assert staged.pending_confirmation is not None
+    assert staged.output["status"] == "confirmation_required"
+
+    details = await execute_tool("get_order_details", {"order_id": 1}, "tenant-a", db_session)
+    assert details.output["status"] == "processing"
+
+    with pytest.raises(HTTPException) as exc:
+        await ai_pending_action_service.confirm_pending_action_service(
+            "tenant-a", staged.pending_confirmation.id, db_session
+        )
+    assert exc.value.status_code == 422
+
+    still_processing = await execute_tool("get_order_details", {"order_id": 1}, "tenant-a", db_session)
+    assert still_processing.output["status"] == "processing"
+
+
+@pytest.mark.asyncio
+async def test_category_parent_id_rejects_self_cross_tenant_and_cycles(db_session):
+    parent = await execute_tool(
+        "create_category",
+        {"name": {"en": "Parent", "he": "הורה"}, "slug": "parent-ai"},
+        "tenant-a",
+        db_session,
+    )
+    assert parent.is_error is False
+    parent_id = parent.output["id"]
+
+    child = await execute_tool(
+        "create_category",
+        {"name": {"en": "Child", "he": "ילד"}, "slug": "child-ai", "parent_id": parent_id},
+        "tenant-a",
+        db_session,
+    )
+    assert child.is_error is False
+    child_id = child.output["id"]
+
+    self_parent = await execute_tool(
+        "update_category", {"category_id": parent_id, "parent_id": parent_id}, "tenant-a", db_session
+    )
+    assert self_parent.is_error is True
+    assert "own parent" in str(self_parent.output).lower()
+
+    cycle = await execute_tool(
+        "update_category", {"category_id": parent_id, "parent_id": child_id}, "tenant-a", db_session
+    )
+    assert cycle.is_error is True
+    assert "cycle" in str(cycle.output).lower()
+
+    other = await execute_tool(
+        "create_category",
+        {"name": {"en": "Other", "he": "אחר"}, "slug": "other-ai"},
+        "tenant-b",
+        db_session,
+    )
+    assert other.is_error is False
+    cross = await execute_tool(
+        "update_category",
+        {"category_id": parent_id, "parent_id": other.output["id"]},
+        "tenant-a",
+        db_session,
+    )
+    assert cross.is_error is True
+    assert "parent" in str(cross.output).lower()

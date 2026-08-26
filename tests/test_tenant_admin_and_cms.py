@@ -456,3 +456,75 @@ async def test_update_store_settings_partial(async_client: AsyncClient, seed_tok
     assert resp.json()['currency'] == 'EUR'
     assert resp.json()['logo_url'] == 'https://example.com/logo.png'
 
+
+@pytest.mark.asyncio
+async def test_update_category_rest_and_parent_guards(async_client: AsyncClient, seed_tokens):
+    headers_a = {"Authorization": seed_tokens["tenant_admin_a"]}
+    headers_b = {"Authorization": seed_tokens["tenant_admin_b"]}
+
+    created = await async_client.post(
+        "/api/v1/admin/store/tenant-a/categories",
+        json={"name": {"en": "Mugs", "he": "ספלים"}, "slug": "mugs-rest"},
+        headers=headers_a,
+    )
+    assert created.status_code == 201
+    category_id = created.json()["id"]
+
+    updated = await async_client.put(
+        f"/api/v1/admin/store/tenant-a/categories/{category_id}",
+        json={"slug": "mugs-updated"},
+        headers=headers_a,
+    )
+    assert updated.status_code == 200
+    assert updated.json()["slug"] == "mugs-updated"
+
+    self_parent = await async_client.put(
+        f"/api/v1/admin/store/tenant-a/categories/{category_id}",
+        json={"parent_id": category_id},
+        headers=headers_a,
+    )
+    assert self_parent.status_code == 400
+
+    other = await async_client.post(
+        "/api/v1/admin/store/tenant-b/categories",
+        json={"name": {"en": "Other", "he": "אחר"}, "slug": "other-rest"},
+        headers=headers_b,
+    )
+    assert other.status_code == 201
+    cross = await async_client.put(
+        f"/api/v1/admin/store/tenant-a/categories/{category_id}",
+        json={"parent_id": other.json()["id"]},
+        headers=headers_a,
+    )
+    assert cross.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_update_coupon_rest(async_client: AsyncClient, seed_tokens):
+    headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+    created = await async_client.post(
+        "/api/v1/admin/store/tenant-a/coupons",
+        json={
+            "code": "RESTUP10",
+            "discount_type": "percentage",
+            "discount_val": "10.00",
+            "min_order_amt": "0.00",
+            "usage_limit": 20,
+            "valid_until": "2037-12-31T23:59:59",
+        },
+        headers=headers,
+    )
+    assert created.status_code == 201
+    coupon_id = created.json()["id"]
+
+    updated = await async_client.put(
+        f"/api/v1/admin/store/tenant-a/coupons/{coupon_id}",
+        json={"discount_val": "15.00", "is_active": False},
+        headers=headers,
+    )
+    assert updated.status_code == 200
+    body = updated.json()
+    assert float(body["discount_val"]) == 15.0
+    assert body["is_active"] is False
+    assert body["code"] == "RESTUP10"
+

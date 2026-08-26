@@ -23,9 +23,18 @@ export function useCoupons() {
     })
   }
 
+  const updateCoupon = async (couponId: number, payload: Record<string, unknown>) => {
+    if (!tenantSlug) throw new Error('Tenant slug is not resolved')
+    return apiClient(`/api/v1/admin/store/${tenantSlug}/coupons/${couponId}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    })
+  }
+
   return {
     fetchCoupons,
     createCoupon,
+    updateCoupon,
     deleteCoupon
   }
 }

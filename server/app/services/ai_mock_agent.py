@@ -76,10 +76,20 @@ _CREATE_PRODUCT_RE = re.compile(
 _INVENTORY_HEALTH_RE = re.compile(r"low.?stock|out.?of.?stock|inventory\s+(?:health|status)", re.IGNORECASE)
 _SALES_REPORT_RE = re.compile(r"sales\s+report|how\s+much\s+revenue|revenue\s+report|sales\s+(?:this|for|summary)", re.IGNORECASE)
 _LIST_ORDERS_RE = re.compile(r"list\s+orders|show\s+(?:me\s+)?(?:the\s+)?orders|recent\s+orders", re.IGNORECASE)
+_LIST_PRODUCTS_RE = re.compile(r"list\s+products|find\s+(?:the\s+)?product|look\s+up\s+(?:the\s+)?product|search\s+products|show\s+products", re.IGNORECASE)
+_LIST_CUSTOMERS_RE = re.compile(r"list\s+customers|show\s+(?:me\s+)?(?:the\s+)?customers", re.IGNORECASE)
+_LIST_REVIEWS_RE = re.compile(r"list\s+reviews|show\s+(?:me\s+)?(?:the\s+)?reviews|pending\s+reviews", re.IGNORECASE)
+_STORE_SETTINGS_RE = re.compile(r"store\s+settings|branding|stripe\s+connect|is\s+stripe\s+connected", re.IGNORECASE)
 _CREATE_COUPON_RE = re.compile(
     r"create\s+a?\s*coupon\s+([A-Za-z0-9_-]+)\s+for\s+(\d+(?:\.\d+)?)%\s*off",
     re.IGNORECASE,
 )
+
+
+def _resolve_name(name: Any) -> str:
+    if isinstance(name, dict):
+        return name.get("en") or name.get("he") or next(iter(name.values()), "")
+    return str(name)
 
 
 def _slugify(text: str) -> str:
@@ -102,9 +112,10 @@ def _format_markdown_table(headers: List[str], rows: List[List[str]]) -> str:
 
 _NO_PAGE_FALLBACK_REPLY = (
     "I'm running in offline mock mode (no GEMINI_API_KEY set). From the general store copilot I understand "
-    "\"show low stock\", \"sales report\", \"list orders\", \"add a product called X for $Y\", or \"create a "
-    "coupon CODE for X% off\" — page-layout edits (resize/move/add/remove a section) need a specific page open, "
-    "so try that from the page editor instead. Or set GEMINI_API_KEY to use the real Gemini agent."
+    "\"show low stock\", \"sales report\", \"list orders\", \"list products\", \"list customers\", \"list reviews\", "
+    "\"store settings\", \"add a product called X for $Y\", or \"create a coupon CODE for X% off\" — page-layout "
+    "edits (resize/move/add/remove a section) need a specific page open, so try that from the page editor instead. "
+    "Or set GEMINI_API_KEY to use the real Gemini agent."
 )
 
 
@@ -112,6 +123,60 @@ async def run_mock_agent(
     user_message: str, tenant_slug: str, page_key: Optional[str], page_type: Optional[str], db: AsyncSession
 ) -> Dict[str, Any]:
     tool_calls: List[Dict[str, Any]] = []
+
+    if _LIST_PRODUCTS_RE.search(user_message):
+        q_match = re.search(r"(?:named|called|for|matching)\s+[\"']?([^\"'\n]+)[\"']?", user_message, re.IGNORECASE)
+        args = {"query": q_match.group(1).strip(), "include_inactive": True} if q_match else {"include_inactive": True}
+        result = await execute_tool("list_products", args, tenant_slug, db)
+        tool_calls.append({"name": "list_products", "input": args, "output": result.output, "is_error": result.is_error})
+        if result.is_error:
+            return {"reply": f"I couldn't list products (mock mode): {result.output.get('error')}", "tool_calls": tool_calls}
+        products = result.output[:10]
+        if not products:
+            return {"reply": "Done (mock mode) — no matching products.", "tool_calls": tool_calls}
+        rows = [[p["id"], _escape_table_cell(_resolve_name(p.get("name"))), p.get("slug"), p.get("base_price")] for p in products]
+        table = _format_markdown_table(["Id", "Name", "Slug", "Price"], rows)
+        return {"reply": f"Done (mock mode) — products:\n\n{table}", "tool_calls": tool_calls}
+
+    if _LIST_CUSTOMERS_RE.search(user_message):
+        result = await execute_tool("list_customers", {}, tenant_slug, db)
+        tool_calls.append({"name": "list_customers", "input": {}, "output": result.output, "is_error": result.is_error})
+        if result.is_error:
+            return {"reply": f"I couldn't list customers (mock mode): {result.output.get('error')}", "tool_calls": tool_calls}
+        customers = result.output[:10]
+        if not customers:
+            return {"reply": "Done (mock mode) — no customers yet.", "tool_calls": tool_calls}
+        rows = [[c.get("full_name"), c.get("email"), c.get("orders_count")] for c in customers]
+        table = _format_markdown_table(["Name", "Email", "Orders"], rows)
+        return {"reply": f"Done (mock mode) — customers:\n\n{table}", "tool_calls": tool_calls}
+
+    if _LIST_REVIEWS_RE.search(user_message):
+        result = await execute_tool("list_reviews", {}, tenant_slug, db)
+        tool_calls.append({"name": "list_reviews", "input": {}, "output": result.output, "is_error": result.is_error})
+        if result.is_error:
+            return {"reply": f"I couldn't list reviews (mock mode): {result.output.get('error')}", "tool_calls": tool_calls}
+        reviews = result.output[:10]
+        if not reviews:
+            return {"reply": "Done (mock mode) — no reviews yet.", "tool_calls": tool_calls}
+        rows = [[r.get("id"), r.get("product_name"), r.get("rating"), "approved" if r.get("is_approved") else "pending"] for r in reviews]
+        table = _format_markdown_table(["Id", "Product", "Rating", "Status"], rows)
+        return {"reply": f"Done (mock mode) — reviews:\n\n{table}", "tool_calls": tool_calls}
+
+    if _STORE_SETTINGS_RE.search(user_message):
+        result = await execute_tool("get_store_settings", {}, tenant_slug, db)
+        tool_calls.append({"name": "get_store_settings", "input": {}, "output": result.output, "is_error": result.is_error})
+        if result.is_error:
+            return {"reply": f"I couldn't load store settings (mock mode): {result.output.get('error')}", "tool_calls": tool_calls}
+        stripe = result.output.get("stripe_connect") or {}
+        connected = "connected" if stripe.get("is_connected") else "not connected"
+        return {
+            "reply": (
+                f"Done (mock mode) — currency {result.output.get('currency')}, "
+                f"languages {result.output.get('supported_languages')}. Stripe is {connected}. "
+                f"{stripe.get('note', '')}"
+            ),
+            "tool_calls": tool_calls,
+        }
 
     if _INVENTORY_HEALTH_RE.search(user_message):
         result = await execute_tool("get_inventory_health", {}, tenant_slug, db)
@@ -264,7 +329,8 @@ async def run_mock_agent(
                 "I'm running in offline mock mode (no GEMINI_API_KEY set), so I only understand simple commands "
                 "like \"make the hero banner larger\", \"move the video above the products\", \"add a gallery\", "
                 "\"remove the text block\", \"add a product called X for $Y\", \"show low stock\", \"sales "
-                "report\", \"list orders\", or \"create a coupon CODE for X% off\". Try one of those, or set "
+                "report\", \"list orders\", \"list products\", \"list customers\", \"list reviews\", "
+                "\"store settings\", or \"create a coupon CODE for X% off\". Try one of those, or set "
                 "GEMINI_API_KEY to use the real Gemini agent."
             ),
             "tool_calls": tool_calls,

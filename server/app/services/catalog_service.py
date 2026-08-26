@@ -10,7 +10,7 @@ from app.models.user import User
 from app.schemas.tenant_schemas import TenantSettingsSchema
 from app.schemas.catalog_schemas import (
     PaginatedProductResponse, ProductResponse, ProductCreateRequest, ProductUpdateRequest,
-    ProductVariantSchema, CategoryCreateRequest, CategoryResponse, ProductReviewResponse,
+    ProductVariantSchema, CategoryCreateRequest, CategoryUpdateRequest, CategoryResponse, ProductReviewResponse,
     ProductBundleItemSchema, ProductReviewCreateRequest
 )
 from app.schemas.ai_schemas import InventoryHealthItem, InventoryHealthResponse
@@ -57,7 +57,7 @@ async def _fetch_review_stats(product_ids: list[int], db: AsyncSession) -> dict[
     )
     return {product_id: (float(avg_rating), count) for product_id, avg_rating, count in result.all()}
 
-def _build_product_response(p: "Product", review_stats: dict[int, tuple[float, int]]) -> ProductResponse:
+def _build_product_response(p: "Product", review_stats: dict[int, tuple[float, int]], *, include_digital_file: bool = False) -> ProductResponse:
     primary_image = next((img.image_url for img in p.images if img.is_primary), None)
     if not primary_image and p.images:
         primary_image = p.images[0].image_url
@@ -75,7 +75,7 @@ def _build_product_response(p: "Product", review_stats: dict[int, tuple[float, i
         is_active=p.is_active,
         show_in_marketplace=p.show_in_marketplace,
         product_type=p.product_type,
-        digital_file_url=None,
+        digital_file_url=p.digital_file_url if include_digital_file else None,
         download_limit=p.download_limit,
         is_bundle=p.is_bundle,
         variants=[ProductVariantSchema.model_validate(v) for v in p.variants],
@@ -146,6 +146,36 @@ async def get_public_product_service(tenant_slug: str, product_slug: str, db: As
     review_stats = await _fetch_review_stats([product.id], db)
     return _build_product_response(product, review_stats)
 
+
+_MAX_PARENT_WALK = 50
+
+
+async def _assert_valid_parent(
+    db: AsyncSession, tenant_id: int, parent_id: int | None, *, child_id: int | None = None
+) -> None:
+    if parent_id is None:
+        return
+    if child_id is not None and parent_id == child_id:
+        raise HTTPException(status_code=400, detail="A category cannot be its own parent")
+    parent_result = await db.execute(
+        select(Category).where(Category.id == parent_id, Category.tenant_id == tenant_id)
+    )
+    if parent_result.scalar_one_or_none() is None:
+        raise HTTPException(status_code=404, detail="Parent category not found")
+    seen = {child_id} if child_id is not None else set()
+    current_id: int | None = parent_id
+    for _ in range(_MAX_PARENT_WALK):
+        if current_id is None:
+            return
+        if current_id in seen:
+            raise HTTPException(status_code=400, detail="Category parent would create a cycle")
+        seen.add(current_id)
+        ancestor_result = await db.execute(
+            select(Category.parent_id).where(Category.id == current_id, Category.tenant_id == tenant_id)
+        )
+        current_id = ancestor_result.scalar_one_or_none()
+    raise HTTPException(status_code=400, detail="Category parent would create a cycle")
+
 async def create_category_service(tenant_slug: str, req: CategoryCreateRequest, db: AsyncSession) -> CategoryResponse:
     tenant_result = await db.execute(select(Tenant).where(Tenant.slug == tenant_slug).options(selectinload(Tenant.settings)))
     tenant = tenant_result.scalar_one_or_none()
@@ -154,6 +184,7 @@ async def create_category_service(tenant_slug: str, req: CategoryCreateRequest, 
         
     supported_langs = tenant.settings.supported_languages if tenant.settings and tenant.settings.supported_languages else ["he"]
     validate_i18n(req.name, supported_langs, "name")
+    await _assert_valid_parent(db, tenant.id, req.parent_id)
 
     category = Category(
         tenant_id=tenant.id,
@@ -191,6 +222,91 @@ async def delete_category_service(tenant_slug: str, category_id: int, db: AsyncS
         
     await db.delete(category)
     await db.commit()
+
+
+async def update_category_service(
+    tenant_slug: str, category_id: int, req: CategoryUpdateRequest, db: AsyncSession
+) -> CategoryResponse:
+    tenant_result = await db.execute(
+        select(Tenant).where(Tenant.slug == tenant_slug).options(selectinload(Tenant.settings))
+    )
+    tenant = tenant_result.scalar_one_or_none()
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    category_result = await db.execute(
+        select(Category).where(Category.id == category_id, Category.tenant_id == tenant.id)
+    )
+    category = category_result.scalar_one_or_none()
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+
+    updates = req.model_dump(exclude_unset=True)
+    if "name" in updates and updates["name"] is not None:
+        supported_langs = tenant.settings.supported_languages if tenant.settings and tenant.settings.supported_languages else ["he"]
+        validate_i18n(updates["name"], supported_langs, "name")
+        category.name = updates["name"]
+    if "slug" in updates and updates["slug"] is not None:
+        category.slug = updates["slug"]
+    if "parent_id" in updates:
+        await _assert_valid_parent(db, tenant.id, updates["parent_id"], child_id=category_id)
+        category.parent_id = updates["parent_id"]
+
+    await db.commit()
+    await db.refresh(category)
+    return CategoryResponse(id=category.id, name=category.name, slug=category.slug, parent_id=category.parent_id)
+
+
+DEFAULT_LIST_PRODUCTS_LIMIT = 20
+MAX_LIST_PRODUCTS_LIMIT = 50
+
+
+async def list_admin_products_service(
+    tenant_slug: str,
+    db: AsyncSession,
+    *,
+    query: str | None = None,
+    include_inactive: bool = False,
+    category_id: int | None = None,
+    limit: int = DEFAULT_LIST_PRODUCTS_LIMIT,
+) -> list[ProductResponse]:
+    """Admin catalog search — includes inactive products when asked. Not the public storefront list."""
+    tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
+    tenant_id = tenant_result.scalar_one_or_none()
+    if not tenant_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Store not found")
+
+    limit = max(1, min(int(limit), MAX_LIST_PRODUCTS_LIMIT))
+    conditions = [Product.tenant_id == tenant_id]
+    if not include_inactive:
+        conditions.append(Product.is_active == True)  # noqa: E712
+    if category_id is not None:
+        conditions.append(Product.category_id == int(category_id))
+    if query and query.strip():
+        pattern = f"%{_escape_like(query.strip().lower())}%"
+        sku_match = Product.id.in_(
+            select(ProductVariant.product_id).where(
+                ProductVariant.tenant_id == tenant_id,
+                func.lower(ProductVariant.sku).like(pattern, escape="\\"),
+            )
+        )
+        conditions.append(or_(
+            func.lower(cast(Product.name, String)).like(pattern, escape="\\"),
+            func.lower(cast(Product.description, String)).like(pattern, escape="\\"),
+            sku_match,
+        ))
+
+    result = await db.execute(
+        select(Product)
+        .where(*conditions)
+        .options(selectinload(Product.variants), selectinload(Product.images))
+        .order_by(Product.created_at.desc())
+        .limit(limit)
+    )
+    products = result.scalars().unique().all()
+    review_stats = await _fetch_review_stats([p.id for p in products], db)
+    return [_build_product_response(p, review_stats, include_digital_file=True) for p in products]
+
 
 async def create_product_service(tenant_slug: str, req: ProductCreateRequest, db: AsyncSession) -> ProductResponse:
     tenant_result = await db.execute(select(Tenant).where(Tenant.slug == tenant_slug).options(selectinload(Tenant.settings)))
@@ -326,6 +442,30 @@ async def get_admin_product_service(tenant_slug: str, product_id: int, db: Async
         created_at=product.created_at
     )
 
+
+async def _replace_product_images(
+    db: AsyncSession, tenant_id: int, product: Product, image_urls: list[str]
+) -> None:
+    """Full-replace ProductImage rows. First URL is primary. Caller commits.
+
+    Mutates product.images in place so expire_on_commit=False sessions still
+    serialize the new gallery instead of the deleted rows.
+    """
+    for old_image in list(product.images):
+        await db.delete(old_image)
+    product.images.clear()
+    for i, img_url in enumerate(image_urls):
+        image = ProductImage(
+            tenant_id=tenant_id,
+            product_id=product.id,
+            image_url=img_url,
+            is_primary=(i == 0),
+            sort_order=i,
+        )
+        db.add(image)
+        product.images.append(image)
+
+
 async def update_product_service(tenant_slug: str, product_id: int, req: ProductUpdateRequest, db: AsyncSession) -> ProductResponse:
     tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
     tenant_id = tenant_result.scalar_one_or_none()
@@ -358,16 +498,10 @@ async def update_product_service(tenant_slug: str, product_id: int, req: Product
         # Full replace, matching create_product_service's shape (first URL
         # is primary) -- the edit form only ever submits one image_url today,
         # so there's no partial-update case to preserve here.
-        for old_image in product.images:
-            await db.delete(old_image)
-        for i, img_url in enumerate(req.images):
-            db.add(ProductImage(
-                tenant_id=tenant_id,
-                product_id=product.id,
-                image_url=img_url,
-                is_primary=(i == 0),
-                sort_order=i,
-            ))
+        # Keep the in-memory collection in sync: expire_on_commit=False means
+        # refresh() would otherwise keep the old ProductImage rows (and omit
+        # the new ones), so the API/tool result would lie that images are empty.
+        await _replace_product_images(db, tenant_id, product, req.images)
 
     await db.commit()
     await db.refresh(product)
@@ -646,7 +780,7 @@ async def create_product_review_service(
         created_at=review.created_at,
     )
 
-async def export_orders_csv_service(tenant_slug: str, db: AsyncSession):
+async def _load_orders_for_export(tenant_slug: str, db: AsyncSession):
     tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
     tenant_id = tenant_result.scalar_one_or_none()
     if not tenant_id:
@@ -658,11 +792,30 @@ async def export_orders_csv_service(tenant_slug: str, db: AsyncSession):
         .where(Order.tenant_id == tenant_id)
         .order_by(Order.created_at.desc())
     )
+    return result.all()
+
+
+async def summarize_orders_export_service(tenant_slug: str, db: AsyncSession) -> dict:
+    """Same order set as export_orders_csv_service, without dumping CSV into the caller."""
+    rows = await _load_orders_for_export(tenant_slug, db)
+    return {
+        "status": "ok",
+        "report_type": "orders",
+        "row_count": len(rows),
+        "message": (
+            "The assistant cannot attach a CSV file. Export orders from Admin → Reports. "
+            f"This store currently has {len(rows)} order row(s)."
+        ),
+    }
+
+
+async def export_orders_csv_service(tenant_slug: str, db: AsyncSession):
+    rows = await _load_orders_for_export(tenant_slug, db)
 
     f = StringIO()
     writer = csv.writer(f)
     writer.writerow(["order_id", "order_number", "customer_name", "customer_email", "status", "total", "created_at"])
-    for order, customer in result.all():
+    for order, customer in rows:
         writer.writerow([
             order.id, order.order_number, customer.full_name, customer.email,
             order.status, order.total_amount, order.created_at,
