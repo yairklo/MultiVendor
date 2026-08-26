@@ -3,7 +3,7 @@ from sqlalchemy import select
 from fastapi import HTTPException
 from app.models.tenant import Tenant
 from app.models.coupon import Coupon
-from app.schemas.order_schemas import CouponCreateRequest, CouponResponse
+from app.schemas.order_schemas import CouponCreateRequest, CouponUpdateRequest, CouponResponse
 
 async def _get_tenant_id(tenant_slug: str, db: AsyncSession) -> int:
     result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
@@ -52,6 +52,29 @@ async def delete_tenant_coupon_service(tenant_slug: str, coupon_id: int, db: Asy
 
     await db.delete(coupon)
     await db.commit()
+
+async def update_coupon_service(tenant_slug: str, coupon_id: int, req: CouponUpdateRequest, db: AsyncSession) -> CouponResponse:
+    tenant_id = await _get_tenant_id(tenant_slug, db)
+    result = await db.execute(
+        select(Coupon).where(Coupon.id == coupon_id, Coupon.tenant_id == tenant_id)
+    )
+    coupon = result.scalar_one_or_none()
+    if not coupon:
+        raise HTTPException(status_code=404, detail="Coupon not found")
+
+    updates = req.model_dump(exclude_unset=True)
+    if "code" in updates and updates["code"] != coupon.code:
+        existing = await db.execute(
+            select(Coupon).where(Coupon.tenant_id == tenant_id, Coupon.code == updates["code"])
+        )
+        if existing.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail="A coupon with this code already exists")
+    for field, value in updates.items():
+        setattr(coupon, field, value)
+
+    await db.commit()
+    await db.refresh(coupon)
+    return CouponResponse.model_validate(coupon, from_attributes=True)
 
 async def toggle_coupon_status_service(tenant_slug: str, coupon_id: int, is_active: bool, db: AsyncSession) -> CouponResponse:
     tenant_id = await _get_tenant_id(tenant_slug, db)

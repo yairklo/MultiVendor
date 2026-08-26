@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.tenant import Tenant
 from app.models.ai_pending_action import AIPendingAction
 from app.schemas.ai_schemas import PendingConfirmation
-from app.services import catalog_service, order_service, store_page_service
+from app.services import catalog_service, coupon_service, order_service, shipping_service, store_page_service, tenant_service
 
 PENDING_ACTION_TTL_MINUTES = 15
 
@@ -20,7 +20,11 @@ PENDING_ACTION_TTL_MINUTES = 15
 # only when cancelling; update_page_sections only when it would wipe most/all
 # of an existing page's content (see ai_tool_executor.py's update_page_sections
 # handler for the exact condition) — a small edit still applies immediately.
-GATED_TOOLS = ("delete_product", "update_order_status", "apply_storefront_template", "update_page_sections")
+GATED_TOOLS = (
+    "delete_product", "update_order_status", "apply_storefront_template", "update_page_sections",
+    "delete_category", "delete_coupon", "publish_page", "revert_page_version",
+    "delete_shipping_config", "upgrade_subscription",
+)
 
 
 async def _get_tenant_id(tenant_slug: str, db: AsyncSession) -> int:
@@ -81,12 +85,28 @@ async def confirm_pending_action_service(tenant_slug: str, confirmation_id: str,
         if action.tool_name == "delete_product":
             await catalog_service.delete_product_service(tenant_slug, args["product_id"], db)
             result = {"status": "ok", "product_id": args["product_id"], "deleted": True}
+        elif action.tool_name == "delete_category":
+            await catalog_service.delete_category_service(tenant_slug, args["category_id"], db)
+            result = {"status": "ok", "category_id": args["category_id"], "deleted": True}
+        elif action.tool_name == "delete_coupon":
+            await coupon_service.delete_tenant_coupon_service(tenant_slug, args["coupon_id"], db)
+            result = {"status": "ok", "coupon_id": args["coupon_id"], "deleted": True}
         elif action.tool_name == "update_order_status":
             result = await order_service.update_order_status_service(tenant_slug, args["order_id"], args["status"], db)
         elif action.tool_name == "update_page_sections":
             schema = await store_page_service.upsert_page_sections_service(
                 tenant_slug, args["page_key"], args["page_type"], args["sections"], db,
                 background_color=args.get("background_color"), text_color=args.get("text_color"),
+            )
+            result = schema.model_dump(mode="json")
+        elif action.tool_name == "publish_page":
+            schema = await store_page_service.publish_page_service(
+                tenant_slug, args["page_key"], args["page_type"], db
+            )
+            result = schema.model_dump(mode="json")
+        elif action.tool_name == "revert_page_version":
+            schema = await store_page_service.revert_page_to_version_service(
+                tenant_slug, args["page_key"], args["page_type"], args["version_id"], db
             )
             result = schema.model_dump(mode="json")
         elif action.tool_name == "apply_storefront_template":
@@ -96,6 +116,10 @@ async def confirm_pending_action_service(tenant_slug: str, confirmation_id: str,
             pages = await store_page_service.apply_storefront_template_service(tenant_slug, args["template_key"], db)
             published_pages = await store_page_service.publish_pages_service(tenant_slug, pages, db)
             result = {"status": "ok", "template_key": args["template_key"], "pages": [p.model_dump(mode="json") for p in published_pages]}
+        elif action.tool_name == "delete_shipping_config":
+            result = await shipping_service.delete_tenant_shipping_config_service(tenant_slug, args["provider"], db)
+        elif action.tool_name == "upgrade_subscription":
+            result = await tenant_service.upgrade_subscription_service(tenant_slug, args["target_plan_code"], db)
         else:
             raise HTTPException(status_code=400, detail=f"Unknown pending action tool: {action.tool_name}")
             

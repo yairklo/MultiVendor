@@ -131,11 +131,22 @@ class CouponCreateRequest(BaseModel):
     usage_limit: int = Field(100, gt=0)
     valid_until: datetime
 
+class CouponUpdateRequest(BaseModel):
+    code: Optional[str] = Field(None, min_length=3, max_length=20)
+    discount_type: Optional[DiscountType] = None
+    discount_val: Optional[Decimal] = Field(None, gt=0)
+    min_order_amt: Optional[Decimal] = None
+    usage_limit: Optional[int] = Field(None, gt=0)
+    valid_until: Optional[datetime] = None
+    is_active: Optional[bool] = None
+
 class CouponResponse(BaseModel):
     id: int
     code: str
     discount_type: DiscountType
     discount_val: Decimal
+    min_order_amt: Decimal = Decimal("0.00")
+    usage_limit: int = 0
     used_count: int
     valid_until: datetime
     is_active: bool = True

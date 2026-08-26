@@ -140,6 +140,45 @@ ai_tools: List[ToolDefinition] = [
         "parameters": {"type": "object", "properties": {}, "required": []},
     },
     {
+        "name": "create_category",
+        "description": "Create a product category in this store. name is localized {lang: str} for every supported language.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "object", "description": "Localized category name, e.g. {en: 'Mugs', he: 'ספלים'}."},
+                "slug": {"type": "string", "description": "URL slug, lowercase letters/numbers/hyphens."},
+                "parent_id": {"type": "number", "description": "Optional parent category id."},
+            },
+            "required": ["name", "slug"],
+        },
+    },
+    {
+        "name": "update_category",
+        "description": "Partially update a category's name, slug, or parent. Only fields you pass are changed.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "category_id": {"type": "number"},
+                "name": {"type": "object", "description": "Localized category name."},
+                "slug": {"type": "string"},
+                "parent_id": {"type": "number"},
+            },
+            "required": ["category_id"],
+        },
+    },
+    {
+        "name": "delete_category",
+        "description": (
+            "PERMANENTLY delete a category. This tool NEVER deletes anything itself: calling it only stages "
+            "the deletion and returns a confirmation id. A human must click Confirm in the UI."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {"category_id": {"type": "number"}},
+            "required": ["category_id"],
+        },
+    },
+    {
         "name": "get_page_schema",
         "description": (
             "Fetch the current JSON section tree for a specific page or template, identified by page_key and "
@@ -227,6 +266,17 @@ ai_tools: List[ToolDefinition] = [
                 "description": {"type": "object", "description": "Localized product description, same shape as name."},
                 "base_price": {"type": "number", "description": "Price as a positive number."},
                 "category_id": {"type": "number", "description": "Optional existing category id."},
+                "product_type": {
+                    "type": "string",
+                    "enum": ["physical", "digital", "service"],
+                    "description": "Defaults to physical. Digital products do not use stock/shipping.",
+                },
+                "show_in_marketplace": {"type": "boolean", "description": "Whether this product appears on the marketplace."},
+                "digital_file_url": {
+                    "type": "string",
+                    "description": "Required for digital products. Real http(s) or /uploads/... URL. Never invent a URL.",
+                },
+                "download_limit": {"type": "number", "description": "Optional max downloads for a digital product."},
                 "variants": {
                     "type": "array",
                     "description": "At least one variant/SKU with a stock quantity.",
@@ -234,7 +284,7 @@ ai_tools: List[ToolDefinition] = [
                 },
                 "images": {
                     "type": "array",
-                    "description": "Optional list of image URLs.",
+                    "description": "Optional list of real http(s) or /uploads/... image URLs. First is primary. Never invent a URL.",
                     "items": {"type": "string"},
                 },
             },
@@ -246,9 +296,10 @@ ai_tools: List[ToolDefinition] = [
         "description": (
             "Create or update many products/inventory levels in one call from spreadsheet-style rows -- the "
             "standard way to act on an attached .xlsx. Upserts by sku: a sku that already exists in this "
-            "store just gets its stock_quantity/base_price updated; a new sku creates a new product with one "
-            "variant. Use this instead of calling create_product repeatedly when the user attached a "
-            "spreadsheet or otherwise gave you more than a couple of products at once."
+            "store gets its stock_quantity/base_price updated, and image_url replaced when provided; a new sku "
+            "creates a new product with one variant. Use this instead of calling create_product repeatedly "
+            "when the user attached a spreadsheet or otherwise gave you more than a couple of products at once. "
+            "image_url must be a real http(s) or /uploads/... URL — never invent one."
         ),
         "parameters": {
             "type": "object",
@@ -259,15 +310,18 @@ ai_tools: List[ToolDefinition] = [
                     "items": {
                         "type": "object",
                         "properties": {
-                            "name_en": {"type": "string", "description": "Required for a new sku; ignored when updating an existing one."},
-                            "name_he": {"type": "string"},
+                            "name_en": {"type": "string", "description": "Required for a new sku; applied on an existing sku when provided."},
+                            "name_he": {"type": "string", "description": "Applied on create and when updating an existing sku."},
                             "slug": {"type": "string", "description": "Required for a new sku; lowercase letters/numbers/hyphens."},
-                            "description_en": {"type": "string"},
+                            "description_en": {"type": "string", "description": "Applied on create and when updating an existing sku."},
                             "base_price": {"type": "number"},
                             "sku": {"type": "string", "description": "Required -- the upsert key."},
                             "stock_quantity": {"type": "integer"},
                             "category_id": {"type": "number"},
-                            "image_url": {"type": "string"},
+                            "image_url": {
+                                "type": "string",
+                                "description": "Real http(s) or /uploads/... image URL. Applied on create and when updating an existing sku. Never invent a URL.",
+                            },
                         },
                         "required": ["sku", "base_price", "stock_quantity"],
                     },
@@ -311,8 +365,26 @@ ai_tools: List[ToolDefinition] = [
     },
     # --- Catalog & inventory management ---------------------------------
     {
+        "name": "list_products",
+        "description": (
+            "Search this store's catalog by name, description, or SKU — including inactive products when "
+            "include_inactive is true. ALWAYS use this (never get_inventory_health) when looking up a product "
+            "by name or SKU so you can get the real product_id before get_product/update_product."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Optional name/SKU/description search, any supported language."},
+                "include_inactive": {"type": "boolean", "description": "If true, include archived/inactive products. Default false."},
+                "category_id": {"type": "number"},
+                "limit": {"type": "number", "description": "Max rows to return, default 20, hard-capped at 50."},
+            },
+            "required": [],
+        },
+    },
+    {
         "name": "get_product",
-        "description": "Fetch a single product's current full details (name, price, description, category, active status, variants). Call before update_product/archive_product/update_inventory so you know current values.",
+        "description": "Fetch a single product's current full details (name, price, description, category, active status, variants, images). Call before update_product/archive_product/update_inventory so you know current values.",
         "parameters": {
             "type": "object",
             "properties": {"product_id": {"type": "number"}},
@@ -321,7 +393,12 @@ ai_tools: List[ToolDefinition] = [
     },
     {
         "name": "update_product",
-        "description": "Partially update a product — only the fields you pass are changed, everything else stays as-is. Use for name/price/description/category/product_type changes, or is_active for a manual publish/unpublish. To fully remove a product from sale, prefer archive_product (clearer intent).",
+        "description": (
+            "Partially update a product — only the fields you pass are changed, everything else stays as-is. "
+            "Use for name/price/description/category/product_type/is_active, or to set photos via images. "
+            "images is a full replace of the gallery (first URL becomes the primary). Only pass real http(s) "
+            "or /uploads/... URLs — never invent a link. To fully remove a product from sale, prefer archive_product."
+        ),
         "parameters": {
             "type": "object",
             "properties": {
@@ -331,7 +408,18 @@ ai_tools: List[ToolDefinition] = [
                 "base_price": {"type": "number"},
                 "category_id": {"type": "number"},
                 "product_type": {"type": "string", "enum": ["physical", "digital", "service"]},
+                "show_in_marketplace": {"type": "boolean"},
+                "digital_file_url": {
+                    "type": "string",
+                    "description": "http(s) or /uploads/... URL for a digital product. Never invent a URL.",
+                },
+                "download_limit": {"type": "number"},
                 "is_active": {"type": "boolean"},
+                "images": {
+                    "type": "array",
+                    "description": "Full replace of product image URLs. First item is primary. Omit to leave images unchanged; pass [] to clear them.",
+                    "items": {"type": "string"},
+                },
             },
             "required": ["product_id"],
         },
@@ -388,6 +476,24 @@ ai_tools: List[ToolDefinition] = [
             "required": ["product_id", "sku", "stock_quantity"],
         },
     },
+    {
+        "name": "update_variant",
+        "description": (
+            "Update an existing variant's price override, SKU, attribute options, and/or inventory. "
+            "Only fields you pass are changed. Call get_product first so the variant_id is grounded."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "variant_id": {"type": "number"},
+                "sku": {"type": "string"},
+                "attributes_json": {"type": "object", "description": "e.g. {color: 'red', size: 'M'}"},
+                "price_override": {"type": "number"},
+                "stock_quantity": {"type": "number"},
+            },
+            "required": ["variant_id"],
+        },
+    },
     # --- Coupons & promotions ---------------------------------------------
     {
         "name": "create_coupon",
@@ -420,6 +526,36 @@ ai_tools: List[ToolDefinition] = [
                 "is_active": {"type": "boolean"},
             },
             "required": ["coupon_id", "is_active"],
+        },
+    },
+    {
+        "name": "update_coupon",
+        "description": "Partially update a coupon (code, discount, min order, usage limit, expiry, active flag). Only fields you pass are changed.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "coupon_id": {"type": "number"},
+                "code": {"type": "string", "description": "3-20 chars."},
+                "discount_type": {"type": "string", "enum": ["percentage", "fixed"]},
+                "discount_val": {"type": "number"},
+                "min_order_amt": {"type": "number"},
+                "usage_limit": {"type": "number"},
+                "valid_until": {"type": "string", "description": "ISO8601 expiration datetime."},
+                "is_active": {"type": "boolean"},
+            },
+            "required": ["coupon_id"],
+        },
+    },
+    {
+        "name": "delete_coupon",
+        "description": (
+            "PERMANENTLY delete a coupon. This tool NEVER deletes anything itself: calling it only stages "
+            "the deletion and returns a confirmation id. A human must click Confirm in the UI."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {"coupon_id": {"type": "number"}},
+            "required": ["coupon_id"],
         },
     },
     # --- Orders & fulfillment ----------------------------------------------
@@ -468,6 +604,34 @@ ai_tools: List[ToolDefinition] = [
             "required": ["order_id", "status"],
         },
     },
+    {
+        "name": "fulfill_order",
+        "description": (
+            "Create a shipment for a processing physical order via the store's configured courier "
+            "(HFD or Lionwheel). Optional provider_override must be 'hfd' or 'lionwheel'. Tracking is "
+            "returned by the courier — do not invent a tracking number."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "order_id": {"type": "number"},
+                "provider_override": {
+                    "type": "string",
+                    "enum": ["hfd", "lionwheel"],
+                    "description": "Optional courier. Omit to use the store's default.",
+                },
+            },
+            "required": ["order_id"],
+        },
+    },
+    {
+        "name": "export_orders_csv",
+        "description": (
+            "Trigger an orders CSV export. Returns a short summary (row count and where to download) — "
+            "never dumps the file into this chat."
+        ),
+        "parameters": {"type": "object", "properties": {}, "required": []},
+    },
     # --- Analytics (read-only) ----------------------------------------------
     {
         "name": "get_sales_analytics",
@@ -490,6 +654,155 @@ ai_tools: List[ToolDefinition] = [
         "name": "get_inventory_health",
         "description": "Lists every active product's variants that are out of stock or running low, so you can flag restocking needs. Present as a Markdown table when there are several.",
         "parameters": {"type": "object", "properties": {}, "required": []},
+    },
+    {
+        "name": "list_reviews",
+        "description": "List this store's product reviews (pending and approved) for moderation.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "limit": {"type": "number", "description": "Max rows to return, default 20, hard-capped at 50."},
+            },
+            "required": [],
+        },
+    },
+    {
+        "name": "set_review_status",
+        "description": "Set a review's moderation status to approved, rejected, or pending.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "review_id": {"type": "number"},
+                "status": {"type": "string", "enum": ["approved", "rejected", "pending"]},
+            },
+            "required": ["review_id", "status"],
+        },
+    },
+    {
+        "name": "list_customers",
+        "description": "Read-only search of this store's customers (email, name, order count, spend) matching the admin customers panel.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Optional email or name filter."},
+                "limit": {"type": "number", "description": "Max rows to return, default 20, hard-capped at 50."},
+            },
+            "required": [],
+        },
+    },
+    {
+        "name": "get_store_settings",
+        "description": (
+            "Fetch this store's branding and settings (logo, currency, languages, nav, theme color) plus "
+            "Stripe Connect connection status. Stripe onboarding is a browser OAuth flow — report status "
+            "and direct the user to Store Settings; do not attempt to connect Stripe yourself."
+        ),
+        "parameters": {"type": "object", "properties": {}, "required": []},
+    },
+    {
+        "name": "update_store_settings",
+        "description": (
+            "Partially update store settings: logo_url, banner_url, primary_color, currency, "
+            "supported_languages, default_language, nav_items, support_email, custom_css, review flags. "
+            "There is no favicon field. Image URLs must be real http(s) or /uploads/... paths."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "logo_url": {"type": "string"},
+                "banner_url": {"type": "string"},
+                "primary_color": {"type": "string", "description": "CSS color / branding theme token."},
+                "currency": {"type": "string"},
+                "custom_css": {"type": "string"},
+                "support_email": {"type": "string"},
+                "supported_languages": {"type": "array", "items": {"type": "string"}},
+                "default_language": {"type": "string"},
+                "review_moderation_enabled": {"type": "boolean"},
+                "allow_unverified_reviews": {"type": "boolean"},
+                "nav_items": {
+                    "type": "array",
+                    "description": "Primary navigation menu items matching the admin settings schema.",
+                    "items": {"type": "object"},
+                },
+            },
+            "required": [],
+        },
+    },
+    {
+        "name": "list_page_versions",
+        "description": "List saved versions of a page so you can revert to a real version_id instead of guessing one.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "page_key": {"type": "string"},
+                "page_type": {"type": "string", "enum": ["static_page", "template"]},
+            },
+            "required": ["page_key", "page_type"],
+        },
+    },
+    {
+        "name": "publish_page",
+        "description": (
+            "Publish the current draft of a page to the live storefront. This NEVER publishes immediately — "
+            "it stages an AIPendingAction; a human must click Confirm. Never auto-publish drafts."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "page_key": {"type": "string"},
+                "page_type": {"type": "string", "enum": ["static_page", "template"]},
+            },
+            "required": ["page_key", "page_type"],
+        },
+    },
+    {
+        "name": "revert_page_version",
+        "description": (
+            "Roll a page's draft back to a previous version. This NEVER reverts immediately — it stages an "
+            "AIPendingAction; a human must click Confirm. Look up version_id via list_page_versions first."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "page_key": {"type": "string"},
+                "page_type": {"type": "string", "enum": ["static_page", "template"]},
+                "version_id": {"type": "number"},
+            },
+            "required": ["page_key", "page_type", "version_id"],
+        },
+    },
+    {
+        "name": "list_shipping_configs",
+        "description": "List this store's configured shipping providers (hfd/lionwheel) and which is default.",
+        "parameters": {"type": "object", "properties": {}, "required": []},
+    },
+    {
+        "name": "delete_shipping_config",
+        "description": (
+            "Remove a shipping provider config. This NEVER deletes immediately — it stages an AIPendingAction; "
+            "a human must click Confirm. Look up the provider via list_shipping_configs first."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "provider": {"type": "string", "enum": ["hfd", "lionwheel"]},
+            },
+            "required": ["provider"],
+        },
+    },
+    {
+        "name": "upgrade_subscription",
+        "description": (
+            "Upgrade this store's subscription plan. This NEVER upgrades immediately — it stages an "
+            "AIPendingAction; a human must click Confirm."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "target_plan_code": {"type": "string", "enum": ["free", "pro", "enterprise"]},
+            },
+            "required": ["target_plan_code"],
+        },
     },
 ]
 

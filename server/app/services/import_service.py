@@ -6,11 +6,12 @@ import openpyxl
 from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
-from app.models.catalog import ProductVariant
+from app.models.catalog import Product, ProductVariant
 from app.models.tenant import Tenant
-from app.schemas.catalog_schemas import ProductCreateRequest, ProductVariantSchema
-from app.services.catalog_service import create_product_service
+from app.schemas.catalog_schemas import ProductCreateRequest, ProductVariantSchema, normalize_asset_url
+from app.services.catalog_service import _replace_product_images, create_product_service
 
 # One row = one product with a single default variant. Multi-variant-per-row
 # import isn't supported in v1 -- add extra variants via the product edit
@@ -135,8 +136,58 @@ async def commit_products_import(tenant_slug: str, rows: List[Dict[str, Any]], d
             if existing_variant:
                 existing_variant.stock_quantity = int(data["stock_quantity"])
                 existing_variant.price_override = Decimal(str(data["base_price"]))
+                image_url_raw = data.get("image_url")
+                image_url = str(image_url_raw).strip() if image_url_raw else ""
+                if image_url:
+                    image_url = normalize_asset_url(image_url, field_name="image_url")
+
+                name_en = str(data["name_en"]).strip() if data.get("name_en") else ""
+                name_he = str(data["name_he"]).strip() if data.get("name_he") else ""
+                description_en = str(data["description_en"]).strip() if data.get("description_en") else ""
+                category_raw = data.get("category_id")
+                has_category = category_raw is not None and str(category_raw).strip() != ""
+
+                needs_product = bool(image_url or name_en or name_he or description_en or has_category)
+                product = None
+                if needs_product:
+                    product_result = await db.execute(
+                        select(Product)
+                        .where(Product.id == existing_variant.product_id, Product.tenant_id == tenant_id)
+                        .options(selectinload(Product.images))
+                    )
+                    product = product_result.scalar_one()
+                    if name_en or name_he:
+                        current_name = dict(product.name or {})
+                        if name_en:
+                            current_name["en"] = name_en
+                        if name_he:
+                            current_name["he"] = name_he
+                        product.name = current_name
+                    if description_en:
+                        current_desc = dict(product.description or {})
+                        current_desc["en"] = description_en
+                        product.description = current_desc
+                    if has_category:
+                        product.category_id = int(category_raw)
+                    if image_url:
+                        await _replace_product_images(db, tenant_id, product, [image_url])
                 await db.commit()
-                updated.append({"row_number": row_number, "sku": sku, "variant_id": existing_variant.id})
+                updated_row: Dict[str, Any] = {
+                    "row_number": row_number,
+                    "sku": sku,
+                    "variant_id": existing_variant.id,
+                    "product_id": existing_variant.product_id,
+                    "stock_quantity": int(data["stock_quantity"]),
+                    "base_price": str(Decimal(str(data["base_price"]))),
+                }
+                if product is not None:
+                    updated_row["name"] = product.name
+                    updated_row["description"] = product.description
+                    updated_row["category_id"] = product.category_id
+                if image_url:
+                    updated_row["primary_image_url"] = image_url
+                    updated_row["images"] = [image_url]
+                updated.append(updated_row)
             else:
                 if not data.get("name_en") or not data.get("slug"):
                     raise ValueError("name_en and slug are required to create a new product (sku not found)")
@@ -146,6 +197,9 @@ async def commit_products_import(tenant_slug: str, rows: List[Dict[str, Any]], d
                 # missing Hebrew text -- fall back to the English value like the form does.
                 name_en = str(data["name_en"])
                 description_en = str(data["description_en"]) if data.get("description_en") else None
+                create_image_url = str(data["image_url"]).strip() if data.get("image_url") else ""
+                if create_image_url:
+                    create_image_url = normalize_asset_url(create_image_url, field_name="image_url")
                 req = ProductCreateRequest(
                     category_id=int(data["category_id"]) if data.get("category_id") else None,
                     name={"en": name_en, "he": str(data["name_he"]) if data.get("name_he") else name_en},
@@ -153,7 +207,7 @@ async def commit_products_import(tenant_slug: str, rows: List[Dict[str, Any]], d
                     description={"en": description_en, "he": description_en} if description_en else None,
                     base_price=Decimal(str(data["base_price"])),
                     variants=[ProductVariantSchema(sku=sku, stock_quantity=int(data["stock_quantity"]))],
-                    images=[str(data["image_url"])] if data.get("image_url") else [],
+                    images=[create_image_url] if create_image_url else [],
                 )
                 product = await create_product_service(tenant_slug, req, db)
                 created.append({"row_number": row_number, "sku": sku, "product_id": product.id})

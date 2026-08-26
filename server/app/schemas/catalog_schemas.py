@@ -5,20 +5,35 @@ from decimal import Decimal
 from app.schemas.common_schemas import PaginatedResponse, ReviewStatus
 
 
-def normalize_digital_file_url(url: Optional[str]) -> Optional[str]:
+def normalize_asset_url(url: Optional[str], *, field_name: str = "url", allow_empty: bool = False) -> Optional[str]:
+    """http(s) or /uploads/... only. Rejects javascript:/data:/vbscript:. Does not check the host."""
     if url is None:
         return None
     stripped = url.strip()
     if not stripped:
-        return None
+        if allow_empty:
+            return None
+        raise ValueError(f"{field_name} must not be empty")
     if len(stripped) > 512:
-        raise ValueError("digital_file_url must be at most 512 characters")
+        raise ValueError(f"{field_name} must be at most 512 characters")
     lowered = stripped.lower()
     if lowered.startswith(("javascript:", "data:", "vbscript:")):
-        raise ValueError("Invalid digital_file_url")
-    if stripped.startswith("/") or lowered.startswith(("http://", "https://")):
+        raise ValueError(f"Invalid {field_name}")
+    if lowered.startswith(("http://", "https://")):
         return stripped
-    raise ValueError("digital_file_url must be an http(s) URL or a site-relative path")
+    if stripped.startswith("/uploads/"):
+        return stripped
+    raise ValueError(f"{field_name} must be an http(s) URL or a /uploads/... path")
+
+
+def normalize_digital_file_url(url: Optional[str]) -> Optional[str]:
+    return normalize_asset_url(url, field_name="digital_file_url", allow_empty=True)
+
+
+def _normalize_image_urls(urls: Optional[List[str]]) -> Optional[List[str]]:
+    if urls is None:
+        return None
+    return [normalize_asset_url(u, field_name="images") for u in urls]
 
 class ProductVariantSchema(BaseModel):
     id: Optional[int] = None
@@ -79,6 +94,11 @@ class ProductCreateRequest(BaseModel):
     def _normalize_digital_file_url(cls, v: Optional[str]) -> Optional[str]:
         return normalize_digital_file_url(v)
 
+    @field_validator("images")
+    @classmethod
+    def _normalize_images(cls, v: List[str]) -> List[str]:
+        return _normalize_image_urls(v) or []
+
 class ProductUpdateRequest(BaseModel):
     category_id: Optional[int] = None
     name: Optional[Dict[str, str]] = None
@@ -97,6 +117,11 @@ class ProductUpdateRequest(BaseModel):
     @classmethod
     def _normalize_digital_file_url(cls, v: Optional[str]) -> Optional[str]:
         return normalize_digital_file_url(v)
+
+    @field_validator("images")
+    @classmethod
+    def _normalize_images(cls, v: Optional[List[str]]) -> Optional[List[str]]:
+        return _normalize_image_urls(v)
 
 class ProductResponse(BaseModel):
     id: int
@@ -156,6 +181,12 @@ class CategoryCreateRequest(BaseModel):
             "slug": "mens-clothing"
         }
     })
+
+class CategoryUpdateRequest(BaseModel):
+    name: Optional[Dict[str, str]] = None
+    slug: Optional[str] = Field(None, pattern="^[a-z0-9-]+$")
+    parent_id: Optional[int] = None
+
 
 class CategoryResponse(BaseModel):
     id: int

@@ -1,3 +1,4 @@
+import asyncio
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -5,10 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.services import ai_conversation_service
 from app.services.ai_mock_agent import run_mock_agent
-from app.services.ai_tool_executor import ToolGroundingContext, execute_tool
+from app.services.ai_tool_executor import READ_TOOLS, WRITE_TOOLS, ToolGroundingContext, execute_tool
 from app.services.ai_tools import to_gemini_function_declarations
 
-MAX_TOOL_TURNS = 6
+MAX_TOOL_TURNS = 14
 
 # A tool call that fails validation/grounding isn't fatal — its error is fed back to
 # the model as the next turn's input so it can self-correct. But an unbounded retry
@@ -21,10 +22,10 @@ MAX_VALIDATION_RETRIES = 3
 _SYSTEM_INSTRUCTION_HEADER = (
     "You are a proactive store-management co-pilot for a multi-vendor e-commerce admin panel — a full "
     "assistant to the store owner, not just a layout editor. You can edit a page's JSON section tree; create, "
-    "update, archive, or (with confirmation) delete products; adjust inventory; create and toggle coupons; "
-    "look up and update orders; and pull sales/customer/inventory analytics — all via the provided tools, every "
-    "one of which is automatically scoped to this vendor's own store. You never need to (and cannot) specify "
-    "which vendor. "
+    "update, archive, or (with confirmation) delete products and categories; manage variants, inventory, "
+    "coupons, reviews, store settings, and shipping; look up customers and orders; fulfill orders; and pull "
+    "sales/customer/inventory analytics — all via the provided tools, every one of which is automatically "
+    "scoped to this vendor's own store. You never need to (and cannot) specify which vendor. "
 )
 
 # Used when this chat IS scoped to a real page (the per-page layout editor).
@@ -53,24 +54,35 @@ _AMBIGUITY_INSTRUCTION = (
 _SYSTEM_INSTRUCTION_TEMPLATE = (
     "{context_instruction}"
     "{ambiguity_instruction}"
-    "Call exactly ONE tool per turn and wait for its result before calling another — never call multiple tools "
-    "in parallel in the same turn. Prefer a read tool (get_product, get_order_details, list_orders, ...) before "
-    "an update when you don't already know the current state. "
-    "Never fabricate or guess entity ids (product_id, variant_id, coupon_id, order_id) — if the user names an "
-    "item by title, code, or number instead of giving you its id directly, you MUST first call the matching "
-    "lookup tool (get_product, get_inventory_health, list_coupons, list_orders, get_order_details) to retrieve "
-    "the real id from the database before calling any update/archive/delete/toggle tool with it. The server "
-    "enforces this and will reject an id it hasn't seen you look up this conversation with an UngroundedReference "
-    "error — if you see that error, call the suggested lookup tool and then retry with the id it returns, don't "
-    "retry with the same guessed id. "
+    "You may call multiple READ tools in the same turn (list_products, get_product, list_categories, "
+    "list_orders, …) so you can gather context in parallel. Mutation/write tools must run one at a time — "
+    "never mix a write with other tools in the same turn, and never fire two writes together. Prefer a read "
+    "tool before an update when you don't already know the current state. "
+    "Never fabricate or guess entity ids (product_id, variant_id, coupon_id, order_id, category_id, "
+    "review_id, version_id). If the user names an item by title, code, or number instead of giving you its "
+    "id directly, you MUST first call the matching lookup tool — list_products (never get_inventory_health) "
+    "for products by name/SKU, list_categories, list_coupons, list_orders, get_order_details, list_reviews, "
+    "list_page_versions — to retrieve the real id from the database before calling any update/archive/delete/"
+    "toggle tool with it. The server enforces this and will reject an id it hasn't seen you look up this "
+    "conversation with an UngroundedReference error — if you see that error, call the suggested lookup tool "
+    "and then retry with the id it returns, don't retry with the same guessed id. "
     "For sales reports, low-stock lists, or any other multi-row result, reply with a Markdown table — don't just "
     "restate numbers in prose. "
-    "delete_product, update_order_status(status='cancelled'), and apply_storefront_template NEVER complete "
-    "immediately, no matter how clearly the user asks — calling them only stages the action and returns a pending confirmation that "
-    "renders as a real button in the UI; only the user clicking it actually deletes or cancels anything. Tell "
-    "the user plainly what you've staged and that you're waiting on their confirmation — never say it's done "
-    "until it actually is. For anything reversible (archiving, editing, inventory/coupon changes, marking an "
-    "order processing/completed), just do it — don't ask permission first. "
+    "delete_product, delete_category, delete_coupon, delete_shipping_config, update_order_status(status="
+    "'cancelled'), apply_storefront_template, publish_page, revert_page_version, and upgrade_subscription "
+    "NEVER complete immediately, no matter how clearly the user asks — calling them only stages the action "
+    "and returns a pending confirmation that renders as a real button in the UI; only the user clicking it "
+    "actually runs it. Never auto-confirm, never auto-publish drafts, never invent image URLs. Tell the user "
+    "plainly what you've staged and that you're waiting on their confirmation — never say it's done until it "
+    "actually is. For anything reversible (archiving, editing, inventory/coupon changes, marking an order "
+    "processing/completed), just do it — don't ask permission first. "
+    "To add or change product photos, pass images on update_product (after list_products/get_product) or "
+    "image_url on bulk_import_products. Both the create path and an existing-SKU update persist the URL. Only "
+    "use real http(s) or /uploads/... links (user-supplied, an attachment URL, or a known public image host) "
+    "— never invent a URL. Never tell the user an image was added unless the tool result's images or "
+    "primary_image_url actually contains that URL. "
+    "Stripe Connect is a browser OAuth flow: report connection status via get_store_settings and direct the "
+    "user to Store Settings. You cannot connect Stripe yourself. "
     "\n\nPage-layout specifics: always call get_page_schema first to see the current sections and their ids "
     "before editing a page. When calling update_page_sections you MUST pass the full desired sections array "
     "(not a diff), preserving the ids of unchanged sections and omitting id only for brand new sections. Use a "
@@ -195,17 +207,18 @@ def _content_has_part(content: Any, part_attr: str) -> bool:
 def _trim_history_for_persistence(history: List[Any], round_results: List[Dict[str, Any]]) -> List[Any]:
     """
     `history` is the raw google.genai Content[] for this turn (chat.get_history()).
-    `round_results[i]` = {"tool_name", "is_error"} for the i-th function-call round
-    this turn, in order. Because chat.send_message(user_message) seeds history[0]
-    (user) / history[1] (model) before the loop starts, and the system prompt
-    requires exactly one tool call per model turn, round i's function_call lives
-    at history[2*i + 1] and its function_response at history[2*i + 2].
+    `round_results[i]` = {"calls": [{"tool_name", "is_error"}, ...]} for the i-th
+    function-call round this turn, in order. Because chat.send_message(user_message)
+    seeds history[0] (user) / history[1] (model) before the loop starts, round i's
+    function_call Content lives at history[2*i + 1] and its function_response at
+    history[2*i + 2] — a parallel-read round still occupies one pair, with multiple
+    parts inside each Content.
 
     Drops two things before this gets persisted and replayed as context on every
     future turn:
       - a failed round's call/response pair, once a LATER round this same turn
-        retried the same tool and it succeeded — the model already self-corrected,
-        so the abandoned attempt is just noise from here on.
+        retried every failed tool from that round and those retries succeeded —
+        the model already self-corrected, so the abandoned attempt is just noise.
       - a trailing function_call with no matching function_response, which happens
         when the loop stops (retry cap or MAX_TOOL_TURNS) without sending one more
         message to Gemini — left in place it would replay as an unresolved dangling
@@ -213,9 +226,15 @@ def _trim_history_for_persistence(history: List[Any], round_results: List[Dict[s
     """
     drop_indices = set()
     for i, r in enumerate(round_results):
-        if not r["is_error"]:
+        failed_names = [c["tool_name"] for c in r["calls"] if c["is_error"]]
+        if not failed_names:
             continue
-        if any(not later["is_error"] and later["tool_name"] == r["tool_name"] for later in round_results[i + 1:]):
+        later_success = set()
+        for later in round_results[i + 1:]:
+            for c in later["calls"]:
+                if not c["is_error"]:
+                    later_success.add(c["tool_name"])
+        if all(name in later_success for name in failed_names):
             drop_indices.add(2 * i + 1)
             drop_indices.add(2 * i + 2)
 
@@ -303,6 +322,13 @@ async def run_agent_turn(
     round_results: List[Dict[str, Any]] = []
     pending_confirmation = None
     grounding_context = ToolGroundingContext()
+    prior_messages = await ai_conversation_service.get_conversation_messages_service(
+        tenant_slug, page_key, page_type, db
+    )
+    for msg in prior_messages:
+        for prior_call in (msg.tool_calls or []):
+            if not prior_call.is_error:
+                grounding_context.seed_from_tool_output(prior_call.name, prior_call.output)
     consecutive_failures = 0
     last_error_detail: Any = None
     message_parts = (
@@ -317,12 +343,29 @@ async def run_agent_turn(
             result = {"reply": (response.text or "").strip() or "Done.", "tool_calls": tool_calls, "used_provider": "gemini"}
             break
 
+        names = [c.name for c in function_calls]
+        run_parallel = (
+            len(function_calls) > 1
+            and all(n in READ_TOOLS for n in names)
+            and not any(n in WRITE_TOOLS for n in names)
+        )
+        if run_parallel:
+            tool_results = list(await asyncio.gather(*[
+                execute_tool(c.name, dict(c.args or {}), tenant_slug, db, grounding_context)
+                for c in function_calls
+            ]))
+        else:
+            tool_results = [
+                await execute_tool(c.name, dict(c.args or {}), tenant_slug, db, grounding_context)
+                for c in function_calls
+            ]
+
         response_parts = []
         round_had_error = False
-        for call in function_calls:
-            tool_result = await execute_tool(call.name, dict(call.args or {}), tenant_slug, db, grounding_context)
+        round_calls: List[Dict[str, Any]] = []
+        for call, tool_result in zip(function_calls, tool_results):
             tool_calls.append({"name": call.name, "input": call.args, "output": tool_result.output, "is_error": tool_result.is_error})
-            round_results.append({"tool_name": call.name, "is_error": tool_result.is_error})
+            round_calls.append({"tool_name": call.name, "is_error": tool_result.is_error})
             if tool_result.pending_confirmation:
                 pending_confirmation = tool_result.pending_confirmation
             if tool_result.is_error:
@@ -337,6 +380,7 @@ async def run_agent_turn(
                     ),
                 )
             )
+        round_results.append({"calls": round_calls})
 
         consecutive_failures = consecutive_failures + 1 if round_had_error else 0
         if consecutive_failures > MAX_VALIDATION_RETRIES:
