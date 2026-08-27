@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import AsyncSessionLocal
 from app.models.user import User, UserStoreMembership
 from app.models.tenant import Tenant, SubscriptionPlan, TenantSettings
-from app.models.catalog import Product, ProductVariant
+from app.models.catalog import Product, ProductImage, ProductVariant
 from app.core.security import get_password_hash
 
 # Convenience dev-DB seed (targets whatever DATABASE_URL is configured, i.e.
@@ -75,6 +75,16 @@ async def seed():
         session.add_all([
             ProductVariant(tenant_id=store1.id, product_id=product1.id, sku="TSHIRT-DEMO-1", stock_quantity=50),
             ProductVariant(tenant_id=store2.id, product_id=product2.id, sku="MUG-DEMO-1", stock_quantity=50),
+            ProductImage(
+                tenant_id=store1.id, product_id=product1.id,
+                image_url="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=800&h=800&q=80",
+                is_primary=True, sort_order=0,
+            ),
+            ProductImage(
+                tenant_id=store2.id, product_id=product2.id,
+                image_url="https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?auto=format&fit=crop&w=800&h=800&q=80",
+                is_primary=True, sort_order=0,
+            ),
         ])
 
         await session.commit()
