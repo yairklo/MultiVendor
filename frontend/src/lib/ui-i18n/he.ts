@@ -391,8 +391,10 @@ export const he: NestedDict = {
     removeFile: 'הסרה',
   },
   marketplace: {
-    title: 'מרקטפלייס',
-    brand: 'מרקטפלייס MultiVendor',
+    title: 'השוק',
+    brand: 'השוק',
+    manifesto: 'חנויות עצמאיות. בחירה אחת, בלי רעש מיותר.',
+    issue: 'גיליון מתמשך',
     subtitle: 'מוצרים מכל החנויות בפלטפורמה, במקום אחד.',
     browse: 'עיון',
     noProducts: 'לא נמצאו מוצרים.',

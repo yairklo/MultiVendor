@@ -31,8 +31,8 @@ export function HeroBanner({
       style={{
         ...themeStyle,
         height,
-        background: imageUrl ? undefined : 'var(--section-bg, linear-gradient(135deg, #eef2ff, #e0e7ff))',
-        color: imageUrl ? '#ffffff' : 'var(--section-text, #1e293b)',
+        background: imageUrl ? undefined : 'var(--section-bg, oklch(0.93 0.02 78))',
+        color: imageUrl ? '#ffffff' : 'var(--section-text, oklch(0.2 0.025 48))',
         fontFamily: 'var(--section-font, inherit)',
       }}
     >

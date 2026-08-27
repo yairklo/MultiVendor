@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { getCookie } from 'cookies-next'
-import { Menu, ShoppingBag, Store, X } from 'lucide-react'
+import { Menu, ShoppingBag, X } from 'lucide-react'
 import { useMarketplaceCart } from '@/context/MarketplaceCartContext'
 import { useUiLocale } from '@/context/UiLocaleContext'
 import { UiLanguageSwitcher } from '@/components/ui/UiLanguageSwitcher'
@@ -24,22 +24,21 @@ export function MarketplaceHeader() {
   const isActive = (href: string) => (href === '/marketplace' ? pathname === href : pathname?.startsWith(href))
 
   const navLinkClass = (href: string) =>
-    `text-sm transition-colors ${
-      isActive(href) ? 'font-semibold text-foreground' : 'text-muted-foreground hover:text-foreground'
+    `text-[13px] tracking-[0.14em] uppercase transition-colors ${
+      isActive(href) ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
     }`
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+    <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 md:px-8">
         <Link
           href="/marketplace"
-          className="flex items-center gap-2 text-xl font-bold text-foreground font-heading transition-opacity hover:opacity-80"
+          className="font-heading text-2xl font-medium text-foreground transition-opacity hover:opacity-70"
         >
-          <Store className="h-5 w-5 text-primary" />
           {t('marketplace.brand')}
         </Link>
 
-        <nav className="hidden items-center gap-6 md:flex">
+        <nav className="hidden items-center gap-8 md:flex">
           <Link href="/marketplace" className={navLinkClass('/marketplace')}>
             {t('marketplace.browse')}
           </Link>
@@ -58,10 +57,11 @@ export function MarketplaceHeader() {
             type="button"
             data-testid="marketplace-cart-icon"
             onClick={openDrawer}
-            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors duration-150 hover:bg-primary/90 active:scale-[0.98]"
+            className="relative flex items-center gap-2 text-sm text-foreground transition-opacity hover:opacity-70 active:scale-[0.98] motion-safe:transition-transform"
           >
-            <ShoppingBag className="h-4 w-4" />
-            <span>{t('marketplace.cart', { count: cartCount })}</span>
+            <ShoppingBag className="h-5 w-5" strokeWidth={1.5} />
+            <span className="sr-only">{t('marketplace.cart', { count: cartCount })}</span>
+            <span className="tabular-nums text-[13px]">{cartCount}</span>
           </button>
           <button
             type="button"
@@ -75,18 +75,18 @@ export function MarketplaceHeader() {
       </div>
 
       {mobileOpen && (
-        <nav className="flex flex-col gap-1 border-t border-border px-4 py-3 md:hidden animate-in fade-in-0 slide-in-from-top-2 duration-200">
+        <nav className="flex flex-col gap-1 border-t border-border px-4 py-3 md:hidden motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-2 motion-safe:duration-200">
           <Link
             href="/marketplace"
             onClick={() => setMobileOpen(false)}
-            className={`rounded-lg px-2 py-2 ${navLinkClass('/marketplace')}`}
+            className={`rounded-sm px-2 py-2 ${navLinkClass('/marketplace')}`}
           >
             {t('marketplace.browse')}
           </Link>
           <Link
             href={isLoggedIn ? '/account/orders' : '/login'}
             onClick={() => setMobileOpen(false)}
-            className={`rounded-lg px-2 py-2 ${navLinkClass(isLoggedIn ? '/account/orders' : '/login')}`}
+            className={`rounded-sm px-2 py-2 ${navLinkClass(isLoggedIn ? '/account/orders' : '/login')}`}
           >
             {isLoggedIn ? t('storefront.myOrders') : t('common.login')}
           </Link>

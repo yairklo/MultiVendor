@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Sora, Heebo } from "next/font/google";
+import { Geist, Geist_Mono, Frank_Ruhl_Libre, Heebo } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/context/CartContext";
 import { CartDrawer } from "@/components/cart/CartDrawer";
@@ -18,10 +18,10 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const headingFont = Sora({
-  variable: "--font-heading-sora",
-  weight: ["600", "700", "800"],
-  subsets: ["latin"],
+const display = Frank_Ruhl_Libre({
+  variable: "--font-display",
+  subsets: ["latin", "hebrew"],
+  weight: ["400", "500", "700"],
 });
 
 const heebo = Heebo({
@@ -49,7 +49,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="he"
       dir="rtl"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} ${headingFont.variable} ${heebo.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${display.variable} ${heebo.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <UiLocaleProvider>

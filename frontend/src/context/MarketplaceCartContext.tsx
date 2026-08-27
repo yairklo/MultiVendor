@@ -10,6 +10,7 @@ import {
   removeMarketplaceCartItem,
   updateMarketplaceCartItemQuantity,
 } from '@/lib/marketplace-cart'
+import { ApiError } from '@/lib/api/apiClient'
 
 interface MarketplaceCartContextValue {
   cart: MarketplaceCart | null
@@ -52,7 +53,9 @@ export function MarketplaceCartProvider({ children }: { children: React.ReactNod
       const data = await fetchMarketplaceCart(active.cartId)
       setCart(data)
     } catch (e) {
-      console.error('Failed to load marketplace cart, clearing stale cart state:', e)
+      if (!(e instanceof ApiError && e.status === 404)) {
+        console.error(`Failed to load marketplace cart (${e instanceof ApiError ? e.status : 'unknown'}), clearing stale cart state`)
+      }
       clearStoredMarketplaceCart()
       setCart(null)
     } finally {
