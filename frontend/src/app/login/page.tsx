@@ -46,60 +46,53 @@ export default function CustomerLoginPage() {
 
   return (
     <div className="min-h-screen grid grid-cols-1 md:grid-cols-2 text-foreground">
-      <div className="relative hidden md:flex flex-col justify-between overflow-hidden bg-primary p-10 text-primary-foreground">
-        <div
-          className="pointer-events-none absolute inset-0 opacity-20"
-          style={{
-            backgroundImage:
-              'radial-gradient(circle at 20% 20%, white 0, transparent 45%), radial-gradient(circle at 80% 70%, white 0, transparent 40%)',
-          }}
-        />
-        <div className="relative z-10 text-xl font-bold font-heading">{t('auth.customerBrand')}</div>
-        <div className="relative z-10 space-y-3">
-          <h2 className="text-3xl font-bold font-heading leading-tight">
+      <div className="relative hidden md:flex flex-col justify-between bg-sidebar p-10 text-sidebar-foreground md:p-14">
+        <div className="font-heading text-2xl font-medium">{t('auth.customerBrand')}</div>
+        <div className="space-y-4">
+          <h2 className="font-heading text-5xl font-medium leading-[1.1]">
             {t('auth.customerHeadline')}
           </h2>
-          <p className="max-w-sm text-primary-foreground/80">
+          <p className="max-w-sm text-sidebar-foreground/70">
             {t('auth.customerSub')}
           </p>
         </div>
-        <div className="relative z-10 text-xs text-primary-foreground/60">
-          &copy; {new Date().getFullYear()} MultiVendor
+        <div className="text-[11px] uppercase tracking-[0.16em] text-sidebar-foreground/45">
+          &copy; {new Date().getFullYear()} {t('marketplace.brand')}
         </div>
       </div>
 
-      <div className="flex items-center justify-center bg-background p-4 md:p-10">
-        <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-lg animate-in fade-in-0 zoom-in-95 duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]">
-          <div className="mb-4 flex justify-end">
+      <div className="flex items-center justify-center bg-background p-6 md:p-12">
+        <div className="w-full max-w-md motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300">
+          <div className="mb-8 flex justify-end">
             <UiLanguageSwitcher className="text-muted-foreground" />
           </div>
-          <h1 className="text-2xl font-bold mb-1 text-foreground font-heading">{t('auth.customerTitle')}</h1>
-          <p className="mb-8 text-sm text-muted-foreground">{t('auth.customerSubtitle')}</p>
+          <h1 className="mb-2 font-heading text-4xl font-medium text-foreground">{t('auth.customerTitle')}</h1>
+          <p className="mb-10 text-sm text-muted-foreground">{t('auth.customerSubtitle')}</p>
 
           {error && (
-            <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg text-sm">
+            <div className="mb-4 border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
               {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-sm font-medium mb-2 text-foreground">{t('auth.email')}</label>
+              <label className="mb-2 block text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{t('auth.email')}</label>
               <input
                 type="email"
                 required
-                className="w-full px-4 py-3 rounded-lg border border-input focus:ring-2 focus:ring-ring outline-none transition-shadow"
+                className="w-full border-0 border-b border-foreground/30 bg-transparent py-2 outline-none transition-colors focus:border-foreground"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 placeholder="customer@example.com"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2 text-foreground">{t('auth.password')}</label>
+              <label className="mb-2 block text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{t('auth.password')}</label>
               <input
                 type="password"
                 required
-                className="w-full px-4 py-3 rounded-lg border border-input focus:ring-2 focus:ring-ring outline-none transition-shadow"
+                className="w-full border-0 border-b border-foreground/30 bg-transparent py-2 outline-none transition-colors focus:border-foreground"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 placeholder="••••••••"
@@ -109,7 +102,7 @@ export default function CustomerLoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-primary text-primary-foreground py-3 rounded-lg font-bold transition-all duration-150 hover:bg-primary/90 active:scale-[0.98] disabled:opacity-70"
+              className="mt-4 w-full bg-foreground py-3 text-sm font-medium tracking-wide text-background transition-opacity hover:opacity-90 active:scale-[0.98] disabled:opacity-70"
             >
               {loading ? t('auth.authenticating') : t('auth.signIn')}
             </button>

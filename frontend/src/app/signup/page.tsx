@@ -102,50 +102,36 @@ function SignupForm() {
 
   return (
     <div className="min-h-screen flex bg-background text-foreground">
-      {/* Branded panel */}
-      <div className="relative hidden lg:flex lg:w-1/2 flex-col justify-between overflow-hidden bg-[oklch(0.2_0.03_277)] p-12 text-white">
-        <div
-          className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-primary/40 blur-3xl"
-          aria-hidden="true"
-        />
-        <div
-          className="pointer-events-none absolute -bottom-40 -right-24 h-[28rem] w-[28rem] rounded-full bg-[oklch(0.62_0.19_300)]/30 blur-3xl"
-          aria-hidden="true"
-        />
-        <div className="relative z-10">
-          <span className="font-heading text-xl font-bold tracking-tight">MultiVendor</span>
-        </div>
-        <div className="relative z-10 max-w-md">
-          <h1 className="font-heading text-4xl font-bold leading-tight">
+      <div className="relative hidden lg:flex lg:w-1/2 flex-col justify-between bg-sidebar p-12 text-sidebar-foreground lg:p-16">
+        <span className="font-heading text-2xl font-medium tracking-tight">{t('marketplace.brand')}</span>
+        <div className="max-w-md">
+          <h1 className="font-heading text-5xl font-medium leading-[1.1]">
             {mode === 'seller'
               ? t('auth.signupSellerHeadline')
               : t('auth.signupCustomerHeadline')}
           </h1>
-          <p className="mt-4 text-white/70">
+          <p className="mt-5 text-sidebar-foreground/70">
             {mode === 'seller'
               ? t('auth.signupSellerSub')
               : t('auth.signupCustomerSub')}
           </p>
         </div>
-        <div className="relative z-10 text-sm text-white/40">
-          &copy; {new Date().getFullYear()} MultiVendor
+        <div className="text-[11px] uppercase tracking-[0.16em] text-sidebar-foreground/45">
+          &copy; {new Date().getFullYear()} {t('marketplace.brand')}
         </div>
       </div>
 
-      {/* Form panel */}
-      <div className="flex w-full flex-1 items-center justify-center p-4 lg:w-1/2">
-        <div className="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-card shadow-xl shadow-primary/5">
-          <div className="h-1.5 w-full bg-gradient-to-r from-primary to-[oklch(0.62_0.19_300)]" aria-hidden="true" />
-          <div className="p-8">
-            <div className="mb-2 flex justify-end">
-              <UiLanguageSwitcher className="text-muted-foreground" />
-            </div>
-            <h1 className="font-heading text-2xl font-bold text-center mb-1 text-foreground">
-              {t('auth.signupTitle')}
-            </h1>
-            <p className="text-sm text-muted-foreground text-center mb-6">
-              {t('auth.signupSubtitle')}
-            </p>
+      <div className="flex w-full flex-1 items-center justify-center p-6 lg:w-1/2 lg:p-12">
+        <div className="w-full max-w-md">
+          <div className="mb-2 flex justify-end">
+            <UiLanguageSwitcher className="text-muted-foreground" />
+          </div>
+          <h1 className="mb-2 font-heading text-4xl font-medium text-foreground">
+            {t('auth.signupTitle')}
+          </h1>
+          <p className="mb-8 text-sm text-muted-foreground">
+            {t('auth.signupSubtitle')}
+          </p>
 
             <div className="mb-6 grid grid-cols-2 gap-1 rounded-lg bg-muted p-1">
               <button
@@ -309,13 +295,12 @@ function SignupForm() {
               </form>
             )}
 
-            <p className="mt-6 text-center text-sm text-muted-foreground">
+            <p className="mt-6 text-sm text-muted-foreground">
               {t('auth.hasAccount')}{' '}
-              <a href="/login" className="font-medium text-primary hover:underline">
+              <a href="/login" className="font-medium text-foreground underline-offset-4 hover:underline">
                 {t('auth.logIn')}
               </a>
             </p>
-          </div>
         </div>
       </div>
     </div>

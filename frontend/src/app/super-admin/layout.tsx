@@ -49,7 +49,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
       <aside className="hidden w-64 flex-col border-r border-sidebar-border bg-sidebar md:flex">
         <div className="flex h-16 items-center gap-2 border-b border-sidebar-border px-6">
           <Shield className="h-5 w-5 text-primary" strokeWidth={2} />
-          <h1 className="font-heading text-xl font-bold bg-gradient-to-r from-primary to-[oklch(0.62_0.19_300)] bg-clip-text text-transparent">
+          <h1 className="font-heading text-xl font-medium tracking-tight text-sidebar-foreground">
             Platform
           </h1>
         </div>

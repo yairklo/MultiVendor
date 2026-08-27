@@ -27,7 +27,7 @@ function NavLinks() {
   ]
 
   return (
-    <nav className="flex-1 p-4 space-y-1">
+    <nav className="flex-1 space-y-0.5 p-3">
       {navItems.map((item) => {
         const Icon = item.icon
         return (
@@ -53,7 +53,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div dir={dir} className="flex min-h-screen bg-background">
       <aside className="hidden w-64 flex-col border-e border-sidebar-border bg-sidebar md:flex">
         <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-6">
-          <h1 className="font-heading text-xl font-bold bg-gradient-to-r from-primary to-[oklch(0.62_0.19_300)] bg-clip-text text-transparent">
+          <h1 className="font-heading text-xl font-medium tracking-tight text-sidebar-foreground">
             {t('nav.cmsTitle')}
           </h1>
           <UiLanguageSwitcher className="text-sidebar-foreground/70" />

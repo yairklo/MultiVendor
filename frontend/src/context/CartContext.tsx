@@ -10,6 +10,7 @@ import {
   removeCartItem,
   updateItemQuantity,
 } from '@/lib/cart'
+import { ApiError } from '@/lib/api/apiClient'
 
 interface CartContextValue {
   cart: Cart | null
@@ -50,10 +51,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const data = await fetchCart(active.tenantSlug, active.cartId)
       setCart(data)
     } catch (e) {
-      // A stored cart can go stale (e.g. the tenant/store it pointed at no
-      // longer exists). There's nothing to recover — drop it rather than
-      // leaving the app stuck on a cart that will never load.
-      console.error('Failed to load cart, clearing stale cart state:', e)
+      // A stored cart can go stale (never created on the server, or the
+      // tenant it pointed at no longer exists). Drop it rather than leaving
+      // the app stuck. Don't pass the Error to console.error — Next.js
+      // treats that as a runtime overlay even though this path is handled.
+      if (!(e instanceof ApiError && e.status === 404)) {
+        console.error(`Failed to load cart (${e instanceof ApiError ? e.status : 'unknown'}), clearing stale cart state`)
+      }
       clearStoredCart()
       setCart(null)
     } finally {

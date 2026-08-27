@@ -2,12 +2,12 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Store } from 'lucide-react'
 import { StarRating } from '@/components/ui/star-rating'
 import { resolveI18nText } from '@/lib/i18n-text'
 import { useMarketplaceCart } from '@/context/MarketplaceCartContext'
 import { resolveImageUrl } from '@/lib/media'
 import { isDigitalProduct } from '@/lib/stock'
+import { cn } from '@/lib/utils'
 
 const STRINGS = {
   en: { addToCart: 'Add to Cart', outOfStock: 'Out of stock', adding: 'Adding…' },
@@ -25,10 +25,12 @@ export function MarketplaceProductCard({
   product,
   lang = 'he',
   formatCurrency,
+  featured = false,
 }: {
   product: any
   lang?: string
   formatCurrency: (amount: number) => string
+  featured?: boolean
 }) {
   const { addItem } = useMarketplaceCart()
   const [adding, setAdding] = useState(false)
@@ -53,47 +55,92 @@ export function MarketplaceProductCard({
     }
   }
 
+  const addButton = (
+    <button
+      type="button"
+      disabled={!variant?.id || outOfStock || adding}
+      onClick={handleAddToCart}
+      className="self-start border-b border-foreground pb-0.5 text-sm font-medium text-foreground transition-opacity hover:opacity-60 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 motion-safe:transition-transform"
+    >
+      {outOfStock ? t.outOfStock : adding ? t.adding : t.addToCart}
+    </button>
+  )
+
+  if (featured) {
+    return (
+      <article className="group grid items-end gap-8 border-b border-border pb-12 md:grid-cols-2 md:gap-12">
+        <Link href={href} className="block overflow-hidden bg-muted">
+          {image ? (
+            // eslint-disable-next-line @next/next/no-img-element -- arbitrary vendor-supplied
+            // URLs with no host allowlist, same reasoning as storefront/ProductCard.
+            <img
+              src={resolveImageUrl(image)}
+              alt={name}
+              className="aspect-[4/5] w-full object-cover motion-safe:transition-transform motion-safe:duration-700 motion-safe:ease-spring motion-safe:group-hover:scale-[1.03]"
+            />
+          ) : (
+            <div className="aspect-[4/5] w-full bg-muted" />
+          )}
+        </Link>
+        <div className="flex flex-col gap-4 pb-2">
+          <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
+            {product.tenant_name}
+          </p>
+          <Link
+            href={href}
+            className="font-heading text-4xl font-medium leading-[1.12] text-foreground md:text-5xl"
+          >
+            {name}
+          </Link>
+          {product.review_count > 0 && (
+            <div className="flex items-center gap-1">
+              <StarRating rating={product.average_rating} size={14} />
+              <span className="text-xs tabular-nums text-muted-foreground">({product.review_count})</span>
+            </div>
+          )}
+          <span className="font-heading text-2xl tabular-nums text-foreground">
+            {formatCurrency(product.base_price)}
+          </span>
+          {addButton}
+        </div>
+      </article>
+    )
+  }
+
   return (
-    <div className="group flex flex-col rounded-xl border border-border bg-card p-3 shadow-sm transition-shadow duration-300 hover:shadow-lg">
-      <Link href={href} className="mb-2 block overflow-hidden rounded-lg">
+    <article className="group flex flex-col">
+      <Link href={href} className="mb-3 block overflow-hidden bg-muted">
         {image ? (
           // eslint-disable-next-line @next/next/no-img-element -- arbitrary vendor-supplied
           // URLs with no host allowlist, same reasoning as storefront/ProductCard.
           <img
             src={resolveImageUrl(image)}
             alt={name}
-            className="aspect-square w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            className="aspect-[4/5] w-full object-cover motion-safe:transition-transform motion-safe:duration-500 motion-safe:ease-spring motion-safe:group-hover:scale-[1.04]"
           />
         ) : (
-          <div className="aspect-square w-full bg-muted" />
+          <div className="aspect-[4/5] w-full bg-muted" />
         )}
       </Link>
-      <span className="mb-1 inline-flex w-fit items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
-        <Store className="h-3 w-3" />
+      <p className="mb-1 text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
         {product.tenant_name}
-      </span>
+      </p>
       <Link
         href={href}
-        className="line-clamp-2 text-sm font-semibold text-foreground transition-colors hover:text-primary"
+        className={cn(
+          'line-clamp-2 font-heading text-lg font-medium leading-snug text-foreground transition-opacity hover:opacity-70',
+        )}
       >
         {name}
       </Link>
       {product.review_count > 0 && (
         <div className="mt-1 flex items-center gap-1">
           <StarRating rating={product.average_rating} size={12} />
-          <span className="text-xs text-muted-foreground">({product.review_count})</span>
+          <span className="text-xs tabular-nums text-muted-foreground">({product.review_count})</span>
         </div>
       )}
-      <span className="mt-1 text-sm font-medium text-foreground/80">{formatCurrency(product.base_price)}</span>
-
-      <button
-        type="button"
-        disabled={!variant?.id || outOfStock || adding}
-        onClick={handleAddToCart}
-        className="mt-3 w-full rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition-colors duration-150 hover:bg-primary/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {outOfStock ? t.outOfStock : adding ? t.adding : t.addToCart}
-      </button>
-    </div>
+      <span className="mt-2 text-sm tabular-nums text-foreground">{formatCurrency(product.base_price)}</span>
+      <div className="mt-3">{addButton}</div>
+    </article>
   )
 }

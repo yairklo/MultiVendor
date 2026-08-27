@@ -18,11 +18,11 @@ export function TableRowSkeleton({ columns }: { columns: number }) {
 
 export function ProductCardSkeleton() {
   return (
-    <div className="bg-white border border-gray-100 p-5 rounded-xl shadow-md">
-      <Skeleton className="h-5 w-3/4 mb-3" />
-      <Skeleton className="h-4 w-1/3 mb-4" />
-      <Skeleton className="h-4 w-1/2 mb-4" />
-      <Skeleton className="h-9 w-full" />
+    <div className="flex flex-col">
+      <Skeleton className="mb-3 aspect-[4/5] w-full rounded-none bg-muted" />
+      <Skeleton className="mb-2 h-3 w-1/3 bg-muted" />
+      <Skeleton className="mb-2 h-5 w-3/4 bg-muted" />
+      <Skeleton className="h-4 w-1/4 bg-muted" />
     </div>
   )
 }

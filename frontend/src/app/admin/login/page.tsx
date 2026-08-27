@@ -65,84 +65,70 @@ export default function AdminLoginPage() {
 
   return (
     <div className="min-h-screen flex bg-background text-foreground">
-      {/* Branded panel */}
-      <div className="relative hidden lg:flex lg:w-1/2 flex-col justify-between overflow-hidden bg-[oklch(0.2_0.03_277)] p-12 text-white">
-        <div
-          className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-primary/40 blur-3xl"
-          aria-hidden="true"
-        />
-        <div
-          className="pointer-events-none absolute -bottom-40 -right-24 h-[28rem] w-[28rem] rounded-full bg-[oklch(0.62_0.19_300)]/30 blur-3xl"
-          aria-hidden="true"
-        />
-        <div className="relative z-10">
-          <span className="font-heading text-xl font-bold tracking-tight">{t('auth.adminBrand')}</span>
-        </div>
-        <div className="relative z-10 max-w-md">
-          <h1 className="font-heading text-4xl font-bold leading-tight">
+      <div className="relative hidden lg:flex lg:w-1/2 flex-col justify-between bg-sidebar p-12 text-sidebar-foreground lg:p-16">
+        <span className="font-heading text-2xl font-medium tracking-tight">{t('auth.adminBrand')}</span>
+        <div className="max-w-md">
+          <h1 className="font-heading text-5xl font-medium leading-[1.1]">
             {t('auth.adminHeadline')}
           </h1>
-          <p className="mt-4 text-white/70">
+          <p className="mt-5 text-sidebar-foreground/70">
             {t('auth.adminSub')}
           </p>
         </div>
-        <div className="relative z-10 text-sm text-white/40">
-          &copy; {new Date().getFullYear()} Multi-Vendor Platform
+        <div className="text-[11px] uppercase tracking-[0.16em] text-sidebar-foreground/45">
+          &copy; {new Date().getFullYear()} {t('marketplace.brand')}
         </div>
       </div>
 
-      {/* Form panel */}
-      <div className="flex w-full flex-1 items-center justify-center p-4 lg:w-1/2">
-        <div className="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-card shadow-xl shadow-primary/5">
-          <div className="h-1.5 w-full bg-gradient-to-r from-primary to-[oklch(0.62_0.19_300)]" aria-hidden="true" />
-          <div className="p-8">
-            <div className="mb-4 flex justify-end">
-              <UiLanguageSwitcher className="text-muted-foreground" />
-            </div>
-            <h1 className="font-heading text-2xl font-bold text-center mb-1 text-foreground">
-              {t('auth.adminTitle')}
-            </h1>
-            <p className="text-sm text-muted-foreground text-center mb-8">
-              {t('auth.adminSubtitle')}
-            </p>
+      <div className="flex w-full flex-1 items-center justify-center p-6 lg:w-1/2 lg:p-12">
+        <div className="w-full max-w-md">
+          <div className="mb-8 flex justify-end">
+            <UiLanguageSwitcher className="text-muted-foreground" />
+          </div>
+          <h1 className="mb-2 font-heading text-4xl font-medium text-foreground">
+            {t('auth.adminTitle')}
+          </h1>
+          <p className="mb-10 text-sm text-muted-foreground">
+            {t('auth.adminSubtitle')}
+          </p>
 
             {error && (
-              <div className="mb-4 p-4 bg-destructive/10 text-destructive rounded-lg text-sm">
+              <div className="mb-4 border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
                 {error}
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium mb-2">{t('auth.email')}</label>
+                <label htmlFor="email" className="mb-2 block text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{t('auth.email')}</label>
                 <input
                   id="email"
                   type="email"
                   required
-                  className="w-full px-4 py-3 rounded-lg border border-input bg-background focus:ring-2 focus:ring-ring outline-none transition-all"
+                  className="w-full border-0 border-b border-foreground/30 bg-transparent py-2 outline-none transition-colors focus:border-foreground"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   placeholder="admin@example.com"
                 />
               </div>
               <div>
-                <label htmlFor="password" className="block text-sm font-medium mb-2">{t('auth.password')}</label>
+                <label htmlFor="password" className="mb-2 block text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{t('auth.password')}</label>
                 <input
                   id="password"
                   type="password"
                   required
-                  className="w-full px-4 py-3 rounded-lg border border-input bg-background focus:ring-2 focus:ring-ring outline-none transition-all"
+                  className="w-full border-0 border-b border-foreground/30 bg-transparent py-2 outline-none transition-colors focus:border-foreground"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder="••••••••"
                 />
               </div>
               <div>
-                <label htmlFor="tenantSlug" className="block text-sm font-medium mb-2">{t('auth.storeSlug')}</label>
+                <label htmlFor="tenantSlug" className="mb-2 block text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{t('auth.storeSlug')}</label>
                 <input
                   id="tenantSlug"
                   type="text"
-                  className="w-full px-4 py-3 rounded-lg border border-input bg-background focus:ring-2 focus:ring-ring outline-none transition-all"
+                  className="w-full border-0 border-b border-foreground/30 bg-transparent py-2 outline-none transition-colors focus:border-foreground"
                   value={tenantSlug}
                   onChange={e => setTenantSlug(e.target.value)}
                   placeholder={t('auth.storeSlugPlaceholder')}
@@ -152,19 +138,18 @@ export default function AdminLoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-primary text-primary-foreground py-3 rounded-lg font-bold hover:bg-primary/90 active:scale-[0.98] transition-all disabled:opacity-70 disabled:active:scale-100"
+                className="mt-4 w-full bg-foreground py-3 text-sm font-medium tracking-wide text-background transition-opacity hover:opacity-90 active:scale-[0.98] disabled:opacity-70"
               >
                 {loading ? t('auth.authenticating') : t('auth.signIn')}
               </button>
             </form>
 
-            <p className="mt-6 text-center text-sm text-muted-foreground">
+            <p className="mt-6 text-sm text-muted-foreground">
               {t('auth.noStore')}{' '}
-              <a href="/signup?as=seller" className="font-medium text-primary hover:underline">
+              <a href="/signup?as=seller" className="font-medium text-foreground underline-offset-4 hover:underline">
                 {t('auth.signUp')}
               </a>
             </p>
-          </div>
         </div>
       </div>
     </div>

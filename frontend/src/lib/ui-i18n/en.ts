@@ -391,8 +391,10 @@ export const en: NestedDict = {
     removeFile: 'Remove',
   },
   marketplace: {
-    title: 'Marketplace',
-    brand: 'MultiVendor Marketplace',
+    title: 'The Market',
+    brand: 'The Market',
+    manifesto: 'Independent shops. One place to look — without the noise.',
+    issue: 'Ongoing issue',
     subtitle: 'Products from every store on the platform, in one place.',
     browse: 'Browse',
     noProducts: 'No products found.',

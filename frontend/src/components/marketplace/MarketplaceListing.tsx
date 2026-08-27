@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useEffect, useRef, useState } from 'react'
-import { Search } from 'lucide-react'
 import { motion, useReducedMotion } from 'motion/react'
 import { apiClient } from '@/lib/api/apiClient'
 import { MarketplaceProductCard } from './MarketplaceProductCard'
@@ -15,12 +14,12 @@ const PAGE_SIZE = 12
 
 const gridContainerVariants = {
   hidden: {},
-  show: { transition: { staggerChildren: 0.05 } },
+  show: { transition: { staggerChildren: 0.06 } },
 }
 
 const gridItemVariants = {
-  hidden: { opacity: 0, y: 16 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.16, 1, 0.3, 1] as const } },
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] as const } },
 }
 
 
@@ -78,49 +77,70 @@ export function MarketplaceListing({
       .finally(() => setProductsLoading(false))
   }, [debouncedSearch, page])
 
+  const showFeatured = !debouncedSearch && page === 1 && !productsLoading && products.length > 0
+  const featured = showFeatured ? products[0] : null
+  const rest = showFeatured ? products.slice(1) : products
+
   return (
     <div dir={isRtlLang(locale) ? 'rtl' : 'ltr'} className="min-h-full">
-      <div className="mx-auto max-w-6xl px-4 py-8 md:px-8">
-        <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground font-heading">{t('marketplace.title')}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{t('marketplace.subtitle')}</p>
-          </div>
-        </div>
+      <div className="mx-auto max-w-6xl px-4 pb-16 pt-10 md:px-8 md:pt-16">
+        <header className="mb-12 border-b border-border pb-10 md:mb-16 md:pb-14">
+          <p className="mb-4 text-[11px] font-medium uppercase tracking-[0.28em] text-muted-foreground">
+            {t('marketplace.issue')}
+          </p>
+          <h1 className="max-w-3xl font-heading text-5xl font-medium leading-[1.05] text-foreground md:text-7xl">
+            {t('marketplace.title')}
+          </h1>
+          <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
+            {t('marketplace.manifesto')}
+          </p>
+          <label className="mt-10 block max-w-md">
+            <span className="sr-only">{t('marketplace.searchAria')}</span>
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t('marketplace.searchPlaceholder')}
+              aria-label={t('marketplace.searchAria')}
+              className="w-full border-0 border-b border-foreground/30 bg-transparent py-2 text-base outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-foreground"
+            />
+          </label>
+        </header>
 
-        <div className="relative mb-6 max-w-sm">
-          <Search className="absolute start-3 top-1/2 w-4 h-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={t('marketplace.searchPlaceholder')}
-            aria-label={t('marketplace.searchAria')}
-            className="w-full rounded-lg border border-input bg-card py-2 ps-9 pe-3 outline-none transition-shadow focus:ring-2 focus:ring-ring"
-          />
-        </div>
+        {featured && (
+          <div className="mb-14">
+            <MarketplaceProductCard
+              product={featured}
+              lang={locale}
+              formatCurrency={formatCurrency}
+              featured
+            />
+          </div>
+        )}
 
         <motion.div
           data-testid="marketplace-product-grid"
-          className="grid grid-cols-1 gap-6 md:grid-cols-3 lg:grid-cols-4"
+          className="grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3"
           variants={prefersReducedMotion ? undefined : gridContainerVariants}
           initial={prefersReducedMotion ? undefined : 'hidden'}
           animate={prefersReducedMotion ? undefined : 'show'}
         >
           {productsLoading
-            ? Array.from({ length: 8 }, (_, i) => <ProductCardSkeleton key={i} />)
-            : products.map((p) => (
+            ? Array.from({ length: 6 }, (_, i) => <ProductCardSkeleton key={i} />)
+            : rest.map((p) => (
                 <motion.div key={p.id} variants={prefersReducedMotion ? undefined : gridItemVariants}>
                   <MarketplaceProductCard product={p} lang={locale} formatCurrency={formatCurrency} />
                 </motion.div>
               ))}
           {!productsLoading && products.length === 0 && (
-            <div className="col-span-full py-12 text-center text-muted-foreground">{t('marketplace.noProducts')}</div>
+            <div className="col-span-full py-24 text-center">
+              <p className="font-heading text-3xl text-foreground">{t('marketplace.noProducts')}</p>
+            </div>
           )}
         </motion.div>
 
         {meta && meta.total_pages > 1 && (
-          <div className="mt-6 rounded-lg bg-card shadow-sm">
+          <div className="mt-14 border-t border-border pt-6">
             <PaginationControls meta={meta} onPageChange={setPage} />
           </div>
         )}

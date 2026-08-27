@@ -44,7 +44,7 @@ export function AdminMobileNav({
               <button
                 aria-label="Close menu"
                 onClick={() => setOpen(false)}
-                className="text-muted-foreground transition-colors duration-150 hover:text-foreground"
+                className="text-sidebar-foreground/70 transition-colors duration-150 hover:text-sidebar-foreground"
               >
                 <X className="w-5 h-5" />
               </button>

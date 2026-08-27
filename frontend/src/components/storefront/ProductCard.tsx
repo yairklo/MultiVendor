@@ -66,8 +66,8 @@ export function ProductCard({
   }
 
   return (
-    <div className={`group flex flex-col p-3 ${resolveCardStyleClasses(styleVariant)}`}>
-      <Link href={`/store/${tenantSlug}/products/${product.slug}`} className="mb-2 block overflow-hidden rounded-lg">
+    <div className={`group flex flex-col ${resolveCardStyleClasses(styleVariant)}`}>
+      <Link href={`/store/${tenantSlug}/products/${product.slug}`} className="mb-3 block overflow-hidden">
         {image ? (
           // eslint-disable-next-line @next/next/no-img-element -- arbitrary vendor-supplied
           // URLs with no host allowlist; next/image would require allowing every hostname,
@@ -75,31 +75,31 @@ export function ProductCard({
           <img
             src={resolveImageUrl(image)}
             alt={name}
-            className="aspect-square w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            className="aspect-[4/5] w-full object-cover motion-safe:transition-transform motion-safe:duration-500 motion-safe:group-hover:scale-[1.04]"
           />
         ) : (
-          <div className="aspect-square w-full bg-gray-100" />
+          <div className="aspect-[4/5] w-full bg-muted" />
         )}
       </Link>
       <Link
         href={`/store/${tenantSlug}/products/${product.slug}`}
-        className="line-clamp-2 text-sm font-semibold text-gray-900 transition-colors hover:text-blue-600"
+        className="line-clamp-2 font-heading text-lg font-medium leading-snug text-foreground transition-opacity hover:opacity-70"
       >
         {name}
       </Link>
       {product.review_count > 0 && (
         <div className="mt-1 flex items-center gap-1">
           <StarRating rating={product.average_rating} size={12} />
-          <span className="text-xs text-gray-400">({product.review_count})</span>
+          <span className="text-xs tabular-nums text-muted-foreground">({product.review_count})</span>
         </div>
       )}
-      <span className="mt-1 text-sm font-medium text-gray-700">{formatCurrency(product.base_price ?? product.price)}</span>
+      <span className="mt-2 text-sm tabular-nums text-foreground">{formatCurrency(product.base_price ?? product.price)}</span>
 
       <button
         type="button"
         disabled={outOfStock || adding}
         onClick={handleAddToCart}
-        className={`mt-3 w-full px-3 py-2 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${theme.primaryButtonClass}`}
+        className={`mt-3 w-full px-3 py-2 text-xs font-semibold motion-safe:active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 ${theme.primaryButtonClass}`}
       >
         {outOfStock ? t.outOfStock : adding ? t.adding : t.addToCart}
       </button>
