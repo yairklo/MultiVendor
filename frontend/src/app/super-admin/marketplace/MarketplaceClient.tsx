@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Globe } from 'lucide-react'
 import { apiClient } from '@/lib/api/apiClient'
 import { useToast } from '@/context/ToastContext'
+import { errorMessage } from '@/lib/errors'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -35,8 +36,8 @@ export function MarketplaceClient({ initialTenants }: { initialTenants: TenantAd
       })
       await reload()
       showToast('Marketplace listing updated', 'success')
-    } catch (err: any) {
-      showToast(err.message || 'Failed to update marketplace', 'error')
+    } catch (err) {
+      showToast(errorMessage(err) || 'Failed to update marketplace', 'error')
     } finally {
       setBusyId(null)
     }

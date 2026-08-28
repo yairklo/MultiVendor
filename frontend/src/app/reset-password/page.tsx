@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { apiClient, ApiError } from '@/lib/api/apiClient'
 import { useUiLocale } from '@/context/UiLocaleContext'
 import { UiLanguageSwitcher } from '@/components/ui/UiLanguageSwitcher'
+import { errorMessage } from '@/lib/errors'
 
 export default function ResetPasswordPage() {
   return (
@@ -44,8 +45,8 @@ function ResetPasswordForm() {
         body: JSON.stringify({ token, new_password: password }),
       })
       setSuccess(true)
-    } catch (err: any) {
-      setError(err instanceof ApiError && err.status === 400 ? t('auth.invalidResetLink') : err.message || t('auth.resetPasswordFailed'))
+    } catch (err) {
+      setError(err instanceof ApiError && err.status === 400 ? t('auth.invalidResetLink') : errorMessage(err) || t('auth.resetPasswordFailed'))
     } finally {
       setLoading(false)
     }

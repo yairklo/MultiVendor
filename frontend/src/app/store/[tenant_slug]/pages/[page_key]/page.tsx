@@ -9,9 +9,9 @@ export default async function StorefrontDynamicPage({
 }) {
   const { tenant_slug: tenantSlug, page_key: pageKey } = await params
 
+  let page
   try {
-    const page = await getTenantPage(tenantSlug, pageKey)
-    return <DynamicPageView page={page} tenantSlug={tenantSlug} />
+    page = await getTenantPage(tenantSlug, pageKey)
   } catch (e) {
     if (e instanceof ApiError && e.status === 404) {
       return (
@@ -26,4 +26,5 @@ export default async function StorefrontDynamicPage({
     }
     throw e
   }
+  return <DynamicPageView page={page} tenantSlug={tenantSlug} />
 }

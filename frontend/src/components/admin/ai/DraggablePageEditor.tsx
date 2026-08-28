@@ -119,7 +119,7 @@ function DraggableSectionList({
     const left = sections[idx]
     const right = sections[idx + 1]
     const merged: Section = {
-      id: `sec_${Math.random().toString(16).slice(2, 10)}`,
+      id: `sec_${crypto.randomUUID().slice(0, 8)}`,
       type: 'two_column_layout',
       settings: { design_variant: 'neutral', split: 50 },
       zones: { left: [left], right: [right] },
@@ -186,7 +186,7 @@ function GridContainerEditor({
   return (
     <div className={containerClass}>
       <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-current/60">
-        Grid ({section.settings.columns ?? 3} columns)
+        Grid ({Number(section.settings.columns ?? 3)} columns)
       </div>
       <DraggableSectionList
         sections={section.children ?? []}
@@ -325,11 +325,13 @@ export function DraggablePageEditor({
   const { lang } = useStorefrontTheme()
   const chrome = usePreviewChrome()
   const pageRef = useRef(page)
-  pageRef.current = page
   const onChangeRef = useRef(onChange)
-  onChangeRef.current = onChange
   const onAskAIRef = useRef(onAskAI)
-  onAskAIRef.current = onAskAI
+  useLayoutEffect(() => {
+    pageRef.current = page
+    onChangeRef.current = onChange
+    onAskAIRef.current = onAskAI
+  })
 
   const closeEditor = useCallback(() => {
     setEditingSectionId(null)

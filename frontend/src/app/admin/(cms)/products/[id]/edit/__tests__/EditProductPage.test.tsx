@@ -134,7 +134,7 @@ describe('EditProductClient digital file', () => {
         productId="10"
         categories={[]}
         initialSlug="ebook"
-        initialVariant={{ id: 3, sku: 'EBK-1', attributes_json: {}, price_override: null }}
+        initialVariant={{ id: 3, sku: 'EBK-1', attributes_json: {}, price_override: null, stock_quantity: 0 }}
         initialValues={{
           name_en: 'Ebook',
           name_he: 'ספר',

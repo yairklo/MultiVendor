@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useEffect, useRef, useState } from 'react'
+import React, { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { usePathname } from 'next/navigation'
 import { apiClient } from '@/lib/api/apiClient'
 import { DEFAULT_STOREFRONT_THEME, resolveStorefrontTheme, StorefrontThemeClasses } from '@/lib/storefront-themes'
@@ -37,6 +37,17 @@ import { getActiveCart } from '@/lib/cart'
 import { getCookie } from 'cookies-next'
 import { isUsableTenantSlug } from '@/lib/tenantSlug'
 
+function subscribeNoop(): () => void {
+  return () => {}
+}
+function getFallbackSlugSnapshot(): string {
+  const resolved = getCookie('tenantSlug')?.toString() || getActiveCart()?.tenantSlug
+  return isUsableTenantSlug(resolved) ? resolved : ''
+}
+function getFallbackSlugServerSnapshot(): string {
+  return ''
+}
+
 export function StorefrontThemeProvider({
   tenantSlug,
   children,
@@ -53,12 +64,7 @@ export function StorefrontThemeProvider({
   // server-rendered HTML for every one of the many pages that mount this provider
   // with no explicit tenantSlug prop (notably the root layout) -- a hydration
   // error. Stays empty until the effect below resolves the real value post-mount.
-  const [fallbackSlug, setFallbackSlug] = useState('')
-  useEffect(() => {
-    if (tenantSlug) return
-    const resolved = getCookie('tenantSlug')?.toString() || getActiveCart()?.tenantSlug
-    if (isUsableTenantSlug(resolved)) setFallbackSlug(resolved)
-  }, [tenantSlug])
+  const fallbackSlug = useSyncExternalStore(subscribeNoop, getFallbackSlugSnapshot, getFallbackSlugServerSnapshot)
   const resolvedSlug = tenantSlug || fallbackSlug
   const pathname = usePathname()
   const isStorefront = !!pathname?.startsWith('/store/')

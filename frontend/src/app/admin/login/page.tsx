@@ -5,6 +5,7 @@ import { setCookie } from 'cookies-next'
 import { apiClient, ApiError } from '@/lib/api/apiClient'
 import { useUiLocale } from '@/context/UiLocaleContext'
 import { UiLanguageSwitcher } from '@/components/ui/UiLanguageSwitcher'
+import { errorMessage } from '@/lib/errors'
 
 export default function AdminLoginPage() {
   const { t } = useUiLocale()
@@ -20,7 +21,7 @@ export default function AdminLoginPage() {
     setLoading(true)
 
     try {
-      const payload: any = { email, password }
+      const payload: Record<string, unknown> = { email, password }
       if (tenantSlug) {
         payload.tenant_slug = tenantSlug
       }
@@ -54,10 +55,10 @@ export default function AdminLoginPage() {
       } else {
         setError(t('auth.loginFailed'))
       }
-    } catch (err: any) {
+    } catch (err) {
       // See customer login page for why 401 gets the localized copy instead
       // of the backend's fixed, untranslated "Invalid credentials" string.
-      setError(err instanceof ApiError && err.status === 401 ? t('auth.loginFailed') : err.message || t('auth.loginFailed'))
+      setError(err instanceof ApiError && err.status === 401 ? t('auth.loginFailed') : errorMessage(err) || t('auth.loginFailed'))
     } finally {
       setLoading(false)
     }

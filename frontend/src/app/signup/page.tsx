@@ -6,6 +6,7 @@ import { setCookie } from 'cookies-next'
 import { apiClient } from '@/lib/api/apiClient'
 import { useUiLocale } from '@/context/UiLocaleContext'
 import { UiLanguageSwitcher } from '@/components/ui/UiLanguageSwitcher'
+import { errorMessage } from '@/lib/errors'
 
 type SignupMode = 'customer' | 'seller'
 
@@ -93,8 +94,8 @@ function SignupForm() {
           window.location.assign('/admin/dashboard')
         }
       }
-    } catch (err: any) {
-      setError(err.message || t('auth.registrationFailed'))
+    } catch (err) {
+      setError(errorMessage(err) || t('auth.registrationFailed'))
     } finally {
       setLoading(false)
     }

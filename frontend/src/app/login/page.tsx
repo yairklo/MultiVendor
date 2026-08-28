@@ -6,13 +6,14 @@ import { setCookie } from 'cookies-next'
 import { apiClient, ApiError } from '@/lib/api/apiClient'
 import { useUiLocale } from '@/context/UiLocaleContext'
 import { UiLanguageSwitcher } from '@/components/ui/UiLanguageSwitcher'
+import { errorMessage } from '@/lib/errors'
 
 export default function CustomerLoginPage() {
   const router = useRouter()
   const { t } = useUiLocale()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [tenantSlug, setTenantSlug] = useState('test-tenant')
+  const [tenantSlug] = useState('test-tenant')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -32,13 +33,13 @@ export default function CustomerLoginPage() {
         // Redirect to the test storefront
         router.push(`/store/${tenantSlug}`)
       }
-    } catch (err: any) {
+    } catch (err) {
       // The backend's 401 detail ("Invalid credentials") is a fixed,
       // untranslated English string -- show the localized copy instead of
       // relaying it as-is into an otherwise-translated UI. Anything else
       // (network failure, 5xx) is unexpected enough that the raw message is
       // more useful than a generic one.
-      setError(err instanceof ApiError && err.status === 401 ? t('auth.loginFailed') : err.message || t('auth.loginFailed'))
+      setError(err instanceof ApiError && err.status === 401 ? t('auth.loginFailed') : errorMessage(err) || t('auth.loginFailed'))
     } finally {
       setLoading(false)
     }

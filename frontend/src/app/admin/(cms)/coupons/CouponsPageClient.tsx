@@ -29,6 +29,8 @@ import {
 import { useCurrency } from '@/hooks/useCurrency'
 import { useUiLocale } from '@/context/UiLocaleContext'
 import { formatUiDate } from '@/lib/utils'
+import { errorMessage } from '@/lib/errors'
+import type { Coupon } from '@/lib/types'
 
 const formSchema = z.object({
   code: z.string().min(3, 'At least 3 characters').max(20).regex(/^[A-Za-z0-9]+$/, 'Alphanumeric only'),
@@ -39,13 +41,13 @@ const formSchema = z.object({
   valid_until: z.string().min(1, 'Required'),
 })
 
-export function CouponsPageClient({ initialCoupons }: { initialCoupons: any[] }) {
+export function CouponsPageClient({ initialCoupons }: { initialCoupons: Coupon[] }) {
   const { fetchCoupons, createCoupon, deleteCoupon } = useCoupons()
   const { formatCurrency } = useCurrency()
   const { t, locale } = useUiLocale()
   const { showToast } = useToast()
   const { confirm } = useConfirm()
-  const [coupons, setCoupons] = useState<any[]>(initialCoupons)
+  const [coupons, setCoupons] = useState<Coupon[]>(initialCoupons)
   const [loading, setLoading] = useState(false)
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -79,8 +81,8 @@ export function CouponsPageClient({ initialCoupons }: { initialCoupons: any[] })
       form.reset()
       await loadCoupons()
       showToast(t('coupons.created'), 'success')
-    } catch (error: any) {
-      showToast(error.message || t('coupons.createFailed'), 'error')
+    } catch (error) {
+      showToast(errorMessage(error) || t('coupons.createFailed'), 'error')
     } finally {
       setLoading(false)
     }
@@ -97,8 +99,8 @@ export function CouponsPageClient({ initialCoupons }: { initialCoupons: any[] })
       await deleteCoupon(id)
       await loadCoupons()
       showToast(t('coupons.deleted'), 'success')
-    } catch (error: any) {
-      showToast(error.message || t('coupons.deleteFailed'), 'error')
+    } catch (error) {
+      showToast(errorMessage(error) || t('coupons.deleteFailed'), 'error')
     }
   }
 

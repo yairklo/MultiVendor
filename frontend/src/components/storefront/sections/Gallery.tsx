@@ -28,8 +28,9 @@ export function Gallery({ section, themeStyle }: { section: Section; themeStyle:
       ) : layout === 'carousel' ? (
         <div className="flex gap-3 overflow-x-auto pb-1">
           {images.map((url, i) => (
-            // eslint-disable-next-line @next/next/no-img-element -- arbitrary AI/admin-authored
-            // URLs with no host allowlist; see ProductCard.tsx for why next/image isn't used here.
+            // Arbitrary AI/admin-authored URLs with no host allowlist; see
+            // ProductCard.tsx for why next/image isn't used here.
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               key={i}
               src={url}

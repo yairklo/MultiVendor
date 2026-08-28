@@ -2,6 +2,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { ApiError, serverApiClient } from '@/lib/api/serverApiClient'
 import { OrdersList } from './OrdersList'
+import type { Order } from '@/lib/types'
 
 export default async function MyOrdersPage() {
   const cookieStore = await cookies()
@@ -9,7 +10,7 @@ export default async function MyOrdersPage() {
     redirect('/login')
   }
 
-  let initialOrders: any[] = []
+  let initialOrders: Order[] = []
   let initialError = ''
   try {
     const data = await serverApiClient('/api/v1/customer/orders')

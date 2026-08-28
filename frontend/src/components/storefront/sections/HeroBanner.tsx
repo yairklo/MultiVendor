@@ -9,7 +9,7 @@ export function HeroBanner({
   section, themeStyle, onInlineEdit,
 }: { section: Section; themeStyle: CSSProperties; onInlineEdit?: (sectionId: string, patch: Partial<Section>) => void }) {
   const { lang } = useStorefrontTheme()
-  const size = section.settings.size ?? 'medium'
+  const size = typeof section.settings.size === 'string' ? section.settings.size : 'medium'
   const height = SIZE_HEIGHTS[size] ?? SIZE_HEIGHTS.medium
   const alignment = section.settings.alignment === 'left' ? 'items-start text-left' : section.settings.alignment === 'right' ? 'items-end text-right' : 'items-center text-center'
   const imageUrl = section.media?.type === 'image' ? section.media.url : undefined
@@ -20,7 +20,10 @@ export function HeroBanner({
     const next = e.currentTarget.textContent ?? ''
     if (next !== headline) {
       onInlineEdit?.(section.id, {
-        settings: { ...section.settings, headline: { ...section.settings.headline, [lang]: next } },
+        settings: {
+          ...section.settings,
+          headline: { ...(section.settings.headline as Record<string, string> | undefined), [lang]: next },
+        },
       })
     }
   }
@@ -38,8 +41,9 @@ export function HeroBanner({
     >
       {imageUrl && (
         <>
-          {/* eslint-disable-next-line @next/next/no-img-element -- arbitrary AI/admin-authored
-              URL with no host allowlist; see ProductCard.tsx for why next/image isn't used here. */}
+          {/* Arbitrary AI/admin-authored URL with no host allowlist; see
+              ProductCard.tsx for why next/image isn't used here. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
           <div className="absolute inset-0 bg-black/35" />
         </>

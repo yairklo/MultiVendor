@@ -35,12 +35,14 @@ import { useUploads } from '@/hooks/useUploads'
 import { resolveImageUrl } from '@/lib/media'
 import { useUiLocale } from '@/context/UiLocaleContext'
 import { resolveI18nText } from '@/lib/i18n-text'
+import { errorMessage } from '@/lib/errors'
+import type { Product, Category } from '@/lib/types'
 
 export function ProductsPageClient({
   initialProducts,
   initialMeta,
 }: {
-  initialProducts: any[]
+  initialProducts: Product[]
   initialMeta: PaginationMeta | null
 }) {
   const tenantSlug = useTenantSlug()
@@ -51,8 +53,8 @@ export function ProductsPageClient({
   const { formatCurrency } = useCurrency()
   const { t, locale } = useUiLocale()
   const { previewProductsImport, commitProductsImport, downloadImportTemplate } = useUploads()
-  const [products, setProducts] = useState<any[]>(initialProducts)
-  const [categories, setCategories] = useState<any[]>([])
+  const [products, setProducts] = useState<Product[]>(initialProducts)
+  const [categories, setCategories] = useState<Category[]>([])
   const [meta, setMeta] = useState<PaginationMeta | null>(initialMeta)
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(false)
@@ -65,6 +67,15 @@ export function ProductsPageClient({
 
   // Bulk Actions
   const [selectedIds, setSelectedIds] = useState<number[]>([])
+
+  const loadProducts = async (pageToLoad = page, s = search, cid = categoryId) => {
+    if (!tenantSlug) return
+    setLoading(true)
+    const { data, meta } = await fetchProducts(pageToLoad, 20, s, cid)
+    setProducts(data)
+    setMeta(meta)
+    setLoading(false)
+  }
 
   useEffect(() => {
     fetchCategories().then(setCategories)
@@ -84,15 +95,6 @@ export function ProductsPageClient({
     loadProducts(page, debouncedSearch, categoryId)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, debouncedSearch, categoryId])
-
-  const loadProducts = async (pageToLoad = page, s = search, cid = categoryId) => {
-    if (!tenantSlug) return
-    setLoading(true)
-    const { data, meta } = await fetchProducts(pageToLoad, 20, s, cid)
-    setProducts(data)
-    setMeta(meta)
-    setLoading(false)
-  }
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
@@ -124,8 +126,8 @@ export function ProductsPageClient({
       setSelectedIds([])
       await loadProducts()
       showToast(t('products.deletedPlural'), 'success')
-    } catch (e: any) {
-      showToast(e.message || t('products.deleteSomeFailed'), 'error')
+    } catch (e) {
+      showToast(errorMessage(e) || t('products.deleteSomeFailed'), 'error')
     }
   }
 
@@ -141,8 +143,8 @@ export function ProductsPageClient({
       await deleteProduct(id)
       await loadProducts()
       showToast(t('products.deleted'), 'success')
-    } catch (e: any) {
-      showToast(e.message || t('products.deleteFailed'), 'error')
+    } catch (e) {
+      showToast(errorMessage(e) || t('products.deleteFailed'), 'error')
     }
   }
 

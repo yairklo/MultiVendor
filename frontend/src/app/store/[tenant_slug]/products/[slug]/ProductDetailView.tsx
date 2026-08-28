@@ -14,6 +14,8 @@ import { useCurrency } from '@/hooks/useCurrency'
 import { resolveImageUrl } from '@/lib/media'
 import { resolveI18nText } from '@/lib/i18n-text'
 import { formatUiDate } from '@/lib/utils'
+import { errorMessage } from '@/lib/errors'
+import type { Product, ProductReview } from '@/lib/types'
 
 const STRINGS = {
   en: {
@@ -76,12 +78,12 @@ export function ProductDetailView({
 }: {
   tenantSlug: string
   slug: string
-  product: any
-  initialReviews: any[]
+  product: Product
+  initialReviews: ProductReview[]
 }) {
   const [quantity, setQuantity] = useState(1)
   const [adding, setAdding] = useState(false)
-  const [reviews, setReviews] = useState<any[]>(initialReviews)
+  const [reviews, setReviews] = useState<ProductReview[]>(initialReviews)
   const [reviewRating, setReviewRating] = useState(5)
   const [reviewComment, setReviewComment] = useState('')
   const [submittingReview, setSubmittingReview] = useState(false)
@@ -94,7 +96,7 @@ export function ProductDetailView({
   const loadReviews = () => {
     apiClient(`/api/v1/store/${tenantSlug}/products/${slug}/reviews`)
       .then(setReviews)
-      .catch((e: any) => console.error('Failed to load reviews:', e))
+      .catch((e) => console.error('Failed to load reviews:', e))
   }
 
   const handleSubmitReview = async (e: React.FormEvent) => {
@@ -109,11 +111,11 @@ export function ProductDetailView({
       setReviewComment('')
       setReviewRating(5)
       loadReviews()
-    } catch (e: any) {
+    } catch (e) {
       if (e instanceof ApiError && e.status === 400) {
         showToast(t.alreadyReviewed, 'error')
       } else {
-        showToast(e.message || t.failedToSubmitReview, 'error')
+        showToast(errorMessage(e) || t.failedToSubmitReview, 'error')
       }
     } finally {
       setSubmittingReview(false)
@@ -154,6 +156,9 @@ export function ProductDetailView({
         <div className="mt-4 bg-white rounded-xl shadow-sm border border-gray-100 p-6 grid grid-cols-1 md:grid-cols-2 gap-8 transition-shadow duration-300 hover:shadow-md">
           <div>
             {images.length > 0 ? (
+              // Arbitrary vendor-supplied URLs with no host allowlist, same
+              // reasoning as storefront/ProductCard.
+              // eslint-disable-next-line @next/next/no-img-element
               <img src={resolveImageUrl(images[0])} alt={name} className="w-full h-80 object-cover rounded-lg" />
             ) : (
               <div className="w-full h-80 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
@@ -166,7 +171,7 @@ export function ProductDetailView({
             <h1 className={`text-2xl font-bold mb-2 ${theme.headingFont}`}>{name}</h1>
             {product.review_count > 0 && (
               <div className="flex items-center gap-2 mb-2">
-                <StarRating rating={product.average_rating} />
+                <StarRating rating={product.average_rating ?? 0} />
                 <span className="text-sm text-gray-500">
                   {product.average_rating} ({product.review_count} {t.reviewWord(product.review_count)})
                 </span>
@@ -270,7 +275,7 @@ export function ProductDetailView({
             <p className="text-gray-500 text-sm">{t.noReviewsYet}</p>
           ) : (
             <div className="space-y-4">
-              {reviews.map((r: any) => (
+              {reviews.map((r) => (
                 <div key={r.id} className="border-b last:border-0 pb-4 last:pb-0">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <StarRating rating={r.rating} size={14} />

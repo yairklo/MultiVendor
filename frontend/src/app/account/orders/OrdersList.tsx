@@ -9,14 +9,16 @@ import { useCurrency } from '@/hooks/useCurrency'
 import { useUiLocale } from '@/context/UiLocaleContext'
 import { formatUiDateTime } from '@/lib/utils'
 import { resolveImageUrl } from '@/lib/media'
+import { errorMessage } from '@/lib/errors'
+import type { Order, OrderItem } from '@/lib/types'
 
-export function OrdersList({ initialOrders, initialError }: { initialOrders: any[]; initialError: string }) {
+export function OrdersList({ initialOrders, initialError }: { initialOrders: Order[]; initialError: string }) {
   const { fetchOrders, cancelOrder, payOrder } = useOrders()
   const { formatCurrency } = useCurrency()
   const { t, locale } = useUiLocale()
   const { showToast } = useToast()
   const { confirm } = useConfirm()
-  const [orders, setOrders] = useState<any[]>(initialOrders)
+  const [orders, setOrders] = useState<Order[]>(initialOrders)
   const [busyId, setBusyId] = useState<number | null>(null)
   const [error, setError] = useState(initialError)
 
@@ -24,8 +26,8 @@ export function OrdersList({ initialOrders, initialError }: { initialOrders: any
     try {
       const data = await fetchOrders()
       setOrders(data)
-    } catch (e: any) {
-      setError(e.message || t('orders.loadFailed'))
+    } catch (e) {
+      setError(errorMessage(e) || t('orders.loadFailed'))
     }
   }
 
@@ -36,8 +38,8 @@ export function OrdersList({ initialOrders, initialError }: { initialOrders: any
       await payOrder(orderId)
       await loadOrders()
       showToast(t('orders.paymentSuccess'), 'success')
-    } catch (e: any) {
-      showToast(e.message || t('orders.paymentFailed'), 'error')
+    } catch (e) {
+      showToast(errorMessage(e) || t('orders.paymentFailed'), 'error')
     } finally {
       setBusyId(null)
     }
@@ -57,8 +59,8 @@ export function OrdersList({ initialOrders, initialError }: { initialOrders: any
       await cancelOrder(orderId)
       await loadOrders()
       showToast(t('account.cancelled'), 'success')
-    } catch (e: any) {
-      showToast(e.message || t('account.cancelFailed'), 'error')
+    } catch (e) {
+      showToast(errorMessage(e) || t('account.cancelFailed'), 'error')
     } finally {
       setBusyId(null)
     }
@@ -98,7 +100,7 @@ export function OrdersList({ initialOrders, initialError }: { initialOrders: any
                 </div>
 
                 <div className="space-y-1 mb-3 text-sm text-foreground/80">
-                  {order.items?.map((item: any) => (
+                  {order.items?.map((item: OrderItem) => (
                     <div key={item.id} className="flex justify-between gap-3 items-start">
                       <span>{item.product_name} &times; {item.quantity}</span>
                       <div className="flex items-center gap-3 shrink-0">

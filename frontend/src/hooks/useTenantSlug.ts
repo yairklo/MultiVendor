@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useSyncExternalStore } from 'react'
 import { getCookie } from 'cookies-next'
 
 /**
@@ -18,11 +18,24 @@ import { getCookie } from 'cookies-next'
  */
 export const PLACEHOLDER_TENANT_SLUG = ''
 
+// Cookies don't dispatch a change event to subscribe to -- useSyncExternalStore
+// still gets the SSR/hydration behavior right without one: it renders
+// getServerSnapshot() (empty string) on both the server and the first client
+// render to match, then re-reads getSnapshot() right after mount and
+// re-renders if the real cookie value differs.
+function subscribe(): () => void {
+  return () => {}
+}
+
+function getSnapshot(): string {
+  const cookieSlug = getCookie('tenantSlug')
+  return cookieSlug ? String(cookieSlug) : ''
+}
+
+function getServerSnapshot(): string {
+  return ''
+}
+
 export function useTenantSlug(): string {
-  const [tenantSlug, setTenantSlug] = useState('')
-  useEffect(() => {
-    const cookieSlug = getCookie('tenantSlug')
-    if (cookieSlug) setTenantSlug(String(cookieSlug))
-  }, [])
-  return tenantSlug
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
 }

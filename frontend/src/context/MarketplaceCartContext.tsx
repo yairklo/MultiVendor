@@ -64,6 +64,10 @@ export function MarketplaceCartProvider({ children }: { children: React.ReactNod
   }, [])
 
   useEffect(() => {
+    // Standard fetch-on-mount effect -- refresh's first synchronous step is
+    // setLoading/setCart, same "start loading" pattern React's own data
+    // fetching docs example uses.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refresh()
   }, [refresh])
 

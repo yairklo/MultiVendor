@@ -1,4 +1,4 @@
-import { Section } from '@/lib/ai/types'
+import { Section, DispatchedAction } from '@/lib/ai/types'
 import { resolveDesignVariantClasses } from '@/lib/design-tokens'
 import { renderSections } from '../PageRenderer'
 
@@ -16,7 +16,7 @@ export function GridContainer({
   showTypeLabels,
 }: {
   section: Section
-  onAction?: (action: any) => void
+  onAction?: (action: DispatchedAction) => void
   tenantSlug?: string
   showTypeLabels?: boolean
 }) {

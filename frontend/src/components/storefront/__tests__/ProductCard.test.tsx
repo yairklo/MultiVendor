@@ -16,16 +16,23 @@ vi.mock('@/hooks/useCurrency', () => ({
 
 const baseProduct = {
   id: 1,
+  tenant_id: 1,
   slug: 'classic-tee',
   name: { en: 'Classic Tee' },
   base_price: 42,
   primary_image_url: 'https://picsum.photos/seed/classic-tee/400/400',
-  variants: [{ id: 101, stock_quantity: 5 }],
+  variants: [{ id: 101, sku: 'TEE-CLASSIC', stock_quantity: 5 }],
   product_type: 'physical' as string,
+  is_active: true,
+  show_in_marketplace: true,
+  is_bundle: false,
+  images: [],
+  review_count: 0,
+  created_at: '2026-01-01T00:00:00Z',
 }
 
 describe('ProductCard', () => {
-  let postedItems: any[]
+  let postedItems: unknown[]
 
   beforeEach(() => {
     localStorage.clear()
@@ -66,13 +73,13 @@ describe('ProductCard', () => {
   })
 
   it('disables the button and shows "Out of stock" when every variant is at zero stock', () => {
-    renderCard({ variants: [{ id: 101, stock_quantity: 0 }] })
+    renderCard({ variants: [{ id: 101, sku: 'TEE-CLASSIC', stock_quantity: 0 }] })
     const button = screen.getByRole('button', { name: 'Out of stock' })
     expect(button).toBeDisabled()
   })
 
   it('keeps Add to Cart enabled for a digital product even when stock is zero', () => {
-    renderCard({ product_type: 'digital', variants: [{ id: 101, stock_quantity: 0 }] })
+    renderCard({ product_type: 'digital', variants: [{ id: 101, sku: 'TEE-CLASSIC', stock_quantity: 0 }] })
     expect(screen.getByRole('button', { name: 'Add to Cart' })).toBeEnabled()
   })
 

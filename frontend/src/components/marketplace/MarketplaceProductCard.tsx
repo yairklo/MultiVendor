@@ -8,6 +8,7 @@ import { useMarketplaceCart } from '@/context/MarketplaceCartContext'
 import { resolveImageUrl } from '@/lib/media'
 import { isDigitalProduct } from '@/lib/stock'
 import { cn } from '@/lib/utils'
+import type { MarketplaceProduct } from '@/lib/types'
 
 const STRINGS = {
   en: { addToCart: 'Add to Cart', outOfStock: 'Out of stock', adding: 'Adding…' },
@@ -27,7 +28,7 @@ export function MarketplaceProductCard({
   formatCurrency,
   featured = false,
 }: {
-  product: any
+  product: MarketplaceProduct
   lang?: string
   formatCurrency: (amount: number) => string
   featured?: boolean
@@ -41,7 +42,7 @@ export function MarketplaceProductCard({
 
   const variant = product.variants?.[0]
   const stockKnown = Number.isFinite(variant?.stock_quantity)
-  const outOfStock = !isDigitalProduct(product) && stockKnown && variant.stock_quantity <= 0
+  const outOfStock = !isDigitalProduct(product) && stockKnown && variant!.stock_quantity <= 0
 
   const handleAddToCart = async () => {
     if (!variant?.id) return
@@ -71,8 +72,9 @@ export function MarketplaceProductCard({
       <article className="group grid items-end gap-8 border-b border-border pb-12 md:grid-cols-2 md:gap-12">
         <Link href={href} className="block overflow-hidden bg-muted">
           {image ? (
-            // eslint-disable-next-line @next/next/no-img-element -- arbitrary vendor-supplied
-            // URLs with no host allowlist, same reasoning as storefront/ProductCard.
+            // Arbitrary vendor-supplied URLs with no host allowlist, same reasoning
+            // as storefront/ProductCard.
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={resolveImageUrl(image)}
               alt={name}
@@ -94,7 +96,7 @@ export function MarketplaceProductCard({
           </Link>
           {product.review_count > 0 && (
             <div className="flex items-center gap-1">
-              <StarRating rating={product.average_rating} size={14} />
+              <StarRating rating={product.average_rating ?? 0} size={14} />
               <span className="text-xs tabular-nums text-muted-foreground">({product.review_count})</span>
             </div>
           )}
@@ -111,8 +113,9 @@ export function MarketplaceProductCard({
     <article className="group flex flex-col">
       <Link href={href} className="mb-3 block overflow-hidden bg-muted">
         {image ? (
-          // eslint-disable-next-line @next/next/no-img-element -- arbitrary vendor-supplied
-          // URLs with no host allowlist, same reasoning as storefront/ProductCard.
+          // Arbitrary vendor-supplied URLs with no host allowlist, same reasoning
+          // as storefront/ProductCard.
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={resolveImageUrl(image)}
             alt={name}
@@ -135,7 +138,7 @@ export function MarketplaceProductCard({
       </Link>
       {product.review_count > 0 && (
         <div className="mt-1 flex items-center gap-1">
-          <StarRating rating={product.average_rating} size={12} />
+          <StarRating rating={product.average_rating ?? 0} size={12} />
           <span className="text-xs tabular-nums text-muted-foreground">({product.review_count})</span>
         </div>
       )}

@@ -54,14 +54,16 @@ function ColorField({
 
 function FontFields({
   settings, onChange,
-}: { settings: Record<string, any>; onChange: (key: string, value: any) => void }) {
+}: { settings: Record<string, unknown>; onChange: (key: string, value: unknown) => void }) {
+  const fontFamily = typeof settings.font_family === 'string' ? settings.font_family : ''
+  const fontSize = typeof settings.font_size === 'string' ? settings.font_size : ''
   return (
     <>
       <div className="flex flex-col gap-1">
         <label className="text-xs font-semibold text-foreground">Font</label>
         <select
           className="rounded-md border p-2 text-sm"
-          value={settings.font_family ?? ''}
+          value={fontFamily}
           onChange={(e) => onChange('font_family', e.target.value)}
         >
           {FONT_FAMILIES.map((f) => (
@@ -73,7 +75,7 @@ function FontFields({
         <label className="text-xs font-semibold text-foreground">Heading Size</label>
         <select
           className="rounded-md border p-2 text-sm"
-          value={settings.font_size ?? ''}
+          value={fontSize}
           onChange={(e) => onChange('font_size', e.target.value)}
         >
           {FONT_SIZES.map((f) => (
@@ -170,11 +172,11 @@ export function SectionPropertiesEditor({
   const [aiPrompt, setAiPrompt] = useState('')
   const { lang: editingLang, setLang: setEditingLang, supportedLanguages } = useStorefrontTheme()
 
-  const handleSettingChange = (key: string, value: any) => {
+  const handleSettingChange = (key: string, value: unknown) => {
     onChange({ settings: { ...section.settings, [key]: value } })
   }
 
-  const handleItemsChange = (arrayKey: string, items: any[]) => {
+  const handleItemsChange = (arrayKey: string, items: unknown[]) => {
     handleSettingChange(arrayKey, items)
   }
 
@@ -202,7 +204,7 @@ export function SectionPropertiesEditor({
                     <label className="text-xs font-semibold text-foreground">Size</label>
                     <select
                       className="rounded-md border p-2 text-sm"
-                      value={section.settings.size ?? 'medium'}
+                      value={typeof section.settings.size === 'string' ? section.settings.size : 'medium'}
                       onChange={(e) => handleSettingChange('size', e.target.value)}
                     >
                       <option value="small">Small</option>
@@ -214,7 +216,7 @@ export function SectionPropertiesEditor({
                     <label className="text-xs font-semibold text-foreground">Alignment</label>
                     <select
                       className="rounded-md border p-2 text-sm"
-                      value={section.settings.alignment ?? 'center'}
+                      value={typeof section.settings.alignment === 'string' ? section.settings.alignment : 'center'}
                       onChange={(e) => handleSettingChange('alignment', e.target.value)}
                     >
                       <option value="left">Left</option>
@@ -245,13 +247,13 @@ export function SectionPropertiesEditor({
             <ColorField
               label="Background Color"
               fallback="#ffffff"
-              value={section.settings.background_color ?? ''}
+              value={typeof section.settings.background_color === 'string' ? section.settings.background_color : ''}
               onChange={(v) => handleSettingChange('background_color', v)}
             />
             <ColorField
               label="Text Color"
               fallback="#000000"
-              value={section.settings.text_color ?? ''}
+              value={typeof section.settings.text_color === 'string' ? section.settings.text_color : ''}
               onChange={(v) => handleSettingChange('text_color', v)}
             />
           </>
@@ -265,7 +267,7 @@ export function SectionPropertiesEditor({
                 <label className="text-xs font-semibold text-foreground">Columns</label>
                 <select
                   className="rounded-md border p-2 text-sm"
-                  value={section.settings.columns ?? 3}
+                  value={Number(section.settings.columns ?? 3)}
                   onChange={(e) => handleSettingChange('columns', parseInt(e.target.value, 10))}
                 >
                   <option value={2}>2</option>
@@ -281,7 +283,7 @@ export function SectionPropertiesEditor({
               <label className="text-xs font-semibold text-foreground">Design Variant</label>
               <select
                 className="rounded-md border p-2 text-sm"
-                value={section.settings.design_variant ?? 'neutral'}
+                value={typeof section.settings.design_variant === 'string' ? section.settings.design_variant : 'neutral'}
                 onChange={(e) => handleSettingChange('design_variant', e.target.value)}
               >
                 <option value="neutral">Neutral</option>
@@ -310,7 +312,7 @@ export function SectionPropertiesEditor({
                 min={2}
                 max={4}
                 className="rounded-md border p-2 text-sm"
-                value={section.settings.columns ?? 3}
+                value={Number(section.settings.columns ?? 3)}
                 onChange={(e) => handleSettingChange('columns', parseInt(e.target.value) || 3)}
               />
             </div>
@@ -351,7 +353,7 @@ export function SectionPropertiesEditor({
               <label className="text-xs font-semibold text-foreground">Layout</label>
               <select
                 className="rounded-md border p-2 text-sm"
-                value={section.settings.layout ?? 'grid'}
+                value={typeof section.settings.layout === 'string' ? section.settings.layout : 'grid'}
                 onChange={(e) => handleSettingChange('layout', e.target.value)}
               >
                 <option value="grid">Grid</option>
@@ -393,8 +395,8 @@ export function SectionPropertiesEditor({
         )
       }
       case 'button_group': {
-        const buttons: any[] = Array.isArray(section.settings.buttons) ? section.settings.buttons : []
-        const updateButton = (i: number, patch: Record<string, any>) => {
+        const buttons: Record<string, unknown>[] = Array.isArray(section.settings.buttons) ? section.settings.buttons : []
+        const updateButton = (i: number, patch: Record<string, unknown>) => {
           const next = buttons.map((b, idx) => (idx === i ? { ...b, ...patch } : b))
           handleItemsChange('buttons', next)
         }
@@ -422,7 +424,7 @@ export function SectionPropertiesEditor({
                   />
                   <select
                     className="rounded-md border p-2 text-sm"
-                    value={button.variant ?? 'primary'}
+                    value={typeof button.variant === 'string' ? button.variant : 'primary'}
                     onChange={(e) => updateButton(i, { variant: e.target.value })}
                   >
                     <option value="primary">Primary</option>
@@ -430,7 +432,7 @@ export function SectionPropertiesEditor({
                     <option value="outline">Outline</option>
                   </select>
                   <p className="text-xs text-muted-foreground">
-                    Action target ({button.actionType ?? 'not set'}) — edit via Ask AI below.
+                    Action target ({typeof button.actionType === 'string' ? button.actionType : 'not set'}) — edit via Ask AI below.
                   </p>
                 </div>
               ))}
@@ -451,8 +453,8 @@ export function SectionPropertiesEditor({
         )
       }
       case 'testimonials': {
-        const items: any[] = Array.isArray(section.settings.items) ? section.settings.items : []
-        const updateItem = (i: number, patch: Record<string, any>) => {
+        const items: Record<string, unknown>[] = Array.isArray(section.settings.items) ? section.settings.items : []
+        const updateItem = (i: number, patch: Record<string, unknown>) => {
           const next = items.map((it, idx) => (idx === i ? { ...it, ...patch } : it))
           handleItemsChange('items', next)
         }
@@ -495,8 +497,8 @@ export function SectionPropertiesEditor({
         )
       }
       case 'feature_highlights': {
-        const items: any[] = Array.isArray(section.settings.items) ? section.settings.items : []
-        const updateItem = (i: number, patch: Record<string, any>) => {
+        const items: Record<string, unknown>[] = Array.isArray(section.settings.items) ? section.settings.items : []
+        const updateItem = (i: number, patch: Record<string, unknown>) => {
           const next = items.map((it, idx) => (idx === i ? { ...it, ...patch } : it))
           handleItemsChange('items', next)
         }
@@ -524,7 +526,7 @@ export function SectionPropertiesEditor({
                   </div>
                   <select
                     className="rounded-md border p-2 text-sm"
-                    value={item.icon ?? 'Sparkles'}
+                    value={typeof item.icon === 'string' ? item.icon : 'Sparkles'}
                     onChange={(e) => updateItem(i, { icon: e.target.value })}
                   >
                     {ICON_NAMES.map((name) => (

@@ -7,12 +7,14 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { StarRating } from '@/components/ui/star-rating'
 import { useUiLocale } from '@/context/UiLocaleContext'
+import { errorMessage } from '@/lib/errors'
+import type { ProductReview } from '@/lib/types'
 
-export function ReviewsPageClient({ initialReviews }: { initialReviews: any[] }) {
+export function ReviewsPageClient({ initialReviews }: { initialReviews: ProductReview[] }) {
   const { fetchReviews, updateReviewStatus } = useReviews()
   const { showToast } = useToast()
   const { t } = useUiLocale()
-  const [reviews, setReviews] = useState<any[]>(initialReviews)
+  const [reviews, setReviews] = useState<ProductReview[]>(initialReviews)
   const [busyId, setBusyId] = useState<number | null>(null)
 
   const loadReviews = async () => {
@@ -26,8 +28,8 @@ export function ReviewsPageClient({ initialReviews }: { initialReviews: any[] })
       await updateReviewStatus(reviewId, status)
       await loadReviews()
       showToast(status === 'approved' ? t('reviews.approved') : t('reviews.rejected'), 'success')
-    } catch (e: any) {
-      showToast(e.message || t('reviews.updateFailed'), 'error')
+    } catch (e) {
+      showToast(errorMessage(e) || t('reviews.updateFailed'), 'error')
     } finally {
       setBusyId(null)
     }
@@ -48,7 +50,7 @@ export function ReviewsPageClient({ initialReviews }: { initialReviews: any[] })
               <div className="flex justify-between items-start mb-2">
                 <div>
                   <div className="font-bold text-foreground">{review.product_name}</div>
-                  <div className="text-sm text-muted-foreground">{t('reviews.by', { name: review.customer_name })}</div>
+                  <div className="text-sm text-muted-foreground">{t('reviews.by', { name: review.customer_name ?? t('orders.guest') })}</div>
                 </div>
                 <div className="flex items-center gap-2">
                   <StarRating rating={review.rating} />

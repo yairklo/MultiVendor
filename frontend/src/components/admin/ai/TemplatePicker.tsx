@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import { LayoutTemplate, X } from 'lucide-react'
 import { useUiLocale } from '@/context/UiLocaleContext'
+import type { StorefrontTemplateMeta } from '@/lib/ai/types'
 
 const PREVIEW_PAGES = ['home', 'about', 'contact'] as const
 
@@ -44,7 +45,7 @@ export function TemplatePicker({
   onApply,
   isApplying,
 }: {
-  templates: any[]
+  templates: StorefrontTemplateMeta[]
   onApply: (key: string) => void
   isApplying: boolean
 }) {

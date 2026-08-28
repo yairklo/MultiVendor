@@ -13,8 +13,9 @@ import {
 import { useCurrency } from '@/hooks/useCurrency'
 import { useUiLocale } from '@/context/UiLocaleContext'
 import { formatUiDate } from '@/lib/utils'
+import type { Customer } from '@/lib/types'
 
-export function CustomersPageClient({ initialCustomers }: { initialCustomers: any[] }) {
+export function CustomersPageClient({ initialCustomers }: { initialCustomers: Customer[] }) {
   const { formatCurrency } = useCurrency()
   const { t, locale } = useUiLocale()
   const customers = initialCustomers

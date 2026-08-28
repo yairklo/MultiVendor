@@ -25,6 +25,8 @@ import { useUiLocale } from '@/context/UiLocaleContext'
 import { useStorefrontTheme } from '@/context/StorefrontThemeContext'
 import { extraLanguageCodes, languageDisplayName } from '@/lib/languages'
 import { isValidDigitalFileUrl } from '@/lib/digitalFileUrl'
+import { errorMessage } from '@/lib/errors'
+import type { Category, ProductVariant } from '@/lib/types'
 
 const formSchema = z.object({
   name_en: z.string().min(2, { message: 'English name must be at least 2 characters.' }),
@@ -50,9 +52,9 @@ export function EditProductClient({
   initialExtraDescs = {},
 }: {
   productId: string
-  categories: any[]
+  categories: Category[]
   initialSlug: string
-  initialVariant: any
+  initialVariant: ProductVariant | null
   initialValues: z.infer<typeof formSchema>
   initialExtraNames?: Record<string, string>
   initialExtraDescs?: Record<string, string>
@@ -65,7 +67,7 @@ export function EditProductClient({
   const [extraNames, setExtraNames] = useState<Record<string, string>>(initialExtraNames)
   const [extraDescs, setExtraDescs] = useState<Record<string, string>>(initialExtraDescs)
   const [slug] = useState(initialSlug)
-  const [variant] = useState<any>(initialVariant)
+  const [variant] = useState<ProductVariant | null>(initialVariant)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -84,7 +86,7 @@ export function EditProductClient({
       for (const lang of extraLangs) {
         name[lang] = extraNames[lang]?.trim() || values.name_he || values.name_en
       }
-      const payload: any = {
+      const payload: Record<string, unknown> = {
         name,
         base_price: values.base_price,
         category_id: values.category_id || undefined,
@@ -111,7 +113,7 @@ export function EditProductClient({
 
       await updateProduct(Number(productId), payload)
 
-      if (variant) {
+      if (variant?.id) {
         await updateVariant(variant.id, {
           sku: variant.sku,
           attributes_json: variant.attributes_json ?? {},
@@ -121,8 +123,8 @@ export function EditProductClient({
       }
 
       router.push('/admin/products')
-    } catch (err: any) {
-        setError(err.message || t('products.updateFailed'))
+    } catch (err) {
+        setError(errorMessage(err) || t('products.updateFailed'))
     } finally {
       setLoading(false)
     }

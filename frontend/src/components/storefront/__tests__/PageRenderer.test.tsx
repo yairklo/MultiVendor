@@ -61,7 +61,7 @@ const page: StorePageSchema = {
 
 describe('PageRenderer XSS safety', () => {
   beforeEach(() => {
-    ;(window as any).__xss_fired = false
+    ;(window as unknown as { __xss_fired: boolean }).__xss_fired = false
   })
 
   it('never turns AI-controlled text into live HTML/script across any section type', () => {
@@ -72,7 +72,7 @@ describe('PageRenderer XSS safety', () => {
     )
 
     // No script ever executed, in any section.
-    expect((window as any).__xss_fired).toBe(false)
+    expect((window as unknown as { __xss_fired: boolean }).__xss_fired).toBe(false)
 
     // No section rendered the payload as a real element — it stayed inert text.
     expect(container.querySelector('img')).toBeNull()

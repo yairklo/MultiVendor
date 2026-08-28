@@ -38,7 +38,7 @@ export interface ButtonSpec {
   label: LocalizedText
   variant?: ButtonVariant
   actionType: ButtonActionType
-  actionPayload?: Record<string, any>
+  actionPayload?: Record<string, unknown>
 }
 
 export interface SectionMedia {
@@ -50,7 +50,7 @@ export interface SectionMedia {
 export interface Section {
   id: string
   type: SectionType
-  settings: Record<string, any>
+  settings: Record<string, unknown>
   media?: SectionMedia
   /** Only meaningful for type="grid_container" — the sections rendered inside the grid. */
   children?: Section[]
@@ -110,7 +110,7 @@ export interface ChatMessage {
 export interface DispatchedAction {
   label: string
   actionType: ButtonActionType
-  actionPayload?: Record<string, any>
+  actionPayload?: Record<string, unknown>
 }
 
 export interface StorePageVersionSummary {
@@ -128,4 +128,13 @@ export interface ChatMessageRecord {
 
 export interface ConversationResponse {
   messages: ChatMessageRecord[]
+}
+
+// Metadata for one of the handful of selectable storefront templates -- see
+// server/app/services/storefront_templates.py::StorefrontTemplateMeta.
+export interface StorefrontTemplateMeta {
+  key: string
+  name: string
+  tagline: string
+  swatch: { bg: string; text: string; accent: string }
 }

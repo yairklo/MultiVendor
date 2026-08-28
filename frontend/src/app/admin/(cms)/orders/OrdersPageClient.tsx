@@ -18,16 +18,17 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import type { Order } from '@/lib/types'
 
 // No real order is ever in plain 'pending' — checkout always creates
 // 'pending_payment', which becomes 'processing' once paid. 'pending' was a
 // leftover from before that flow existed and isn't a reachable admin action.
 const MANUAL_STATUSES = ['processing', 'completed', 'cancelled']
 
-export function OrdersPageClient({ initialOrders }: { initialOrders: any[] }) {
+export function OrdersPageClient({ initialOrders }: { initialOrders: Order[] }) {
   const { showToast } = useToast()
   const { formatCurrency } = useCurrency()
-  const [orders, setOrders] = useState<any[]>(initialOrders)
+  const [orders, setOrders] = useState<Order[]>(initialOrders)
   const [exporting, setExporting] = useState(false)
   const [updatingId, setUpdatingId] = useState<number | null>(null)
   const tenantSlug = useTenantSlug()

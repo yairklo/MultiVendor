@@ -1,5 +1,4 @@
 import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ProductsPageClient } from '../ProductsPageClient'
 
@@ -35,25 +34,39 @@ vi.mock('@/context/ConfirmContext', () => ({
 const baseProducts = [
   {
     id: 1,
+    tenant_id: 1,
+    slug: 'vintage-tshirt',
     name: { en: 'Vintage T-Shirt', he: 'חולצה וינטג' },
     description: { en: 'A shirt', he: 'חולצה' },
-    base_price: '25.00',
+    base_price: 25,
     category_id: 10,
     is_active: true,
-    variants: [{ id: 100, stock_quantity: 5 }],
+    show_in_marketplace: true,
+    product_type: 'physical',
+    is_bundle: false,
+    variants: [{ id: 100, sku: 'TSHIRT-1', stock_quantity: 5 }],
     primary_image_url: 'https://example.com/tshirt.jpg',
     images: ['https://example.com/tshirt.jpg'],
+    review_count: 0,
+    created_at: '2026-01-01T00:00:00Z',
   },
   {
     id: 2,
+    tenant_id: 1,
+    slug: 'plain-mug',
     name: { en: 'Plain Mug', he: 'ספל' },
     description: { en: 'A mug', he: 'ספל' },
-    base_price: '10.00',
+    base_price: 10,
     category_id: 20,
     is_active: true,
-    variants: [{ id: 101, stock_quantity: 3 }],
+    show_in_marketplace: true,
+    product_type: 'physical',
+    is_bundle: false,
+    variants: [{ id: 101, sku: 'MUG-1', stock_quantity: 3 }],
     primary_image_url: null,
     images: [],
+    review_count: 0,
+    created_at: '2026-01-01T00:00:00Z',
   },
 ]
 
@@ -93,7 +106,7 @@ describe('ProductsPageClient', () => {
           id: 9,
           name: { en: 'Ebook', he: 'ספר' },
           product_type: 'digital',
-          variants: [{ id: 200, stock_quantity: 0 }],
+          variants: [{ id: 200, sku: 'EBOOK-1', stock_quantity: 0 }],
         }]}
         initialMeta={{ page: 1, page_size: 20, total: 1, total_pages: 1 }}
       />

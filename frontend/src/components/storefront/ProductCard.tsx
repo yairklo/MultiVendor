@@ -11,6 +11,7 @@ import { resolveCardStyleClasses, CardStyle } from '@/lib/product-card-styles'
 import { useCurrency } from '@/hooks/useCurrency'
 import { resolveImageUrl } from '@/lib/media'
 import { resolveI18nText } from '@/lib/i18n-text'
+import type { Product } from '@/lib/types'
 
 const STRINGS = {
   en: { addToCart: 'Add to Cart', outOfStock: 'Out of stock', adding: 'Adding…' },
@@ -30,7 +31,7 @@ export function ProductCard({
   styleVariant = 'default',
   lang,
 }: {
-  product: any
+  product: Product
   tenantSlug: string
   styleVariant?: CardStyle
   /** Defaults to the storefront's current language (see StorefrontThemeContext) when omitted --
@@ -69,9 +70,10 @@ export function ProductCard({
     <div className={`group flex flex-col ${resolveCardStyleClasses(styleVariant)}`}>
       <Link href={`/store/${tenantSlug}/products/${product.slug}`} className="mb-3 block overflow-hidden">
         {image ? (
-          // eslint-disable-next-line @next/next/no-img-element -- arbitrary vendor-supplied
-          // URLs with no host allowlist; next/image would require allowing every hostname,
-          // turning the server into an open image proxy (see next.config.ts history).
+          // Arbitrary vendor-supplied URLs with no host allowlist; next/image would
+          // require allowing every hostname, turning the server into an open image
+          // proxy (see next.config.ts history).
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={resolveImageUrl(image)}
             alt={name}
@@ -89,11 +91,11 @@ export function ProductCard({
       </Link>
       {product.review_count > 0 && (
         <div className="mt-1 flex items-center gap-1">
-          <StarRating rating={product.average_rating} size={12} />
+          <StarRating rating={product.average_rating ?? 0} size={12} />
           <span className="text-xs tabular-nums text-muted-foreground">({product.review_count})</span>
         </div>
       )}
-      <span className="mt-2 text-sm tabular-nums text-foreground">{formatCurrency(product.base_price ?? product.price)}</span>
+      <span className="mt-2 text-sm tabular-nums text-foreground">{formatCurrency(product.base_price)}</span>
 
       <button
         type="button"

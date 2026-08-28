@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { Menu, X } from 'lucide-react'
 
@@ -17,10 +17,15 @@ export function AdminMobileNav({
 }) {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
-
-  useEffect(() => {
+  // Close the drawer on navigation -- adjusted during render (React's
+  // recommended pattern for "reset state when a prop changes") rather than
+  // in an effect, so it takes effect before the browser paints the new page
+  // with the drawer still open.
+  const [prevPathname, setPrevPathname] = useState(pathname)
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname)
     setOpen(false)
-  }, [pathname])
+  }
 
   return (
     <>

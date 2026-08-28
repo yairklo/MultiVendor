@@ -10,7 +10,7 @@ export function useCoupons() {
     return Array.isArray(data) ? data : (data.data || [])
   }
 
-  const createCoupon = async (payload: any) => {
+  const createCoupon = async (payload: Record<string, unknown>) => {
     return apiClient(`/api/v1/admin/store/${tenantSlug}/coupons`, {
       method: 'POST',
       body: JSON.stringify(payload)

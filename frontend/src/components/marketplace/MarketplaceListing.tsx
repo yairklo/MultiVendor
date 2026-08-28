@@ -9,6 +9,7 @@ import { ProductCardSkeleton } from '@/components/ui/skeleton'
 import { useCurrency } from '@/hooks/useCurrency'
 import { useUiLocale } from '@/context/UiLocaleContext'
 import { isRtlLang } from '@/lib/languages'
+import type { MarketplaceProduct } from '@/lib/types'
 
 const PAGE_SIZE = 12
 
@@ -33,12 +34,12 @@ export function MarketplaceListing({
   initialMeta,
 }: {
   /** Server-fetched page-1/no-search data, seeded in so first paint doesn't show a loading skeleton. */
-  initialProducts?: any[]
+  initialProducts?: MarketplaceProduct[]
   initialMeta?: PaginationMeta | null
 }) {
   const { formatCurrency } = useCurrency()
   const { t, locale } = useUiLocale()
-  const [products, setProducts] = useState<any[]>(initialProducts ?? [])
+  const [products, setProducts] = useState<MarketplaceProduct[]>(initialProducts ?? [])
   const [productsLoading, setProductsLoading] = useState(!initialProducts)
   const [meta, setMeta] = useState<PaginationMeta | null>(initialMeta ?? null)
   const [page, setPage] = useState(1)
@@ -47,13 +48,15 @@ export function MarketplaceListing({
   const prefersReducedMotion = useReducedMotion()
 
   useEffect(() => {
-    const handle = setTimeout(() => setDebouncedSearch(search), 300)
+    const handle = setTimeout(() => {
+      setDebouncedSearch(search)
+      // Folded in here (rather than a separate effect keyed off
+      // debouncedSearch) so resetting to page 1 on a new search isn't a
+      // second synchronous setState-in-effect.
+      setPage(1)
+    }, 300)
     return () => clearTimeout(handle)
   }, [search])
-
-  useEffect(() => {
-    setPage(1)
-  }, [debouncedSearch])
 
   const skipInitialFetch = useRef(!!initialProducts)
   useEffect(() => {

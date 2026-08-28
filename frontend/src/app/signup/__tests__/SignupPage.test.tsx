@@ -27,8 +27,8 @@ describe('SignupPage', () => {
     setCookieMock.mockReset()
     // jsdom doesn't implement navigation; the seller flow triggers it after
     // a successful submit, which we don't need to observe.
-    delete (window as any).location
-    ;(window as any).location = { assign: vi.fn() }
+    delete (window as unknown as { location?: unknown }).location
+    ;(window as unknown as { location: { assign: (url: string) => void } }).location = { assign: vi.fn() }
   })
 
   it('defaults to the customer form and registers via /auth/register', async () => {

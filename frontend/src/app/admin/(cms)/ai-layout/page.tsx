@@ -17,7 +17,8 @@ import { StorefrontHeader } from '@/components/storefront/StorefrontHeader'
 import { StorefrontFooter } from '@/components/storefront/StorefrontFooter'
 import { useUiLocale } from '@/context/UiLocaleContext'
 import { PreviewCanvas } from '@/components/admin/ai/PreviewCanvas'
-import { DispatchedAction, Section, StorePageSchema, StorePageSummary, StorePageVersionSummary } from '@/lib/ai/types'
+import { DispatchedAction, Section, StorePageSchema, StorePageSummary, StorePageVersionSummary, StorefrontTemplateMeta } from '@/lib/ai/types'
+import { errorMessage } from '@/lib/errors'
 
 export default function AiLayoutPage() {
   const {
@@ -31,7 +32,7 @@ export default function AiLayoutPage() {
   const { t } = useUiLocale()
 
   const [targets, setTargets] = useState<StorePageSummary[]>([])
-  const [templates, setTemplates] = useState<any[]>([])
+  const [templates, setTemplates] = useState<StorefrontTemplateMeta[]>([])
   const [page, setPage] = useState<StorePageSchema | null>(null)
   const [provider, setProvider] = useState<'gemini' | 'mock' | null>(null)
   const [isBusy, setIsBusy] = useState(false)
@@ -117,9 +118,9 @@ export default function AiLayoutPage() {
       ])
       fetchPageTargets().then(setTargets).catch(() => {})
       fetchPageVersions(pageKey, pageType).then(setVersions).catch(() => {})
-    } catch (err: any) {
-      setMessages((prev) => [...prev, { role: 'assistant', text: `Error: ${err.message}` }])
-      showToast(err.message || t('aiLayout.sendFailed'), 'error')
+    } catch (err) {
+      setMessages((prev) => [...prev, { role: 'assistant', text: `Error: ${errorMessage(err)}` }])
+      showToast(errorMessage(err) || t('aiLayout.sendFailed'), 'error')
     } finally {
       setIsBusy(false)
     }
@@ -142,8 +143,8 @@ export default function AiLayoutPage() {
       resolvePendingConfirmationInPlace(confirmationId, t('aiLayout.confirmedDone'))
       showToast(t('aiLayout.actionCompleted'), 'success')
       fetchPageTargets().then(setTargets).catch(() => {})
-    } catch (err: any) {
-      showToast(err.message || 'Failed to confirm action', 'error')
+    } catch (err) {
+      showToast(errorMessage(err) || 'Failed to confirm action', 'error')
     } finally {
       setResolvingConfirmationId(null)
     }
@@ -154,8 +155,8 @@ export default function AiLayoutPage() {
     try {
       await cancelPendingAction(confirmationId)
       resolvePendingConfirmationInPlace(confirmationId, t('aiLayout.cancelledNothing'))
-    } catch (err: any) {
-      showToast(err.message || 'Failed to cancel action', 'error')
+    } catch (err) {
+      showToast(errorMessage(err) || 'Failed to cancel action', 'error')
     } finally {
       setResolvingConfirmationId(null)
     }
@@ -165,8 +166,8 @@ export default function AiLayoutPage() {
     try {
       await clearConversation({ pageKey, pageType })
       setMessages([])
-    } catch (err: any) {
-      showToast(err.message || 'Failed to start a new conversation', 'error')
+    } catch (err) {
+      showToast(errorMessage(err) || 'Failed to start a new conversation', 'error')
     }
   }
 
@@ -185,8 +186,8 @@ export default function AiLayoutPage() {
       setPage(reverted)
       fetchPageVersions(pageKey, pageType).then(setVersions).catch(() => {})
       showToast(t('aiLayout.reverted'), 'success')
-    } catch (err: any) {
-      showToast(err.message || 'Failed to revert', 'error')
+    } catch (err) {
+      showToast(errorMessage(err) || 'Failed to revert', 'error')
     } finally {
       setRevertingId(null)
     }
@@ -204,8 +205,8 @@ export default function AiLayoutPage() {
       setPage(saved)
       fetchPageVersions(pageKey, pageType).then(setVersions).catch(() => {})
       showToast(t('aiLayout.layoutSaved'), 'success')
-    } catch (err: any) {
-      showToast(err.message || 'Failed to save layout', 'error')
+    } catch (err) {
+      showToast(errorMessage(err) || 'Failed to save layout', 'error')
     } finally {
       setSavingLayout(false)
     }
@@ -224,8 +225,8 @@ export default function AiLayoutPage() {
       const published = await publishPage(pageKey, pageType)
       setPage(published)
       showToast(t('aiLayout.publishedLive'), 'success')
-    } catch (err: any) {
-      showToast(err.message || 'Failed to publish', 'error')
+    } catch (err) {
+      showToast(errorMessage(err) || 'Failed to publish', 'error')
     } finally {
       setPublishing(false)
     }
@@ -247,8 +248,8 @@ export default function AiLayoutPage() {
       setPage(reloadedPage)
       fetchPageVersions(pageKey, pageType).then(setVersions).catch(() => {})
       showToast(t('aiLayout.templateApplied'), 'success')
-    } catch (err: any) {
-      showToast(err.message || 'Failed to apply template', 'error')
+    } catch (err) {
+      showToast(errorMessage(err) || 'Failed to apply template', 'error')
     } finally {
       setApplyingTemplate(false)
     }
@@ -327,7 +328,13 @@ export default function AiLayoutPage() {
   )
 }
 
-function PreviewWrapper({ tenantSlug, page, handleSend, handleSectionsReorder, handleAction }: any) {
+function PreviewWrapper({ tenantSlug, page, handleSend, handleSectionsReorder, handleAction }: {
+  tenantSlug: string
+  page: StorePageSchema | null
+  handleSend: (message: string, file?: File | null) => void
+  handleSectionsReorder: (sections: Section[]) => void
+  handleAction: (action: DispatchedAction) => void
+}) {
   const { lang } = useStorefrontTheme()
   return (
     <div dir={isRtlLang(lang) ? 'rtl' : 'ltr'} className="flex w-full flex-col bg-background">

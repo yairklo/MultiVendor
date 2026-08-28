@@ -10,7 +10,7 @@ export function useCurrency() {
         style: 'currency',
         currency: currency,
       }).format(amount)
-    } catch (e) {
+    } catch {
       // Fallback
       return `${amount} ${currency}`
     }

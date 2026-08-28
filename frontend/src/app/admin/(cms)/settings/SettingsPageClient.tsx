@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from 'react'
 import { ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react'
 import { apiClient } from '@/lib/api/apiClient'
+import { errorMessage } from '@/lib/errors'
 import { useToast } from '@/context/ToastContext'
 import { useTenantSlug } from '@/hooks/useTenantSlug'
 import { useUiLocale } from '@/context/UiLocaleContext'
@@ -91,8 +92,8 @@ export function SettingsPageClient({
         body: JSON.stringify(payload)
       })
       showToast(t('settings.saved'), 'success')
-    } catch (err: any) {
-      showToast(err.message || t('settings.saveFailed'), 'error')
+    } catch (err) {
+      showToast(errorMessage(err) || t('settings.saveFailed'), 'error')
     } finally {
       setLoading(false)
     }

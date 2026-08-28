@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { getCookie } from 'cookies-next'
@@ -9,17 +9,25 @@ import { useMarketplaceCart } from '@/context/MarketplaceCartContext'
 import { useUiLocale } from '@/context/UiLocaleContext'
 import { UiLanguageSwitcher } from '@/components/ui/UiLanguageSwitcher'
 
+// SSR/hydration-safe cookie read -- see hooks/useTenantSlug.ts for why a
+// plain useEffect+useState pair isn't used here.
+function subscribeNoop(): () => void {
+  return () => {}
+}
+function getLoggedInSnapshot(): boolean {
+  return !!getCookie('token')
+}
+function getLoggedInServerSnapshot(): boolean {
+  return false
+}
+
 export function MarketplaceHeader() {
   const { cart, openDrawer } = useMarketplaceCart()
   const { t } = useUiLocale()
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const isLoggedIn = useSyncExternalStore(subscribeNoop, getLoggedInSnapshot, getLoggedInServerSnapshot)
   const cartCount = cart?.items.reduce((sum, item) => sum + item.quantity, 0) ?? 0
-
-  useEffect(() => {
-    setIsLoggedIn(!!getCookie('token'))
-  }, [])
 
   const isActive = (href: string) => (href === '/marketplace' ? pathname === href : pathname?.startsWith(href))
 

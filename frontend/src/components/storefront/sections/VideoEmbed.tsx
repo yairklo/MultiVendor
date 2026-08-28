@@ -14,7 +14,7 @@ export function VideoEmbed({ section, themeStyle }: { section: Section; themeSty
       <div className="flex aspect-video items-center justify-center rounded-xl bg-black/30">
         <span>▶ {section.media?.url ?? 'no media set'}</span>
       </div>
-      {section.settings.autoplay && (
+      {!!section.settings.autoplay && (
         <span className="mt-2 inline-block rounded-full bg-white/20 px-2 py-0.5 text-xs">autoplay</span>
       )}
     </div>

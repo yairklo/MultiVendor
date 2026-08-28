@@ -1,9 +1,9 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useState, useSyncExternalStore } from 'react'
 import { useRouter } from 'next/navigation'
 import { getCookie } from 'cookies-next'
-import { apiClient } from '@/lib/api/apiClient'
+import { apiClient, ApiError } from '@/lib/api/apiClient'
 import { getActiveMarketplaceCart } from '@/lib/marketplace-cart'
 import { useMarketplaceCart } from '@/context/MarketplaceCartContext'
 import { useCurrency } from '@/hooks/useCurrency'
@@ -11,6 +11,21 @@ import { orderStatusClass, orderStatusLabel } from '@/lib/orderStatus'
 import { StripeCardForm } from '@/components/checkout/StripeCardForm'
 import { DigitalDownloads } from '@/components/orders/DigitalDownloads'
 import { useUiLocale } from '@/context/UiLocaleContext'
+import { errorMessage } from '@/lib/errors'
+
+// Same SSR/hydration-safe cookie read as useTenantSlug -- see that hook for why
+// a plain useEffect+useState pair isn't used here. Server/first-client-render
+// snapshot is null ("not checked yet"), distinct from false ("checked, logged
+// out") -- the render logic below treats only null as still-loading.
+function subscribeNoop(): () => void {
+  return () => {}
+}
+function getLoggedInSnapshot(): boolean | null {
+  return !!getCookie('token')
+}
+function getLoggedInServerSnapshot(): boolean | null {
+  return null
+}
 
 interface SubOrder {
   id: number
@@ -45,7 +60,7 @@ export default function MarketplaceCheckoutPage() {
   const { t } = useUiLocale()
   const router = useRouter()
 
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null)
+  const isLoggedIn = useSyncExternalStore(subscribeNoop, getLoggedInSnapshot, getLoggedInServerSnapshot)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [masterOrder, setMasterOrder] = useState<MasterOrder | null>(null)
@@ -58,10 +73,6 @@ export default function MarketplaceCheckoutPage() {
   const [address, setAddress] = useState('')
   const [city, setCity] = useState('')
   const [phone, setPhone] = useState('')
-
-  useEffect(() => {
-    setIsLoggedIn(!!getCookie('token'))
-  }, [])
 
   const activeCart = getActiveMarketplaceCart()
   const subtotal = cart ? Number(cart.subtotal) : 0
@@ -101,11 +112,11 @@ export default function MarketplaceCheckoutPage() {
 
       setMasterOrder(order)
       clear()
-    } catch (e: any) {
-      if (e.status === 401) {
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 401) {
         setError(t('checkout.loginToCheckout'))
       } else {
-        setError(e.message || t('checkout.placeFailed'))
+        setError(errorMessage(e) || t('checkout.placeFailed'))
       }
     } finally {
       setSubmitting(false)
@@ -131,8 +142,8 @@ export default function MarketplaceCheckoutPage() {
         // Mock gateway: /pay already marked every sub-order paid synchronously.
         setPaymentDone(true)
       }
-    } catch (e: any) {
-      setError(e.message || t('checkout.paymentFailed'))
+    } catch (e) {
+      setError(errorMessage(e) || t('checkout.paymentFailed'))
     } finally {
       setPayBusy(false)
     }

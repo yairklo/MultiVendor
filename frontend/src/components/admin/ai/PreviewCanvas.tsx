@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, PointerEvent, ReactNode, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { createContext, PointerEvent, ReactNode, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { Maximize2, Minus, Plus, UnfoldHorizontal } from 'lucide-react'
 import { useUiLocale } from '@/context/UiLocaleContext'
 import { Section } from '@/lib/ai/types'
@@ -32,6 +32,18 @@ function numericZoom(mode: ZoomMode, currentScale: number) {
   return typeof mode === 'number' ? mode : currentScale
 }
 
+function subscribeReducedMotion(callback: () => void): () => void {
+  const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
+  mq.addEventListener('change', callback)
+  return () => mq.removeEventListener('change', callback)
+}
+function getReducedMotionSnapshot(): boolean {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}
+function getReducedMotionServerSnapshot(): boolean {
+  return false
+}
+
 export function PreviewCanvas({ children }: { children: ReactNode }) {
   const { t } = useUiLocale()
   const viewportRef = useRef<HTMLDivElement>(null)
@@ -41,21 +53,15 @@ export function PreviewCanvas({ children }: { children: ReactNode }) {
   const [mode, setMode] = useState<ZoomMode>('fit-width')
   const [scale, setScale] = useState(1)
   const [contentHeight, setContentHeight] = useState(900)
-  const [reduceMotion, setReduceMotion] = useState(false)
+  const reduceMotion = useSyncExternalStore(subscribeReducedMotion, getReducedMotionSnapshot, getReducedMotionServerSnapshot)
   const [propertiesSession, setPropertiesSession] = useState<PreviewPropertiesSession | null>(null)
   const setPropertiesSessionRef = useRef(setPropertiesSession)
-  setPropertiesSessionRef.current = setPropertiesSession
+  useLayoutEffect(() => {
+    setPropertiesSessionRef.current = setPropertiesSession
+  }, [setPropertiesSession])
   const chrome = useMemo<PreviewChrome>(() => ({
     setPropertiesSession: (session) => setPropertiesSessionRef.current(session),
   }), [])
-
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
-    setReduceMotion(mq.matches)
-    const onChange = () => setReduceMotion(mq.matches)
-    mq.addEventListener('change', onChange)
-    return () => mq.removeEventListener('change', onChange)
-  }, [])
 
   const recompute = useCallback(() => {
     const vp = viewportRef.current

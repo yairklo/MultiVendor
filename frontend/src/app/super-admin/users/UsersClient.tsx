@@ -4,6 +4,7 @@ import React, { useMemo, useState } from 'react'
 import { Users } from 'lucide-react'
 import { apiClient } from '@/lib/api/apiClient'
 import { useToast } from '@/context/ToastContext'
+import { errorMessage } from '@/lib/errors'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -44,8 +45,8 @@ export function UsersClient({ initialUsers }: { initialUsers: PlatformUser[] }) 
       })
       await reload()
       showToast(user.is_active ? 'User deactivated' : 'User activated', 'success')
-    } catch (err: any) {
-      showToast(err.message || 'Failed to update user', 'error')
+    } catch (err) {
+      showToast(errorMessage(err) || 'Failed to update user', 'error')
     } finally {
       setBusyId(null)
     }

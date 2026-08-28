@@ -20,9 +20,6 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-// Temporarily using standard select if shadcn select is complex, or checkbox for active
-// Actually, shadcn select is installed. But let's keep it simple for boolean
-import { Label } from '@/components/ui/label'
 import { ImageUploadField } from '@/components/upload/ImageUploadField'
 import { FileUploadField } from '@/components/upload/FileUploadField'
 import { resolveImageUrl } from '@/lib/media'
@@ -30,6 +27,8 @@ import { useUiLocale } from '@/context/UiLocaleContext'
 import { useStorefrontTheme } from '@/context/StorefrontThemeContext'
 import { extraLanguageCodes, languageDisplayName } from '@/lib/languages'
 import { isValidDigitalFileUrl } from '@/lib/digitalFileUrl'
+import { errorMessage } from '@/lib/errors'
+import type { Category } from '@/lib/types'
 
 const formSchema = z.object({
   name_en: z.string().min(2, { message: 'English name must be at least 2 characters.' }),
@@ -55,7 +54,7 @@ export default function NewProductPage() {
   const [extraDescs, setExtraDescs] = useState<Record<string, string>>({})
   const { createProduct } = useProducts()
   const { fetchCategories } = useCategories()
-  const [categories, setCategories] = useState<any[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [limitReached, setLimitReached] = useState(false)
@@ -95,7 +94,7 @@ export default function NewProductPage() {
       for (const lang of extraLangs) {
         name[lang] = extraNames[lang]?.trim() || values.name_he || values.name_en
       }
-      const payload: any = {
+      const payload: Record<string, unknown> = {
         name,
         slug: values.slug,
         base_price: values.base_price,
@@ -123,11 +122,11 @@ export default function NewProductPage() {
       
       await createProduct(payload)
       router.push('/admin/products')
-    } catch (err: any) {
+    } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
         setLimitReached(true)
       } else {
-        setError(err.message || t('products.createFailed'))
+        setError(errorMessage(err) || t('products.createFailed'))
       }
     } finally {
       setLoading(false)

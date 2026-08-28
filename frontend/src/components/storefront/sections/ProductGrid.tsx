@@ -8,6 +8,7 @@ import { CardStyle } from '@/lib/product-card-styles'
 import { resolveI18nText } from '@/lib/i18n-text'
 import { useStorefrontTheme } from '@/context/StorefrontThemeContext'
 import { isUsableTenantSlug } from '@/lib/tenantSlug'
+import type { Product } from '@/lib/types'
 
 export function ProductGrid({
   section,
@@ -22,14 +23,12 @@ export function ProductGrid({
   const { lang } = useStorefrontTheme()
   const columns = Number(section.settings.columns ?? 4)
   const categoryId = section.settings.category_id
-  const cardStyle: CardStyle = section.settings.card_style ?? 'default'
-  const [products, setProducts] = useState<any[] | null>(null)
+  const cardStyle: CardStyle = typeof section.settings.card_style === 'string' ? (section.settings.card_style as CardStyle) : 'default'
+  const [products, setProducts] = useState<Product[] | null>(null)
+  const tenantUsable = isUsableTenantSlug(tenantSlug)
 
   useEffect(() => {
-    if (!isUsableTenantSlug(tenantSlug)) {
-      setProducts(null)
-      return
-    }
+    if (!tenantUsable) return
     let cancelled = false
     const params = new URLSearchParams({ page: '1', page_size: String(columns * 2) })
     if (categoryId) params.set('category_id', String(categoryId))
@@ -43,7 +42,7 @@ export function ProductGrid({
     return () => {
       cancelled = true
     }
-  }, [tenantSlug, categoryId, columns])
+  }, [tenantUsable, tenantSlug, categoryId, columns])
 
   return (
     <div
@@ -70,7 +69,7 @@ export function ProductGrid({
             <ProductCard key={p.id} product={p} tenantSlug={tenantSlug} styleVariant={cardStyle} />
           ))}
       </div>
-      {section.settings.collection && !categoryId && (
+      {typeof section.settings.collection === 'string' && section.settings.collection && !categoryId && (
         <div className="mt-3 text-xs text-current/60">collection: {section.settings.collection}</div>
       )}
     </div>

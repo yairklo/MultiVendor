@@ -4,6 +4,7 @@ import { ApiError } from '@/lib/api/apiClient'
 import { adminApiClient, getServerTenantSlug } from '@/lib/api/serverApiClient'
 import { pickExtraLangValues } from '@/lib/languages'
 import { EditProductClient } from './EditProductClient'
+import type { Product } from '@/lib/types'
 
 export default async function EditProductPage({
   params,
@@ -13,7 +14,7 @@ export default async function EditProductPage({
   const { id: productId } = await params
   const tenantSlug = await getServerTenantSlug()
 
-  let product: any = null
+  let product: Product | null = null
   let error = ''
   try {
     product = await adminApiClient(`/api/v1/admin/store/${tenantSlug}/products/${productId}`)

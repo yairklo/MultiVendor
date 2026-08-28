@@ -24,7 +24,7 @@ export function useProducts() {
     return apiClient(`/api/v1/admin/store/${tenantSlug}/products/${productId}`)
   }
 
-  const createProduct = async (payload: any) => {
+  const createProduct = async (payload: Record<string, unknown>) => {
     if (!tenantSlug) throw new Error('Tenant slug is not resolved')
     return apiClient(`/api/v1/admin/store/${tenantSlug}/products`, {
       method: 'POST',
@@ -32,7 +32,7 @@ export function useProducts() {
     })
   }
 
-  const updateProduct = async (productId: number, payload: any) => {
+  const updateProduct = async (productId: number, payload: Record<string, unknown>) => {
     if (!tenantSlug) throw new Error('Tenant slug is not resolved')
     return apiClient(`/api/v1/admin/store/${tenantSlug}/products/${productId}`, {
       method: 'PUT',
@@ -47,7 +47,7 @@ export function useProducts() {
     })
   }
 
-  const updateVariant = async (variantId: number, payload: any) => {
+  const updateVariant = async (variantId: number, payload: Record<string, unknown>) => {
     if (!tenantSlug) throw new Error('Tenant slug is not resolved')
     return apiClient(`/api/v1/admin/store/${tenantSlug}/variants/${variantId}`, {
       method: 'PUT',

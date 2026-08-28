@@ -2,7 +2,7 @@ import { apiClient } from '@/lib/api/apiClient'
 import { useTenantSlug } from './useTenantSlug'
 import {
   AIChatResponse, ConversationResponse, PageContext, PageType, StorePageSchema, StorePageSummary,
-  StorePageVersionSummary,
+  StorePageVersionSummary, StorefrontTemplateMeta,
 } from '@/lib/ai/types'
 
 /** page_key/page_type query params for a page-scoped request, or nothing for the global copilot. */
@@ -82,8 +82,8 @@ export function useAiLayout() {
     })
   }
 
-  const confirmPendingAction = async (confirmationId: string): Promise<any> => {
-    return apiClient(adminPath(`/ai/pending-actions/${confirmationId}/confirm`), {
+  const confirmPendingAction = async (confirmationId: string): Promise<void> => {
+    await apiClient(adminPath(`/ai/pending-actions/${confirmationId}/confirm`), {
       method: 'POST',
     })
   }
@@ -109,12 +109,12 @@ export function useAiLayout() {
     })
   }
 
-  const fetchTemplates = async (): Promise<any[]> => {
+  const fetchTemplates = async (): Promise<StorefrontTemplateMeta[]> => {
     return apiClient(adminPath('/ai/templates'))
   }
 
-  const applyTemplate = async (templateKey: string): Promise<any> => {
-    return apiClient(adminPath(`/ai/templates/${templateKey}/apply`), {
+  const applyTemplate = async (templateKey: string): Promise<void> => {
+    await apiClient(adminPath(`/ai/templates/${templateKey}/apply`), {
       method: 'POST',
     })
   }

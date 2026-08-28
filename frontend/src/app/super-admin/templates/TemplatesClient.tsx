@@ -4,6 +4,7 @@ import React, { useMemo, useState } from 'react'
 import { LayoutTemplate, Plus } from 'lucide-react'
 import { apiClient } from '@/lib/api/apiClient'
 import { useToast } from '@/context/ToastContext'
+import { errorMessage } from '@/lib/errors'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -162,8 +163,8 @@ export function TemplatesClient({ initialTemplates }: { initialTemplates: Storef
       }
       setEditingKey(null)
       await reload()
-    } catch (err: any) {
-      showToast(err.message || 'Failed to save template', 'error')
+    } catch (err) {
+      showToast(errorMessage(err) || 'Failed to save template', 'error')
     } finally {
       setSaving(false)
     }
@@ -178,8 +179,8 @@ export function TemplatesClient({ initialTemplates }: { initialTemplates: Storef
       })
       await reload()
       showToast(template.is_active ? 'Template deactivated' : 'Template activated', 'success')
-    } catch (err: any) {
-      showToast(err.message || 'Failed to update template', 'error')
+    } catch (err) {
+      showToast(errorMessage(err) || 'Failed to update template', 'error')
     } finally {
       setTogglingKey(null)
     }

@@ -16,7 +16,10 @@ export function TextBlock({
     const next = e.currentTarget.textContent ?? ''
     if (next !== current) {
       onInlineEdit?.(section.id, {
-        settings: { ...section.settings, [key]: { ...section.settings[key], [lang]: next } },
+        settings: {
+          ...section.settings,
+          [key]: { ...(section.settings[key] as Record<string, string> | undefined), [lang]: next },
+        },
       })
     }
   }

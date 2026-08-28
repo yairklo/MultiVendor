@@ -5,6 +5,8 @@ import { ChatDrawer } from '@/components/admin/ai/ChatDrawer'
 import { useAiLayout } from '@/hooks/useAiLayout'
 import { useToast } from '@/context/ToastContext'
 import { useUiLocale } from '@/context/UiLocaleContext'
+import { errorMessage } from '@/lib/errors'
+import type { ChatMessage } from '@/lib/ai/types'
 
 // This chat is not scoped to any page — it's the tenant-wide global copilot.
 // PageContext is `null` throughout: never fake a page identity to satisfy an
@@ -16,14 +18,14 @@ export default function CopilotPage() {
   const { showToast } = useToast()
   const { t } = useUiLocale()
 
-  const [messages, setMessages] = useState<any[]>([])
+  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isBusy, setIsBusy] = useState(false)
   const [resolvingConfirmationId, setResolvingConfirmationId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!tenantSlug) return
     fetchConversation(NO_PAGE_CONTEXT)
-      .then((res) => setMessages(res.messages.map((m: any) => ({ role: m.role, text: m.text, toolCalls: m.tool_calls ?? undefined }))))
+      .then((res) => setMessages(res.messages.map((m) => ({ role: m.role, text: m.text, toolCalls: m.tool_calls ?? undefined }))))
       .catch(() => setMessages([]))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantSlug])
@@ -45,9 +47,9 @@ export default function CopilotPage() {
           pendingConfirmation: result.pending_confirmation ?? undefined,
         },
       ])
-    } catch (err: any) {
-      setMessages((prev) => [...prev, { role: 'assistant', text: `Error: ${err.message}` }])
-      showToast(err.message || 'Failed to send message', 'error')
+    } catch (err) {
+      setMessages((prev) => [...prev, { role: 'assistant', text: `Error: ${errorMessage(err)}` }])
+      showToast(errorMessage(err) || 'Failed to send message', 'error')
     } finally {
       setIsBusy(false)
     }
@@ -69,8 +71,8 @@ export default function CopilotPage() {
       await confirmPendingAction(confirmationId)
       resolvePendingConfirmationInPlace(confirmationId, t('aiLayout.confirmedDone'))
       showToast(t('aiLayout.actionCompleted'), 'success')
-    } catch (err: any) {
-      showToast(err.message || t('aiLayout.sendFailed'), 'error')
+    } catch (err) {
+      showToast(errorMessage(err) || t('aiLayout.sendFailed'), 'error')
     } finally {
       setResolvingConfirmationId(null)
     }
@@ -81,8 +83,8 @@ export default function CopilotPage() {
     try {
       await cancelPendingAction(confirmationId)
       resolvePendingConfirmationInPlace(confirmationId, t('aiLayout.cancelledNothing'))
-    } catch (err: any) {
-      showToast(err.message || 'Failed to cancel action', 'error')
+    } catch (err) {
+      showToast(errorMessage(err) || 'Failed to cancel action', 'error')
     } finally {
       setResolvingConfirmationId(null)
     }
@@ -92,8 +94,8 @@ export default function CopilotPage() {
     try {
       await clearConversation(NO_PAGE_CONTEXT)
       setMessages([])
-    } catch (err: any) {
-      showToast(err.message || 'Failed to start a new conversation', 'error')
+    } catch (err) {
+      showToast(errorMessage(err) || 'Failed to start a new conversation', 'error')
     }
   }
 

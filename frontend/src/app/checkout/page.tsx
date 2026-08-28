@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { apiClient } from '@/lib/api/apiClient'
+import { apiClient, ApiError } from '@/lib/api/apiClient'
 import { getActiveCart } from '@/lib/cart'
 import { useCart } from '@/context/CartContext'
 import { useOrders } from '@/hooks/useOrders'
@@ -11,6 +11,8 @@ import { useRouter } from 'next/navigation'
 import { StripeCardForm } from '@/components/checkout/StripeCardForm'
 import { DigitalDownloads } from '@/components/orders/DigitalDownloads'
 import { useUiLocale } from '@/context/UiLocaleContext'
+import { errorMessage } from '@/lib/errors'
+import type { Order, Coupon } from '@/lib/types'
 
 export default function CheckoutPage() {
   const { t } = useUiLocale()
@@ -24,7 +26,7 @@ export default function CheckoutPage() {
   const { showToast } = useToast()
   const [error, setError] = useState<string>('')
   const [submitting, setSubmitting] = useState(false)
-  const [payingOrder, setPayingOrder] = useState<any>(null)
+  const [payingOrder, setPayingOrder] = useState<Order | null>(null)
   const [paymentDone, setPaymentDone] = useState(false)
   const [payBusy, setPayBusy] = useState(false)
   const [stripePayment, setStripePayment] = useState<{ clientSecret: string; publishableKey: string } | null>(null)
@@ -34,7 +36,7 @@ export default function CheckoutPage() {
   const [city, setCity] = useState('')
   const [phone, setPhone] = useState('')
   const [couponInput, setCouponInput] = useState('')
-  const [appliedCoupon, setAppliedCoupon] = useState<any>(null)
+  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null)
   const [applyingCoupon, setApplyingCoupon] = useState(false)
   const [shippingMethodId, setShippingMethodId] = useState<number>(1)
   const router = useRouter()
@@ -65,8 +67,8 @@ export default function CheckoutPage() {
       )
       setAppliedCoupon(coupon)
       showToast(t('checkout.couponAppliedToast', { code: coupon.code }), 'success')
-    } catch (e: any) {
-      showToast(e.message || t('checkout.invalidCoupon'), 'error')
+    } catch (e) {
+      showToast(errorMessage(e) || t('checkout.invalidCoupon'), 'error')
     } finally {
       setApplyingCoupon(false)
     }
@@ -115,11 +117,11 @@ export default function CheckoutPage() {
 
       setPayingOrder(order)
       clear()
-    } catch (e: any) {
-      if (e.status === 401) {
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 401) {
         setError(t('checkout.loginToCheckout'))
       } else {
-        setError(e.message || t('checkout.placeFailed'))
+        setError(errorMessage(e) || t('checkout.placeFailed'))
       }
     } finally {
       setSubmitting(false)
@@ -145,8 +147,8 @@ export default function CheckoutPage() {
         setPayingOrder(result)
         setPaymentDone(true)
       }
-    } catch (e: any) {
-      setError(e.message || t('checkout.paymentFailed'))
+    } catch (e) {
+      setError(errorMessage(e) || t('checkout.paymentFailed'))
     } finally {
       setPayBusy(false)
     }
@@ -159,8 +161,8 @@ export default function CheckoutPage() {
     try {
       await cancelOrder(payingOrder.id)
       setPayingOrder(null)
-    } catch (e: any) {
-      setError(e.message || t('checkout.cancelFailed'))
+    } catch (e) {
+      setError(errorMessage(e) || t('checkout.cancelFailed'))
     } finally {
       setPayBusy(false)
     }

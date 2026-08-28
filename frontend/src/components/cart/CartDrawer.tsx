@@ -45,6 +45,9 @@ export function CartDrawer() {
           {cart?.items.map(item => (
             <div key={item.id} data-testid="cart-item" className="flex gap-3 border-b border-border pb-4">
               {item.image_url ? (
+                // Arbitrary vendor-supplied URLs with no host allowlist, same
+                // reasoning as storefront/ProductCard.
+                // eslint-disable-next-line @next/next/no-img-element
                 <img src={resolveImageUrl(item.image_url)} alt={item.product_name} className="w-16 h-16 object-cover rounded-lg flex-shrink-0" />
               ) : (
                 <div

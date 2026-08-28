@@ -14,6 +14,23 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useCurrency } from '@/hooks/useCurrency'
 import { useUiLocale } from '@/context/UiLocaleContext'
 import { formatUiChartDay, formatUiDate } from '@/lib/utils'
+import type { Order, Product, ProductReview } from '@/lib/types'
+
+interface DashboardMetrics {
+  data: { date?: string | null; total_sales: number; order_count: number }[]
+  total_revenue: number
+  orders_count: number
+  aov: number
+}
+
+interface TopProduct {
+  sku: string
+  product_name: string
+  quantity_sold: number
+  revenue: number
+}
+
+type LowStockProduct = Product & { _stock: number }
 
 const kpiContainerVariants = {
   hidden: {},
@@ -38,16 +55,16 @@ export function DashboardClient({
   lowStockProducts,
   recentReviews,
 }: {
-  metrics: any
-  topProducts: any[]
-  recentOrders: any[]
-  lowStockProducts: any[]
-  recentReviews: any[]
+  metrics: DashboardMetrics | null
+  topProducts: TopProduct[]
+  recentOrders: Order[]
+  lowStockProducts: LowStockProduct[]
+  recentReviews: ProductReview[]
 }) {
   const { formatCurrency } = useCurrency()
   const { t, locale } = useUiLocale()
   const prefersReducedMotion = useReducedMotion()
-  const chartData = metrics?.data?.map((d: any) => ({
+  const chartData = metrics?.data?.map((d) => ({
     date: formatUiChartDay(d.date, locale),
     Revenue: d.total_sales,
     Orders: d.order_count
@@ -129,7 +146,7 @@ export function DashboardClient({
                     />
                     <Tooltip
                       contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', background: 'var(--popover)', color: 'var(--popover-foreground)' }}
-                      formatter={(value: any) => [formatCurrency(value), t('dashboard.revenue')]}
+                      formatter={(value) => [formatCurrency(Number(value) || 0), t('dashboard.revenue')]}
                     />
                     <Area type="monotone" dataKey="Revenue" stroke="var(--chart-1)" strokeWidth={2} fillOpacity={1} fill="url(#colorRevenue)" />
                   </AreaChart>
@@ -230,7 +247,7 @@ export function DashboardClient({
                   <p className="text-muted-foreground text-sm py-4">{t('dashboard.inventoryHealthy')}</p>
                 ) : (
                   <div className="space-y-4">
-                    {lowStockProducts.map((p: any) => {
+                    {lowStockProducts.map((p) => {
                       const level = stockLevel(p._stock)
                       return (
                         <div key={p.id} className="flex items-center justify-between border-b border-border pb-3 last:border-0 last:pb-0">
@@ -254,15 +271,14 @@ export function DashboardClient({
                   <p className="text-muted-foreground text-sm py-4">{t('reviews.none')}</p>
                 ) : (
                   <div className="space-y-4">
-                    {recentReviews.map((r: any) => (
+                    {recentReviews.map((r) => (
                       <div key={r.id} className="flex items-start space-x-3 border-b border-border pb-3 last:border-0 last:pb-0">
                         <div className="flex bg-yellow-50 text-yellow-600 px-1.5 py-1 rounded-md text-xs font-bold items-center shrink-0">
                           {r.rating} <Star className="h-3 w-3 ml-0.5 fill-yellow-500 text-yellow-500" />
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-foreground">{r.title}</p>
                           <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{r.comment}</p>
-                          <p className="text-xs text-muted-foreground/70 mt-1">{t('reviews.by', { name: r.reviewer_name })}</p>
+                          <p className="text-xs text-muted-foreground/70 mt-1">{t('reviews.by', { name: r.customer_name ?? t('orders.guest') })}</p>
                         </div>
                       </div>
                     ))}

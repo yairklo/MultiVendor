@@ -2,10 +2,11 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ApiError, getProduct, getProductReviews } from '@/lib/api/serverApiClient'
 import { ProductDetailView } from './ProductDetailView'
+import type { Product } from '@/lib/types'
 
 type Params = { tenant_slug: string; slug: string }
 
-function productText(product: any) {
+function productText(product: Product) {
   const name = typeof product.name === 'object' ? (product.name?.en || product.name?.he) : product.name
   const description = typeof product.description === 'object' ? (product.description?.en || product.description?.he) : product.description
   return { name, description }
@@ -42,7 +43,7 @@ export default async function ProductDetailPage({
 }) {
   const { tenant_slug: tenantSlug, slug } = await params
 
-  let product: any = null
+  let product: Product | null = null
   let error = ''
   try {
     product = await getProduct(tenantSlug, slug)

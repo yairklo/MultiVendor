@@ -29,19 +29,21 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { errorMessage } from '@/lib/errors'
+import type { Category } from '@/lib/types'
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   slug: z.string().min(2, { message: 'Slug must be at least 2 characters.' }).regex(/^[a-z0-9-]+$/, 'Slug must be lowercase alphanumeric and hyphens only.'),
 })
 
-export function CategoriesPageClient({ initialCategories }: { initialCategories: any[] }) {
+export function CategoriesPageClient({ initialCategories }: { initialCategories: Category[] }) {
   const { fetchCategories, createCategory, deleteCategory } = useCategories()
   const { showToast } = useToast()
   const { confirm } = useConfirm()
   const { t, locale } = useUiLocale()
   const { supportedLanguages } = useStorefrontTheme()
-  const [categories, setCategories] = useState<any[]>(initialCategories)
+  const [categories, setCategories] = useState<Category[]>(initialCategories)
   const [loading, setLoading] = useState(false)
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -70,8 +72,8 @@ export function CategoriesPageClient({ initialCategories }: { initialCategories:
       form.reset()
       await loadCategories()
       showToast(t('categories.created'), 'success')
-    } catch (error: any) {
-      showToast(error.message || t('categories.createFailed'), 'error')
+    } catch (error) {
+      showToast(errorMessage(error) || t('categories.createFailed'), 'error')
     } finally {
       setLoading(false)
     }
@@ -88,8 +90,8 @@ export function CategoriesPageClient({ initialCategories }: { initialCategories:
       await deleteCategory(id)
       await loadCategories()
       showToast(t('categories.deleted'), 'success')
-    } catch (error: any) {
-      showToast(error.message || t('categories.deleteFailed'), 'error')
+    } catch (error) {
+      showToast(errorMessage(error) || t('categories.deleteFailed'), 'error')
     }
   }
 

@@ -17,6 +17,7 @@ import { StorefrontLanguageSwitcher } from './StorefrontLanguageSwitcher'
 import { isRtlLang } from '@/lib/languages'
 import { resolveImageUrl } from '@/lib/media'
 import { isUsableTenantSlug } from '@/lib/tenantSlug'
+import type { Product, Category } from '@/lib/types'
 
 const PAGE_SIZE = 12
 
@@ -56,19 +57,19 @@ export function CatalogListing({
   /** When set, shown instead of the classic grid while the shopper is just browsing (no active search/category filter). */
   aiPage?: StorePageSchema | null
   /** Server-fetched page-1/no-filter data, seeded in so first paint doesn't show a loading skeleton. */
-  initialProducts?: any[]
+  initialProducts?: Product[]
   initialMeta?: PaginationMeta | null
-  initialCategories?: any[]
+  initialCategories?: Category[]
   /** Home page only — the seller's uploaded banner sits above the catalog / AI layout. */
   showBrandBanner?: boolean
 }) {
   const router = useRouter()
   const { showToast } = useToast()
-  const [products, setProducts] = useState<any[]>(initialProducts ?? [])
+  const [products, setProducts] = useState<Product[]>(initialProducts ?? [])
   const [productsLoading, setProductsLoading] = useState(!initialProducts)
   const [meta, setMeta] = useState<PaginationMeta | null>(initialMeta ?? null)
   const [page, setPage] = useState(1)
-  const [categories, setCategories] = useState<any[]>(initialCategories ?? [])
+  const [categories, setCategories] = useState<Category[]>(initialCategories ?? [])
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [categoryId, setCategoryId] = useState('')
@@ -107,7 +108,13 @@ export function CatalogListing({
   const showAiPage = isBrowsing && !!aiPage && aiPage.sections.length > 0
 
   useEffect(() => {
-    const handle = setTimeout(() => setDebouncedSearch(search), 300)
+    const handle = setTimeout(() => {
+      setDebouncedSearch(search)
+      // Folded in here (rather than a separate effect keyed off
+      // debouncedSearch/categoryId) so resetting to page 1 on a new
+      // search/filter isn't a second synchronous setState-in-effect.
+      setPage(1)
+    }, 300)
     return () => clearTimeout(handle)
   }, [search])
 
@@ -123,10 +130,6 @@ export function CatalogListing({
       .catch((e) => console.error('Failed to load categories:', e))
   }, [tenantSlug])
 
-  useEffect(() => {
-    setPage(1)
-  }, [debouncedSearch, categoryId])
-
   const skipInitialProductsFetch = useRef(!!initialProducts)
   useEffect(() => {
     if (skipInitialProductsFetch.current) {
@@ -134,10 +137,14 @@ export function CatalogListing({
       return
     }
     if (showAiPage) return
-    if (!isUsableTenantSlug(tenantSlug)) {
-      setProductsLoading(false)
-      return
-    }
+    // No setState here for an unusable tenantSlug -- the render below already
+    // only shows the loading skeleton while productsLoading AND the slug is
+    // usable, so there's nothing to reset.
+    if (!isUsableTenantSlug(tenantSlug)) return
+    // Standard fetch-on-deps-change effect (React's own docs example for
+    // data fetching does the same synchronous "start loading" set) -- the
+    // async work below is what can't move out of the effect body.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setProductsLoading(true)
     const params = new URLSearchParams({ page: String(page), page_size: String(PAGE_SIZE) })
     if (debouncedSearch) params.set('q', debouncedSearch)
@@ -192,7 +199,7 @@ export function CatalogListing({
           {categories.length > 0 && (
             <select
               value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
+              onChange={(e) => { setCategoryId(e.target.value); setPage(1) }}
               aria-label="Filter by category"
               className="rounded-lg border border-gray-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-blue-600"
             >
@@ -224,7 +231,7 @@ export function CatalogListing({
             initial={prefersReducedMotion ? undefined : 'hidden'}
             animate={prefersReducedMotion ? undefined : 'show'}
           >
-            {productsLoading
+            {productsLoading && isUsableTenantSlug(tenantSlug)
               ? Array.from({ length: 8 }, (_, i) => <ProductCardSkeleton key={i} />)
               : products.map((p) => (
                   <motion.div key={p.id} variants={prefersReducedMotion ? undefined : gridItemVariants}>

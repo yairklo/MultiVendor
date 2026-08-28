@@ -19,6 +19,7 @@ import {
   formatDate, nativeSelectClass, type SubscriptionPlanAdmin, type TenantAdmin,
 } from '../types'
 import { isUsableTenantSlug } from '@/lib/tenantSlug'
+import { errorMessage } from '@/lib/errors'
 
 function statusVariant(status: string) {
   if (status === 'active') return 'success' as const
@@ -92,8 +93,8 @@ export function TenantsClient({
       await apiClient(`/api/v1/super-admin/tenants/${tenant.id}/status?status=${next}`, { method: 'PATCH' })
       await reload()
       showToast(next === 'active' ? 'Store activated' : 'Store suspended', 'success')
-    } catch (err: any) {
-      showToast(err.message || 'Failed to update status', 'error')
+    } catch (err) {
+      showToast(errorMessage(err) || 'Failed to update status', 'error')
     } finally {
       setBusyId(null)
     }
@@ -109,8 +110,8 @@ export function TenantsClient({
       })
       await reload()
       showToast('Plan updated', 'success')
-    } catch (err: any) {
-      showToast(err.message || 'Failed to change plan', 'error')
+    } catch (err) {
+      showToast(errorMessage(err) || 'Failed to change plan', 'error')
     } finally {
       setBusyId(null)
     }
@@ -128,8 +129,8 @@ export function TenantsClient({
         tenant.show_all_products_in_marketplace ? 'Removed from marketplace' : 'Added to marketplace',
         'success',
       )
-    } catch (err: any) {
-      showToast(err.message || 'Failed to update marketplace', 'error')
+    } catch (err) {
+      showToast(errorMessage(err) || 'Failed to update marketplace', 'error')
     } finally {
       setBusyId(null)
     }
@@ -155,8 +156,8 @@ export function TenantsClient({
       setForm(EMPTY_FORM)
       setShowCreate(false)
       await reload()
-    } catch (err: any) {
-      showToast(err.message || 'Failed to create store', 'error')
+    } catch (err) {
+      showToast(errorMessage(err) || 'Failed to create store', 'error')
     } finally {
       setCreating(false)
     }

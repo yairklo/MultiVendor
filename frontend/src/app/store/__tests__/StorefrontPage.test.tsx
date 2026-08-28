@@ -6,6 +6,7 @@ import { CartProvider } from '@/context/CartContext'
 import { ToastProvider } from '@/context/ToastContext'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../../mocks/server'
+import type { StorePageSchema } from '@/lib/ai/types'
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
@@ -16,7 +17,7 @@ vi.mock('next/navigation', () => ({
 // with RTL — this exercises CatalogListing, the client component that
 // actually owns the catalog/search/AI-page-vs-classic-grid behavior.
 describe('CatalogListing', () => {
-  let mockCartItems: any[]
+  let mockCartItems: { id: number; variant_id: number; product_name: string; product_type: string; sku: string; attributes: Record<string, string>; unit_price: number; quantity: number; total_price: number }[]
 
   beforeEach(() => {
     localStorage.clear()
@@ -57,7 +58,7 @@ describe('CatalogListing', () => {
     )
   })
 
-  const renderCatalog = (aiPage: any = null) =>
+  const renderCatalog = (aiPage: StorePageSchema | null = null) =>
     render(
       <ToastProvider>
         <CartProvider>
@@ -107,7 +108,7 @@ describe('CatalogListing', () => {
   })
 
   describe('with an AI-managed home layout', () => {
-    const aiPage = {
+    const aiPage: StorePageSchema = {
       page_key: 'home',
       page_type: 'static_page',
       title: 'Home',
