@@ -20,11 +20,20 @@ class Settings(BaseSettings):
     STORAGE_TYPE: str = "local"
     UPLOAD_DIR: str = "./uploads"
 
+    # "console" (default) logs the email instead of sending it -- zero
+    # external calls until configured, same pattern as PAYMENT_PROVIDER.
+    # "smtp" sends for real via aiosmtplib using the SMTP_* settings below.
+    EMAIL_PROVIDER: str = "console"
     SMTP_HOST: str | None = None
     SMTP_PORT: int | None = None
     SMTP_USER: str | None = None
     SMTP_PASSWORD: str | None = None
     EMAILS_FROM_EMAIL: str | None = None
+
+    # Base URL of the Next.js frontend, used to build links (e.g. password
+    # reset) that get emailed to users -- must not have a trailing slash.
+    FRONTEND_URL: str = "http://localhost:3000"
+    PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: int = 30
 
     # Left unset by default: the AI layout/product assistant runs in a
     # deterministic mock mode with no external calls until a real key is set.

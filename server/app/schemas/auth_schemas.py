@@ -43,6 +43,19 @@ class TokenResponse(BaseModel):
         }
     })
 
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+    model_config = ConfigDict(json_schema_extra={
+        "example": {"email": "user@example.com"}
+    })
+
+class PasswordResetConfirmRequest(BaseModel):
+    token: str
+    new_password: str = Field(..., min_length=8)
+    model_config = ConfigDict(json_schema_extra={
+        "example": {"token": "eyJhbGciOiJIUzI1NiIsInR...", "new_password": "newSecurePassword2026!"}
+    })
+
 class UserProfileUpdateRequest(BaseModel):
     full_name: Optional[str] = Field(None, min_length=2, max_length=100)
     password: Optional[str] = Field(None, min_length=8)

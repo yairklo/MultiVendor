@@ -1,6 +1,9 @@
+import hashlib
+import secrets
+
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from fastapi import HTTPException, status
+from fastapi import BackgroundTasks, HTTPException, status
 from jose import JWTError, jwt
 from app.models.user import User, UserStoreMembership
 from app.models.tenant import Tenant, SubscriptionPlan, TenantSettings
@@ -14,8 +17,10 @@ from app.core.security import (
 from app.core.config import settings
 from app.db.session import redis_client
 from app.db.tenant_context import unscoped
+from app.services.email_service import send_password_reset_email
 
 REFRESH_KEY_PREFIX = "refresh:"
+PASSWORD_RESET_KEY_PREFIX = "pwreset:"
 
 
 async def _persist_refresh_jti(jti: str, user_id: int) -> None:
@@ -183,6 +188,51 @@ async def register_customer_global_service(req: CustomerRegisterRequest, db: Asy
 
     access, refresh = await _issue_token_pair(user)
     return _token_response(user, access, refresh)
+
+
+def _hash_reset_token(token: str) -> str:
+    # Redis holds the hash, never the raw token, so a Redis dump alone can't
+    # be used to reset anyone's password -- the raw token only ever exists
+    # in the email itself and the user's browser.
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+async def request_password_reset_service(email: str, bg_tasks: BackgroundTasks, db: AsyncSession) -> None:
+    user_result = await db.execute(select(User).where(User.email == email))
+    user = user_result.scalar_one_or_none()
+
+    # Whether or not the account exists, the caller gets the same response --
+    # sending the email (or not) happens after that response via bg_tasks, so
+    # this must not raise or branch on anything an attacker could time.
+    if user and user.is_active:
+        token = secrets.token_urlsafe(32)
+        await redis_client.set(
+            f"{PASSWORD_RESET_KEY_PREFIX}{_hash_reset_token(token)}",
+            str(user.id),
+            ex=settings.PASSWORD_RESET_TOKEN_EXPIRE_MINUTES * 60,
+        )
+        reset_link = f"{settings.FRONTEND_URL}/reset-password?token={token}"
+        bg_tasks.add_task(send_password_reset_email, user.email, reset_link)
+
+
+async def confirm_password_reset_service(token: str, new_password: str, db: AsyncSession) -> None:
+    invalid_exception = HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired reset link")
+
+    key = f"{PASSWORD_RESET_KEY_PREFIX}{_hash_reset_token(token)}"
+    user_id = await redis_client.get(key)
+    if user_id is None:
+        raise invalid_exception
+    # Single-use: delete before doing anything else so a crash below can't
+    # leave a still-valid token sitting in Redis.
+    await redis_client.delete(key)
+
+    result = await db.execute(select(User).where(User.id == int(user_id)))
+    user = result.scalar_one_or_none()
+    if user is None or not user.is_active:
+        raise invalid_exception
+
+    user.password_hash = get_password_hash(new_password)
+    await db.commit()
 
 
 async def register_customer_service(tenant_slug: str, req: CustomerRegisterRequest, db: AsyncSession) -> User:

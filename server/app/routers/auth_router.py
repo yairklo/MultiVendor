@@ -2,8 +2,14 @@ from fastapi import APIRouter, Depends, status, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.schemas.tenant_schemas import TenantRegisterRequest
-from app.schemas.auth_schemas import TokenResponse, LoginRequest, CustomerRegisterRequest, UserResponse, RefreshTokenRequest
-from app.services.auth_service import register_tenant_service, login_service, register_customer_service, register_customer_global_service, refresh_tokens_service
+from app.schemas.auth_schemas import (
+    TokenResponse, LoginRequest, CustomerRegisterRequest, UserResponse, RefreshTokenRequest,
+    PasswordResetRequest, PasswordResetConfirmRequest,
+)
+from app.services.auth_service import (
+    register_tenant_service, login_service, register_customer_service, register_customer_global_service,
+    refresh_tokens_service, request_password_reset_service, confirm_password_reset_service,
+)
 from fastapi import Request
 from app.core.limiter import limiter
 
@@ -66,6 +72,32 @@ async def refresh_tokens(request: Request, req: RefreshTokenRequest, db: AsyncSe
 @limiter.limit("10/minute")
 async def register_customer_global(request: Request, req: CustomerRegisterRequest, db: AsyncSession = Depends(get_db)):
     return await register_customer_global_service(req, db)
+
+@auth_router.post(
+    "/password-reset/request",
+    status_code=status.HTTP_200_OK,
+    summary="Request a Password Reset",
+    description="Sends a password-reset link to the given email if an active account owns it. Always returns the same generic response so the endpoint can't be used to enumerate registered emails.",
+)
+@limiter.limit("5/minute")
+async def request_password_reset(request: Request, req: PasswordResetRequest, bg_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
+    await request_password_reset_service(req.email, bg_tasks, db)
+    return {"detail": "If that email is registered, a password reset link has been sent."}
+
+@auth_router.post(
+    "/password-reset/confirm",
+    status_code=status.HTTP_200_OK,
+    summary="Confirm a Password Reset",
+    description="Sets a new password using a token from a password-reset email. The token is single-use and expires shortly after it's issued.",
+    responses={
+        400: {"description": "Reset token is missing, invalid, expired, or already used."},
+        422: {"description": "Validation error in request payload."}
+    }
+)
+@limiter.limit("10/minute")
+async def confirm_password_reset(request: Request, req: PasswordResetConfirmRequest, db: AsyncSession = Depends(get_db)):
+    await confirm_password_reset_service(req.token, req.new_password, db)
+    return {"detail": "Password updated successfully."}
 
 @auth_router.post(
     "/register-customer/{tenant_slug}",

@@ -88,7 +88,12 @@ export default function CustomerLoginPage() {
               />
             </div>
             <div>
-              <label className="mb-2 block text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{t('auth.password')}</label>
+              <div className="mb-2 flex items-center justify-between">
+                <label className="block text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{t('auth.password')}</label>
+                <a href="/forgot-password" className="text-xs font-medium text-primary hover:underline">
+                  {t('auth.forgotPasswordLink')}
+                </a>
+              </div>
               <input
                 type="password"
                 required

@@ -23,6 +23,9 @@ pillow==11.3.0
 # Payments (real Stripe integration behind PAYMENT_PROVIDER=stripe; mock is the default)
 stripe==11.6.0
 
+# Transactional email (password reset, etc.) behind EMAIL_PROVIDER=smtp; console-log is the default
+aiosmtplib==3.0.2
+
 # Shipping (Israeli courier integration; see app/services/shipping_service.py).
 # israel-shipping-sdk is vendored into this monorepo at packages/israel-shipping-sdk
 # (its own standalone project, with its own tests/CI) -- installed editable so

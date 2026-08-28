@@ -224,3 +224,79 @@ async def test_get_me_profile_authenticated_vs_unauthenticated(async_client: Asy
     assert response.status_code == 200
     assert response.json()["role"] == "user"
     assert response.json()["email"] == "customer@gmail.com"
+
+
+async def _request_reset_and_capture_link(async_client: AsyncClient, monkeypatch, email: str) -> str | None:
+    sent = {}
+
+    async def fake_send(to, reset_link):
+        sent["to"] = to
+        sent["link"] = reset_link
+
+    monkeypatch.setattr("app.services.auth_service.send_password_reset_email", fake_send)
+    response = await async_client.post("/api/v1/auth/password-reset/request", json={"email": email})
+    assert response.status_code == 200
+    return sent.get("link")
+
+@pytest.mark.asyncio
+async def test_password_reset_flow_success(async_client: AsyncClient, db_session, monkeypatch):
+    link = await _request_reset_and_capture_link(async_client, monkeypatch, "customer@gmail.com")
+    assert link is not None
+    token = link.split("token=")[1]
+
+    confirm = await async_client.post(
+        "/api/v1/auth/password-reset/confirm",
+        json={"token": token, "new_password": "brandNewPassword123"},
+    )
+    assert confirm.status_code == 200
+
+    login = await async_client.post("/api/v1/auth/login", json={
+        "email": "customer@gmail.com", "password": "brandNewPassword123",
+    })
+    assert login.status_code == 200
+
+    old_login = await async_client.post("/api/v1/auth/login", json={
+        "email": "customer@gmail.com", "password": "password",
+    })
+    assert old_login.status_code == 401
+
+@pytest.mark.asyncio
+async def test_password_reset_request_unknown_email_returns_generic_success_without_sending(
+    async_client: AsyncClient, db_session, monkeypatch
+):
+    sent = []
+
+    async def fake_send(to, reset_link):
+        sent.append(to)
+
+    monkeypatch.setattr("app.services.auth_service.send_password_reset_email", fake_send)
+    response = await async_client.post(
+        "/api/v1/auth/password-reset/request", json={"email": "nobody@nowhere.com"}
+    )
+    assert response.status_code == 200
+    assert sent == []
+
+@pytest.mark.asyncio
+async def test_password_reset_confirm_invalid_token_rejected(async_client: AsyncClient, db_session):
+    response = await async_client.post(
+        "/api/v1/auth/password-reset/confirm",
+        json={"token": "not-a-real-token", "new_password": "brandNewPassword123"},
+    )
+    assert response.status_code == 400
+
+@pytest.mark.asyncio
+async def test_password_reset_token_is_single_use(async_client: AsyncClient, db_session, monkeypatch):
+    link = await _request_reset_and_capture_link(async_client, monkeypatch, "customer@gmail.com")
+    token = link.split("token=")[1]
+
+    first = await async_client.post(
+        "/api/v1/auth/password-reset/confirm",
+        json={"token": token, "new_password": "firstNewPassword123"},
+    )
+    assert first.status_code == 200
+
+    second = await async_client.post(
+        "/api/v1/auth/password-reset/confirm",
+        json={"token": token, "new_password": "secondNewPassword123"},
+    )
+    assert second.status_code == 400
