@@ -21,6 +21,7 @@ const baseProduct = {
   base_price: 42,
   primary_image_url: 'https://picsum.photos/seed/classic-tee/400/400',
   variants: [{ id: 101, stock_quantity: 5 }],
+  product_type: 'physical' as string,
 }
 
 describe('ProductCard', () => {

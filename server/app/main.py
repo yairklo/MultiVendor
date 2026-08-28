@@ -99,13 +99,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:3005",
-        "http://127.0.0.1:3005",
-        "http://localhost:3001",
-    ],
+    allow_origins=settings.cors_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -129,6 +123,17 @@ async def global_exception_middleware(request: Request, call_next):
             content={"detail": "An internal server error occurred.", "code": "INTERNAL_ERROR"}
         )
 
+@app.middleware("http")
+async def security_headers_middleware(request: Request, call_next):
+    # A CSP isn't set here: this is a JSON API (plus /docs and /uploads), and
+    # the frontend -- the thing actually rendering untrusted HTML/JS -- is
+    # where a content policy belongs (see frontend/next.config.ts).
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    return response
+
 @app.get("/health")
 async def health_check():
     db_status = "connected"
@@ -151,9 +156,10 @@ async def health_check():
         content={"status": "healthy" if status_code == 200 else "unhealthy", "database": db_status, "redis": redis_status}
     )
 
-@app.get("/health/error_test")
-async def health_error_test():
-    raise Exception("Test error")
+if settings.APP_ENV != "production":
+    @app.get("/health/error_test")
+    async def health_error_test():
+        raise Exception("Test error")
 
 
 from app.routers.auth_router import auth_router

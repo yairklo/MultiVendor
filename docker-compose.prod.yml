@@ -1,0 +1,101 @@
+# Production stack: mysql + redis + backend + frontend + Caddy (reverse
+# proxy / automatic HTTPS). Local dev keeps using docker-compose.yml (just
+# mysql+redis) with the app run natively via .claude/launch.json -- this
+# file is for an actual VPS deploy.
+#
+# Usage: copy .env.example to .env, fill it in, then:
+#   docker compose -f docker-compose.prod.yml up -d --build
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:latest
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    environment:
+      APP_ENV: production
+      SECRET_KEY: ${SECRET_KEY}
+      DATABASE_URL: mysql+aiomysql://root:${DB_ROOT_PASSWORD}@mysql:3306/${DB_NAME}
+      REDIS_URL: redis://redis:6379/0
+      CORS_ALLOWED_ORIGINS: https://${APP_DOMAIN}
+      FRONTEND_URL: https://${APP_DOMAIN}
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-console}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      EMAILS_FROM_EMAIL: ${EMAILS_FROM_EMAIL:-}
+      PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-mock}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      SHIPPING_CREDENTIALS_ENCRYPTION_KEY: ${SHIPPING_CREDENTIALS_ENCRYPTION_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        # Baked into the client bundle at build time -- must be the public
+        # https:// API domain, not the internal "backend:8000" service name.
+        NEXT_PUBLIC_API_BASE_URL: https://${API_DOMAIN}
+    environment:
+      JWT_SECRET_KEY: ${SECRET_KEY}
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
+      API_DOMAIN: ${API_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+      - frontend
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+  redis_data:
+  uploads:
+  caddy_data:
+  caddy_config:

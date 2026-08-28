@@ -1,0 +1,26 @@
+# Reverse proxy + automatic HTTPS for the two platform domains (the
+# storefront/admin frontend and the API). Both env vars are required --
+# Caddy will fail to start without them, which is what we want (no silent
+# fallback to a placeholder domain in prod). Local dev doesn't use this file
+# at all (see docker-compose.yml / .claude/launch.json).
+#
+# Per-tenant custom domains (a seller pointing their own domain at their
+# storefront) are not handled here yet -- that needs on_demand_tls gated by
+# a backend "is this domain verified" check, which isn't wired up (see
+# Tenant.custom_domain in server/app/models/tenant.py). This file only
+# terminates TLS for the platform's own two domains.
+{
+	email {$ACME_EMAIL}
+}
+
+{$APP_DOMAIN} {
+	encode gzip
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+	reverse_proxy frontend:3000
+}
+
+{$API_DOMAIN} {
+	encode gzip
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+	reverse_proxy backend:8000
+}

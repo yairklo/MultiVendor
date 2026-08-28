@@ -1,0 +1,14 @@
+# Keeps the build context small and out of image layers -- none of this is
+# needed inside the containers (dependencies are reinstalled fresh in the
+# build stage; local envs/venvs/caches never belong in an image).
+.git
+**/node_modules
+**/.next
+**/venv
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+frontend/e2e
+**/.env
+**/.env.local
+server/uploads
