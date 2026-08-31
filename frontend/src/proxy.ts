@@ -9,6 +9,64 @@ import crypto from 'crypto'
 // server-side only and the value must never ship to the client bundle.
 const JWT_SECRET = process.env.JWT_SECRET_KEY
 
+// The platform's own frontend domain (see docker-compose.prod.yml / Caddyfile).
+// Unset in local dev, which means isPlatformHost() below always returns true --
+// no request is ever treated as a tenant custom domain locally.
+const APP_DOMAIN = process.env.APP_DOMAIN
+
+// Reaches the backend directly over the docker network in prod
+// (docker-compose.prod.yml sets this to http://backend:8000) rather than
+// bouncing back out through Caddy/the public API domain. Falls back to the
+// same base URL the browser bundle uses, which is already correct for local
+// dev (both point at localhost).
+const INTERNAL_API_BASE_URL = process.env.INTERNAL_API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
+
+// Routes that exist at the platform level and are never part of a specific
+// store's /store/{slug} tree -- these pass through unrewritten even when
+// reached via a tenant's custom domain. A tenant admin managing their store
+// is expected to do it from the platform's own domain, not their public
+// storefront domain (the same split Shopify/most SaaS platforms use), so
+// /admin and /super-admin are deliberately NOT reachable via a custom domain.
+const PLATFORM_ONLY_PATHS = [
+  '/checkout', '/login', '/signup', '/forgot-password', '/reset-password',
+  '/account', '/marketplace', '/admin', '/super-admin', '/crm',
+]
+
+// This proxy runs as a long-lived Node.js process (not the stateless Edge
+// runtime), so a module-level cache actually persists across requests and
+// saves a resolve-domain round trip to the backend on every single page
+// view of a custom domain.
+const DOMAIN_CACHE_TTL_MS = 5 * 60 * 1000
+const domainCache = new Map<string, { slug: string | null; expiresAt: number }>()
+
+async function resolveTenantSlugForHost(hostname: string): Promise<string | null> {
+  const cached = domainCache.get(hostname)
+  if (cached && cached.expiresAt > Date.now()) return cached.slug
+
+  let slug: string | null = null
+  try {
+    const res = await fetch(
+      `${INTERNAL_API_BASE_URL}/api/v1/store/resolve-domain?domain=${encodeURIComponent(hostname)}`
+    )
+    if (res.ok) {
+      const data = await res.json()
+      if (typeof data.tenant_slug === 'string') slug = data.tenant_slug
+    }
+  } catch {
+    // Backend unreachable -- resolve to "unclaimed" rather than throwing, so
+    // a transient backend outage 404s just this request instead of taking
+    // down the proxy for every request on every host.
+  }
+
+  domainCache.set(hostname, { slug, expiresAt: Date.now() + DOMAIN_CACHE_TTL_MS })
+  return slug
+}
+
+function isPlatformHost(hostname: string): boolean {
+  if (!APP_DOMAIN) return true
+  return hostname === APP_DOMAIN || hostname === 'localhost' || hostname === '127.0.0.1'
+}
+
 function base64UrlDecode(input: string): Buffer | null {
   try {
     return Buffer.from(input, 'base64url')
@@ -83,9 +141,28 @@ function canAccessAdmin(payload: Record<string, unknown>): boolean {
   )
 }
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
+  const { pathname, hostname } = request.nextUrl
+
+  if (!isPlatformHost(hostname)) {
+    const isPlatformOnlyPath = PLATFORM_ONLY_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))
+    if (isPlatformOnlyPath) {
+      return NextResponse.next()
+    }
+
+    const slug = await resolveTenantSlugForHost(hostname)
+    if (!slug) {
+      return new NextResponse('Not Found', { status: 404 })
+    }
+
+    // The address bar keeps showing the seller's own domain; Next.js
+    // internally serves the matching /store/{slug} route underneath it.
+    const url = request.nextUrl.clone()
+    url.pathname = `/store/${slug}${pathname === '/' ? '' : pathname}`
+    return NextResponse.rewrite(url)
+  }
+
   const token = request.cookies.get('token')?.value
-  const { pathname } = request.nextUrl
 
   const isAdmin = pathname.startsWith('/admin') && !pathname.startsWith('/admin/login')
   const isSuperAdmin = pathname.startsWith('/super-admin')
@@ -119,9 +196,9 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    '/admin/:path*',
-    '/super-admin/:path*',
-    '/crm/:path*'
-  ]
+  // Broadened from just /admin, /super-admin, /crm: the custom-domain
+  // rewrite above has to see every request (a seller's storefront root, a
+  // product page, ...), not just the admin surfaces. Excludes static assets
+  // -- those are served identically regardless of which domain asked for them.
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 }

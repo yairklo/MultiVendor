@@ -6,7 +6,7 @@ A multi-tenant e-commerce SaaS platform: any seller can spin up their own storef
 
 ## What it does
 
-- **Multi-tenant storefronts** — each seller (`tenant`) gets an isolated catalog, theme, and admin dashboard under its own slug (`/store/{slug}`), with optional custom domain support.
+- **Multi-tenant storefronts** — each seller (`tenant`) gets an isolated catalog, theme, and admin dashboard under its own slug (`/store/{slug}`), with a real custom-domain option: point a seller's own domain at the server and Caddy + the Next.js proxy serve their store from it automatically (see `server/app/routers/domain_router.py`, `frontend/src/proxy.ts`, `Caddyfile`).
 - **Row-level tenant isolation** — every tenant-scoped table carries a `tenant_id`; access is enforced at the query layer, not just the UI (see `tests/test_tenant_isolation_rls.py`).
 - **Catalog & inventory** — products with variants, images, reviews, digital goods (no shipping/stock tracking), and bundles.
 - **Cart & checkout with real concurrency control** — Redis distributed locks (`lock:tenant:{id}:variant:{id}`) prevent overselling under concurrent checkouts.
@@ -18,6 +18,8 @@ A multi-tenant e-commerce SaaS platform: any seller can spin up their own storef
 - **i18n / RTL** — product and page content stored as JSON per-locale; storefront UI toggles `dir="rtl"`/`"ltr"`.
 - **Super admin** — platform-wide tenant management, audit log, storefront template catalog.
 - **Auth** — JWT-based, with per-store role membership (`UserStoreMembership`: `tenant_admin` / `customer`), password reset via transactional email, and a signed-cookie session that Next.js's proxy layer verifies (HMAC, not just decoded) before allowing `/admin`, `/super-admin`, `/crm` routes through.
+- **Object storage** — pluggable: local disk (default, zero setup) or any S3-compatible bucket (AWS S3, Cloudflare R2, Backblaze B2) behind `STORAGE_TYPE=s3` (see `app/services/storage_service.py`).
+- **Error tracking** — optional Sentry integration (`SENTRY_DSN`), a no-op with zero external calls until set (see `app/core/observability.py`).
 
 ## Project layout
 
@@ -106,12 +108,18 @@ CI (`.github/workflows/ci.yml`) runs backend migrations + pytest, and frontend t
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
-See the comments in `.env.example`, `Caddyfile`, and `docker-compose.prod.yml` for what's required vs. optional at each stage (e.g. per-tenant custom domains are modeled in the DB but not yet wired into Caddy's TLS termination).
+See the comments in `.env.example`, `Caddyfile`, and `docker-compose.prod.yml` for what's required vs. optional at each stage.
+
+**Backups:** `deploy/backup_db.sh` dumps the production MySQL DB (gzip, pruned after `BACKUP_RETENTION_DAYS`, default 14) — run it on the VPS via cron:
+
+```bash
+0 3 * * * cd /path/to/MultiVendor && ./deploy/backup_db.sh >> /var/log/multivendor-backup.log 2>&1
+```
+
+`deploy/restore_db.sh <dump.sql.gz>` restores one back (destructive; asks for confirmation).
 
 ## Known gaps / not yet production-ready
 
-- No error tracking / observability (e.g. Sentry) wired in.
-- No automated DB backup job for the production MySQL volume.
-- Uploaded files are stored on local disk (`STORAGE_TYPE=local`), not object storage — fine for a single instance, not for horizontal scaling.
-- Per-tenant custom domains aren't terminated by Caddy yet (see `Tenant.custom_domain` and the note at the top of `Caddyfile`).
 - No load testing has been done against the Redis-lock checkout path.
+- No CD — CI (`.github/workflows/ci.yml`) tests and builds on every push, but deploying to the VPS is still a manual `git pull && docker compose ... up -d --build`.
+- Secrets live in a plain `.env` on the VPS, not a secret manager — reasonable for a course/small deployment, not for a team-scale one.

@@ -77,6 +77,8 @@
 +-----------------------------------+
 ```
 
+**`Tenants.custom_domain`:** a seller-set hostname (e.g. `www.sellerbrand.com`), resolved at request time by `GET /api/v1/store/resolve-domain?domain=...` (`server/app/routers/domain_router.py`) into a tenant slug — used by both Caddy's `on_demand_tls` cert issuance and the Next.js proxy's storefront rewrite (`frontend/src/proxy.ts`). There's no separate domain-ownership challenge: only whoever controls a domain's DNS can point it at this server in the first place, so DNS pointing here already is the proof, the same model Vercel/Shopify-style custom domains use.
+
 ---
 
 ## 3. Identity & Security

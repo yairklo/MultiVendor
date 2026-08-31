@@ -1,6 +1,8 @@
+import asyncio
 import io
 import re
 import uuid
+from functools import lru_cache
 from pathlib import Path
 
 from fastapi import HTTPException, UploadFile, status
@@ -16,11 +18,51 @@ MAX_DIGITAL_FILE_BYTES = 25 * 1024 * 1024
 ZIP_EXTS = {"zip", "epub", "docx"}
 
 
+@lru_cache(maxsize=1)
+def _s3_client():
+    # Cached: building a boto3 client does a small amount of config
+    # resolution work we don't want repeated on every single upload.
+    # lru_cache rather than a module-level global so tests can clear it
+    # (`_s3_client.cache_clear()`) after monkeypatching settings.
+    import boto3
+
+    return boto3.client(
+        "s3",
+        endpoint_url=settings.S3_ENDPOINT_URL,
+        region_name=settings.S3_REGION,
+        aws_access_key_id=settings.S3_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.S3_SECRET_ACCESS_KEY,
+    )
+
+
+async def _persist(raw: bytes, tenant_id: int, subdir: str, filename: str) -> str:
+    """Writes a file to whichever backend STORAGE_TYPE selects and returns
+    the public URL it's reachable at. Shared by save_image and
+    save_digital_file so there's exactly one place that knows about the two
+    backends.
+    """
+    key = f"{tenant_id}/{subdir}/{filename}"
+
+    if settings.STORAGE_TYPE == "s3":
+        if not settings.S3_BUCKET or not settings.S3_PUBLIC_URL_BASE:
+            raise RuntimeError("STORAGE_TYPE=s3 requires S3_BUCKET and S3_PUBLIC_URL_BASE to be set")
+        # boto3 is synchronous (blocking network I/O); run it off the event
+        # loop so one upload doesn't stall every other request, same
+        # reasoning as the Stripe provider's asyncio.to_thread calls.
+        await asyncio.to_thread(_s3_client().put_object, Bucket=settings.S3_BUCKET, Key=key, Body=raw)
+        return f"{settings.S3_PUBLIC_URL_BASE.rstrip('/')}/{key}"
+
+    tenant_dir = Path(settings.UPLOAD_DIR) / str(tenant_id) / subdir
+    tenant_dir.mkdir(parents=True, exist_ok=True)
+    (tenant_dir / filename).write_bytes(raw)
+    return f"/uploads/{key}"
+
+
 async def save_image(file: UploadFile, tenant_id: int, subdir: str = "products") -> str:
-    """Validates and persists an uploaded image to local disk, returning the
-    public URL path it will be served from (see the /uploads StaticFiles
-    mount in main.py). Raises HTTPException on anything invalid -- callers
-    don't need to re-validate.
+    """Validates and persists an uploaded image via _persist (local disk or
+    S3-compatible bucket, per STORAGE_TYPE), returning its public URL.
+    Raises HTTPException on anything invalid -- callers don't need to
+    re-validate.
     """
     raw = await file.read()
     if len(raw) > MAX_IMAGE_BYTES:
@@ -43,13 +85,8 @@ async def save_image(file: UploadFile, tenant_id: int, subdir: str = "products")
         )
 
     ext = FORMAT_TO_EXT[image_format]
-    tenant_dir = Path(settings.UPLOAD_DIR) / str(tenant_id) / subdir
-    tenant_dir.mkdir(parents=True, exist_ok=True)
-
     filename = f"{uuid.uuid4().hex}.{ext}"
-    (tenant_dir / filename).write_bytes(raw)
-
-    return f"/uploads/{tenant_id}/{subdir}/{filename}"
+    return await _persist(raw, tenant_id, subdir, filename)
 
 
 def _digital_file_ext(raw: bytes, original_name: str) -> str:
@@ -73,8 +110,8 @@ def _safe_stem(original_name: str) -> str:
 
 
 async def save_digital_file(file: UploadFile, tenant_id: int, subdir: str = "files") -> str:
-    """Persists a seller-uploaded digital good (PDF/ZIP/EPUB/DOCX) and returns
-    the public /uploads/... path. Magic-bytes, not the client filename, decide
+    """Persists a seller-uploaded digital good (PDF/ZIP/EPUB/DOCX) via _persist
+    and returns its public URL. Magic-bytes, not the client filename, decide
     the type — HTML/JS/executables are rejected.
     """
     raw = await file.read()
@@ -88,10 +125,5 @@ async def save_digital_file(file: UploadFile, tenant_id: int, subdir: str = "fil
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unsupported file type")
 
     ext = _digital_file_ext(raw, file.filename or "")
-    tenant_dir = Path(settings.UPLOAD_DIR) / str(tenant_id) / subdir
-    tenant_dir.mkdir(parents=True, exist_ok=True)
-
     filename = f"{uuid.uuid4().hex}_{_safe_stem(file.filename or 'file')}.{ext}"
-    (tenant_dir / filename).write_bytes(raw)
-
-    return f"/uploads/{tenant_id}/{subdir}/{filename}"
+    return await _persist(raw, tenant_id, subdir, filename)

@@ -9,12 +9,15 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.core.config import settings
+from app.core.observability import configure_observability
 import app.models  # Ensure all models are registered with SQLAlchemy
 from app.core.limiter import limiter
 from app.db.session import redis_client
 from sqlalchemy import text
 from app.db.session import AsyncSessionLocal
 from app.services.tasks import cleanup_abandoned_checkouts, cleanup_expired_guest_carts
+
+configure_observability()
 
 logger = logging.getLogger(__name__)
 CHECKOUT_CLEANUP_INTERVAL_SECONDS = 60
@@ -118,6 +121,11 @@ async def global_exception_middleware(request: Request, call_next):
         return await call_next(request)
     except Exception:
         logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
+        # This middleware is what turns the exception into a clean 500 response,
+        # which means it never propagates to Sentry's own ASGI instrumentation --
+        # report it explicitly instead. A no-op if SENTRY_DSN isn't set.
+        import sentry_sdk
+        sentry_sdk.capture_exception()
         return JSONResponse(
             status_code=500,
             content={"detail": "An internal server error occurred.", "code": "INTERNAL_ERROR"}
@@ -166,6 +174,7 @@ from app.routers.auth_router import auth_router
 from app.routers.customer_router import customer_router
 from app.routers.super_admin_router import super_admin_router
 from app.routers.storefront_router import storefront_router
+from app.routers.domain_router import domain_router
 from app.routers.cart_router import cart_router
 from app.routers.tenant_admin_router import tenant_admin_router
 from app.routers.ai_router import ai_router
@@ -176,6 +185,7 @@ app.include_router(auth_router)
 app.include_router(customer_router)
 app.include_router(super_admin_router)
 app.include_router(storefront_router)
+app.include_router(domain_router)
 app.include_router(cart_router)
 app.include_router(tenant_admin_router)
 app.include_router(ai_router)

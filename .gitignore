@@ -5,6 +5,7 @@ __pycache__/
 venv/
 uploads/
 test-results/
+backups/
 debug.py
 extract.py
 extract_ast.py

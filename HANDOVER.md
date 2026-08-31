@@ -10,8 +10,8 @@ Test suite, as of this update:
 
 | Suite | Count | Status |
 |---|---|---|
-| Backend (`pytest`) | 312 test functions | Green in CI on every push/PR |
-| Frontend unit/integration (`vitest`) | 82 tests | Green (verified locally) |
+| Backend (`pytest`) | 317 test functions | Green in CI on every push/PR |
+| Frontend unit/integration (`vitest`) | 87 tests | Green (verified locally) |
 | Frontend typecheck (`tsc --noEmit`) | — | Clean, 0 errors |
 | Frontend lint (`eslint`) | — | 0 errors, 6 minor warnings (non-blocking) |
 | E2E (`playwright`) | 11 spec files | Covered in CI history; see `docs/QA_AUDIT_REPORT.md` for the audit that established this baseline |
@@ -20,7 +20,7 @@ The database-isolation issue this file used to describe (test runs corrupting th
 
 ## Known gaps
 
-See the "Known gaps / not yet production-ready" section in [README.md](README.md) — no error tracking, no automated DB backups, local-disk file storage, per-tenant custom domains not yet wired into Caddy's TLS termination, no load testing on the checkout path.
+See the "Known gaps / not yet production-ready" section in [README.md](README.md) — currently: no load testing on the checkout path, no CD (deploys are a manual `git pull` + `docker compose up -d --build`), and secrets live in a plain `.env` on the VPS rather than a secret manager. Error tracking (Sentry), object storage (S3-compatible), DB backups, and per-tenant custom domains are all now implemented — see README.md's feature list.
 
 ## Where things live
 

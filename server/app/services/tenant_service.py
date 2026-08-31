@@ -22,7 +22,9 @@ async def update_tenant_service(tenant_slug: str, req: TenantUpdateSchema, db: A
         raise HTTPException(status_code=404, detail="Tenant not found")
         
     if req.custom_domain:
-        tenant.custom_domain = req.custom_domain
+        # Normalized so resolve_tenant_by_domain_service's lookup (fed a Host
+        # header, which browsers/Caddy always lowercase) reliably matches.
+        tenant.custom_domain = req.custom_domain.strip().lower()
 
     await db.commit()
 
@@ -45,6 +47,23 @@ async def update_tenant_service(tenant_slug: str, req: TenantUpdateSchema, db: A
         "settings": TenantSettingsSchema.model_validate(tenant.settings) if tenant.settings else None
     }
     return TenantResponse(**tenant_data)
+
+
+async def resolve_tenant_by_domain_service(domain: str, db: AsyncSession) -> str | None:
+    """Looks up which active tenant (if any) has claimed `domain` as its
+    Tenant.custom_domain. Used by the /domain-router's resolve-domain
+    endpoint, which in turn backs both Caddy's on_demand_tls "ask" check and
+    the Next.js proxy's custom-domain rewrite -- see docs/erd.md's note on
+    Tenant.custom_domain for the ownership model (DNS pointing at this
+    server IS the proof of control; there's no separate verification step).
+    """
+    domain = (domain or "").strip().lower()
+    if not domain:
+        return None
+    result = await db.execute(
+        select(Tenant.slug).where(Tenant.custom_domain == domain, Tenant.status == "active")
+    )
+    return result.scalar_one_or_none()
 
 
 async def update_marketplace_visibility_service(tenant_slug: str, req: TenantMarketplaceVisibilityUpdateSchema, db: AsyncSession) -> TenantResponse:

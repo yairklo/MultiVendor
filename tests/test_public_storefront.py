@@ -31,6 +31,42 @@ async def test_get_store_config_with_null_supported_languages(async_client: Asyn
     assert data["primary_color"] == "#123456"
 
 @pytest.mark.asyncio
+async def test_resolve_domain_for_claimed_active_tenant(async_client: AsyncClient, db_session):
+    from sqlalchemy import select
+    from app.models.tenant import Tenant
+
+    tenant = (await db_session.execute(select(Tenant).where(Tenant.slug == "tenant-a"))).scalar_one()
+    tenant.custom_domain = "www.sellerbrand.example"
+    await db_session.commit()
+
+    response = await async_client.get("/api/v1/store/resolve-domain?domain=www.sellerbrand.example")
+    assert response.status_code == 200
+    assert response.json() == {"tenant_slug": "tenant-a"}
+
+    # Case-insensitive, matching how browsers/Caddy normalize a Host header.
+    response = await async_client.get("/api/v1/store/resolve-domain?domain=WWW.SELLERBRAND.EXAMPLE")
+    assert response.status_code == 200
+    assert response.json() == {"tenant_slug": "tenant-a"}
+
+@pytest.mark.asyncio
+async def test_resolve_domain_unclaimed_domain_404s(async_client: AsyncClient):
+    response = await async_client.get("/api/v1/store/resolve-domain?domain=nobody-owns-this.example")
+    assert response.status_code == 404
+
+@pytest.mark.asyncio
+async def test_resolve_domain_suspended_tenant_404s(async_client: AsyncClient, db_session):
+    from sqlalchemy import select
+    from app.models.tenant import Tenant
+
+    tenant = (await db_session.execute(select(Tenant).where(Tenant.slug == "tenant-a"))).scalar_one()
+    tenant.custom_domain = "www.suspended-store.example"
+    tenant.status = "suspended"
+    await db_session.commit()
+
+    response = await async_client.get("/api/v1/store/resolve-domain?domain=www.suspended-store.example")
+    assert response.status_code == 404
+
+@pytest.mark.asyncio
 async def test_list_products_with_pagination_and_search(async_client: AsyncClient):
     response = await async_client.get("/api/v1/store/tenant-a/products?page=1&page_size=10&q=test&category_id=1")
     assert response.status_code == 200

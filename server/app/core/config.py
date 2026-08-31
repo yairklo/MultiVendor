@@ -17,8 +17,36 @@ class Settings(BaseSettings):
     
     REDIS_URL: str = "redis://127.0.0.1:6379/0"
     
+    # "local" (default) writes uploads to disk at UPLOAD_DIR, served back via
+    # the /uploads StaticFiles mount in main.py -- zero setup, but doesn't
+    # survive a redeploy that replaces the container and doesn't scale past
+    # one instance. "s3" uploads to any S3-compatible bucket instead (AWS S3,
+    # Cloudflare R2, Backblaze B2, ...) -- see app/services/storage_service.py.
     STORAGE_TYPE: str = "local"
     UPLOAD_DIR: str = "./uploads"
+    S3_BUCKET: str | None = None
+    # Leave unset for real AWS S3. Set to the provider's endpoint for an
+    # S3-compatible service, e.g. Cloudflare R2:
+    # "https://<account_id>.r2.cloudflarestorage.com".
+    S3_ENDPOINT_URL: str | None = None
+    S3_REGION: str = "auto"
+    S3_ACCESS_KEY_ID: str | None = None
+    S3_SECRET_ACCESS_KEY: str | None = None
+    # Public base URL uploaded files are served back from -- an R2.dev
+    # subdomain, a CDN in front of the bucket, or the bucket's own public
+    # endpoint. No trailing slash. Required when STORAGE_TYPE=s3.
+    S3_PUBLIC_URL_BASE: str | None = None
+
+    # Standard library `logging` level name for the whole app (see
+    # app/core/observability.py). "DEBUG" is noisy but useful locally;
+    # production should stay at "INFO" or above.
+    LOG_LEVEL: str = "INFO"
+
+    # Error tracking (https://sentry.io -- free tier covers a course/small
+    # production deployment). Left unset by default: no Sentry SDK
+    # initialization and zero external calls until this is set. See
+    # app/core/observability.py.
+    SENTRY_DSN: str | None = None
 
     # Comma-separated list of allowed CORS origins (e.g.
     # "https://app.example.com,https://admin.example.com"). Defaults to the
