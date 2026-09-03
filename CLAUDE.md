@@ -1,1 +1,2 @@
 - For UI/UX and animation tasks, follow guidelines in `./UI_UX_SKILL.md`
+- Before editing `frontend/`, read the durable lessons under `.agents/rules/` (e.g. `nextjs-client-components.md`) — they are glob-scoped to what they cover and take precedence over ad-hoc assumptions.
