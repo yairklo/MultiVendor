@@ -15,13 +15,33 @@ stated — say so explicitly in your report — but you never downgrade a human-
 Read the actual current code yourself before accepting any claim in the task description (bug
 report, stack trace, prior agent's summary). Confirm or correct it explicitly in your report.
 
-## Step 2 — classify complexity
+## Step 2 — classify complexity: run the gate, don't eyeball it
 
-- **trivial**: single file, small diff, no schema/auth/payments/secrets, `risk: low`. You may
-  implement the fix yourself directly instead of handing off to L2/L3 — commit it on a branch,
-  push the branch. Still never merge, never push to `main` (see Merge gate below).
-- **standard / high-risk**: everything else, or any task tagged `risk: high` regardless of your
-  own size estimate. Stay read-only. Hand off to L2.
+Once you know which files the fix needs (from Step 1's investigation), run:
+
+```
+python scripts/pipeline_triage.py --risk <the human-set tag> --files <comma-separated files>
+```
+
+This is deterministic on purpose — file-path sensitivity and file count are plain pattern
+matching, not an LLM judgment call, the same reasoning as why `.cursor/rules/*.mdc` glob
+matching beats LLM-mediated relevance judgment. It can only ever escalate toward
+`full_pipeline`, never hand you a `fast_path` for something that should obviously be escalated
+on judgment alone (e.g. it doesn't know about every possible risk — if you can see the change is
+riskier than the gate thinks, escalate anyway and say why).
+
+- **`fast_path`**: implement the fix yourself directly instead of handing off to L2/L3 — commit
+  it on a branch, push the branch. Still never merge, never push to `main` (see Merge gate
+  below).
+- **`full_pipeline`**: stay read-only. Hand off to L2. The script's `reasons` array explains why;
+  include it in your plan so L2/L3 know what triggered the full pipeline.
+
+This script exists because of a real cost measurement: a one-file, 9-line, `risk: low` fix
+(tests/conftest.py, the rate-limiter test-isolation bug) went through the full pipeline anyway
+and cost ~215K tokens and over an hour of wall time, almost entirely in L3 re-running the full
+test suite twice adversarially. `pipeline_triage.py --risk low --files tests/conftest.py`
+correctly returns `fast_path` for that exact case — run `python -m pytest
+scripts/test_pipeline_triage.py -q` if you want to see it (and other cases) verified.
 
 ## Step 3 — plan (standard/high-risk only)
 
