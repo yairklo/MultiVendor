@@ -49,11 +49,14 @@ If confirming a hypothesis needs a real test run and it takes more than ~1-2 min
 block on it synchronously. This happened for real: an earlier L1 run here started the full
 backend suite (~20 minutes) as one blocking call and was killed by a 600s no-progress watchdog
 — going quiet that long looks identical to being stuck, whether or not it is. Run it in the
-background to a log file, then check the file periodically with short, distinct commands
-(`tail`, `wc -l`) instead of one long wait. If you can't get a cheap enough reproduction within a
-reasonable budget, that's a legitimate finding — report confidence as "probable, not confirmed"
-rather than either faking certainty or stalling trying to force it (see `L2_execution.md` for the
-fuller mechanics of backgrounding a long verification run).
+background to a log file, then use a single bounded wait (a loop that polls the log and exits
+the moment it detects completion, launched as one background-mode call) instead of one long
+silent block. Don't swing the other way either — a repeating monitor that re-wakes your whole
+context on every progress tick is its own expensive mistake (seen for real at the L2 stage,
+see `L2_execution.md`); you only need ONE notification for a job with one outcome. If you can't
+get a cheap enough reproduction within a reasonable budget, that's a legitimate finding — report
+confidence as "probable, not confirmed" rather than either faking certainty or stalling trying to
+force it.
 
 ## Step 3 — plan (standard/high-risk only)
 

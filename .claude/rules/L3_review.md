@@ -15,10 +15,12 @@ at all. **A review verdict must be based on results you actually observed finish
 a process you started but didn't wait out.
 
 - If verification needs a long-running process, wait for it before writing your final report — but
-  "wait" does not mean one silent blocking call. Run it in the background to a log file and check
-  the file periodically with short, distinct commands, the same reasoning as `L2_execution.md`'s
-  "never block silently" rule: a stage that goes quiet for 10+ minutes gets killed by a
-  no-progress watchdog whether or not it's actually stuck, so waiting has to stay visible.
+  "wait" means neither one silent blocking call nor a repeating monitor that re-wakes your whole
+  context on every progress tick (both happened for real, at the L1 and L2 stages respectively —
+  see `L2_execution.md`). Run it in the background to a log file, then issue one bounded wait: a
+  loop that polls the log and exits the moment it detects completion, launched as a single
+  background-mode call. One notification when it's actually done — nothing silent, nothing
+  repeated for information nobody needs.
 - If you truly cannot wait (hard time/turn budget), do not present that as a finished review.
   Return verdict `INCOMPLETE`, state exactly what ran to completion and what didn't, and hand
   back whatever partial evidence you have — so the orchestrator knows to verify directly rather
