@@ -37,6 +37,13 @@ cryptography==46.0.0
 -e ../packages/israel-shipping-sdk
 respx==0.23.1  # test-only: mocks the courier HTTP calls in tests/test_shipping.py
 
+# Test runner (test-only). pytest.ini sets asyncio_mode = auto, which needs pytest-asyncio
+# specifically, not just pytest. Neither was ever listed here -- a clean CI runner has nothing
+# preinstalled, so "Run backend tests" failed with "No module named pytest". Versions match
+# what's already proven working in local development.
+pytest==9.1.1
+pytest-asyncio==1.4.0
+
 # Error tracking (behind SENTRY_DSN; a no-op with zero external calls until set -- see app/core/observability.py)
 sentry-sdk[fastapi]==2.43.0
 
