@@ -37,6 +37,12 @@ jobs:
       # same database.
       DATABASE_URL: mysql+aiomysql://root:rootpassword@127.0.0.1:3306/multivendor_test
       REDIS_URL: redis://127.0.0.1:6379/0
+      # Fernet key for tests/test_shipping.py -- app/core/crypto.py raises RuntimeError
+      # (not a graceful no-op, unlike PAYMENT_PROVIDER/STORAGE_TYPE's optional keys) when
+      # this is unset, so shipping-config tests always need *a* valid key. Test-only,
+      # unrelated to any real deployment's key -- generated fresh for this workflow with
+      # `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`.
+      SHIPPING_CREDENTIALS_ENCRYPTION_KEY: 1lY-uGR_nVhJPeed5kYHnG-42pwwyu7QkjhhjqT3thQ=
     steps:
       - uses: actions/checkout@v4
 
