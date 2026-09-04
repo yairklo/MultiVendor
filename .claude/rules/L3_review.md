@@ -26,12 +26,23 @@ a process you started but didn't wait out.
   back whatever partial evidence you have — so the orchestrator knows to verify directly rather
   than trust an implied pass.
 
-## Re-run broader than the plan's own scope
+## Re-run broader than the plan's own scope — but scope the cost to the actual blast radius
 
-Whenever it's feasible, re-run the full relevant test suite yourself — not just the tests L1/L2
-focused on. A narrow-scope fix can pass its own targeted tests while still regressing something
-else; that's exactly the kind of thing L3 exists to catch, and a plan/execution stage narrowly
-focused on one bug has no reason to have checked it.
+Don't default to a full-suite run for every change. **Default to the tests actually touched by
+the diff's blast radius** (the changed file(s) plus anything that imports/depends on them); run
+the full suite only when the change plausibly affects something shared — a fixture, a singleton,
+a config default, anything other tests implicitly rely on. A narrow, single-function fix inside
+one already-tested file doesn't need a 20-minute full-suite run to prove it didn't regress
+something unrelated.
+
+When the change *does* touch shared state (this repo's own pilot case: a shared pytest fixture
+in `tests/conftest.py`), a full-suite run is warranted — but run it **once**, not twice. The
+pilot that motivated this file ran the full suite twice (a baseline-vs-fix differential, by
+temporarily reverting the change) to adversarially rule out a regression, and that doubled an
+already-expensive ~20-minute run for marginal extra confidence. Cheaper alternatives that give
+similar confidence: compare against CI's last known-good run on `main` instead of a second local
+run, or if you must run something twice, re-run only the subset of tests near the shared
+fixture rather than the full ~300+ test suite both times.
 
 ## Verdict
 
