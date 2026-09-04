@@ -31,9 +31,46 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 import redis.asyncio as redis
 from app.core.security import create_access_token
 from app.core.limiter import limiter
+from app.db.session import get_db, TenantAwareSession
 
 engine = create_async_engine(DATABASE_URL, echo=False)
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
+
+# HTTP requests made through the ASGI transport in tests otherwise resolve
+# Depends(get_db)/Depends(get_tenant_db) to app/db/session.py's OWN engine --
+# a second, independently-pooled connection to the same multivendor_test
+# schema, racing against the engine above for the whole test session. That
+# dual-pool setup is the probable (not confirmed) cause of intermittent
+# `OperationalError 1412 (Table definition has changed, please retry
+# transaction)` failures. Overriding get_db to hand out sessions from the
+# engine above closes that gap.
+#
+# Sessions handed to routes must still be TenantAwareSession (not a plain
+# AsyncSession): app/db/session.py registers its tenant-isolation query
+# rewriting and write-guarding (do_orm_execute / before_flush) specifically
+# on TenantAwareSyncSession. A plain session would silently stop enforcing
+# tenant scoping for every endpoint call made in tests, which is a much
+# bigger behavior change than "share a connection pool" and would undermine
+# exactly the isolation guarantees tests like test_tenant_session.py and
+# the tenant-isolation assertions elsewhere rely on. So this override reuses
+# TenantAwareSession, bound to this module's engine, rather than the plain
+# AsyncSessionLocal above (which stays as-is for db_session/auto_clear_db,
+# where bypassing tenant scoping for direct fixture setup is intentional).
+_TestTenantSessionLocal = async_sessionmaker(engine, class_=TenantAwareSession, expire_on_commit=False)
+
+
+async def _override_get_db():
+    async with _TestTenantSessionLocal() as session:
+        yield session
+
+
+# get_tenant_db = get_db (same function object, see app/db/session.py), so
+# this single entry covers both dependencies. Set at module scope (not in a
+# fixture): test_concurrency_and_locks.py builds its own
+# ASGITransport(app=app, ...) client directly, bypassing the async_client
+# fixture, and app.dependency_overrides is keyed on the app singleton, so a
+# fixture-scoped override would miss that client.
+app.dependency_overrides[get_db] = _override_get_db
 
 # Setup Redis connection
 REDIS_URL = "redis://127.0.0.1:6379/0"
