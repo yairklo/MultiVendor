@@ -1,0 +1,12 @@
+[
+  {
+    "id": 1,
+    "title": "Reset slowapi rate limiter state between tests",
+    "area": "tests",
+    "files": [
+      "tests/conftest.py"
+    ],
+    "description": "Import `limiter` from `app.core.limiter` in tests/conftest.py and call `limiter.reset()` inside the existing autouse `auto_clear_db` fixture (function-scoped, runs before every test), alongside the DB reset. Root cause: slowapi's default in-memory rate-limit storage lives for the whole pytest process and is keyed by client IP via `get_remote_address`, which is constant across all requests under httpx's ASGITransport in tests. Since auto_clear_db resets DB state per test but never resets the limiter, rate-limit counters accumulate across the full session in alphabetical test-file order: test_auth_and_onboarding.py partially exhausts the /auth/login 10/minute bucket before test_infrastructure.py::test_rate_limiting_and_error_handling runs its own loop (causing 'assert 429 != 429'), and test_cart_and_checkout.py / test_concurrency_and_locks.py / test_marketplace.py exhaust the cart/marketplace checkout 20/minute bucket before test_payments.py and test_v2_feature_expansions.py run their checkout-dependent tests (causing 'assert 429 == 201'). Calling limiter.reset() before each test clears slowapi's MemoryStorage so every test starts with a clean rate-limit budget, matching the isolation auto_clear_db already provides for DB state. No production code, no rate-limit values, and no dependencies change.",
+    "status": "planned"
+  }
+]
