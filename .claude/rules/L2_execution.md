@@ -33,6 +33,17 @@ run it in the background, writing output to a file, then check the file periodic
 distinct tool calls (`tail`, `wc -l`) rather than one long wait. Each check is itself visible
 progress. Never issue a single command that blocks silently for 10+ minutes.
 
+## A "completed" report has to mean actually completed
+
+This happened for real too: an L2 run reported finishing this stage while its own text said a
+full-suite verification was "in progress in the background" and "I'll report back once the
+monitor notifies me" — the same shape of problem `L3_review.md` documents for reviewers, just at
+the execution stage. If you started a background verification run and your own turn is ending
+before it's actually finished, that is not a completed stage. Either stay active and keep
+checking (visibly — see above) until it genuinely finishes, or if you truly must stop first, say
+explicitly in your report that verification is still pending and what specifically hasn't
+finished yet — don't let a "completed" status imply results that don't exist yet.
+
 ## Commit
 
 Commit on the branch with a message explaining root cause + fix. Push the feature branch.
