@@ -14,8 +14,11 @@ checked the actual test artifacts by hand and found the background run never cap
 at all. **A review verdict must be based on results you actually observed finishing**, never on
 a process you started but didn't wait out.
 
-- If verification needs a long-running process, block and wait for it before writing your final
-  report. Do not return control with it still in flight.
+- If verification needs a long-running process, wait for it before writing your final report — but
+  "wait" does not mean one silent blocking call. Run it in the background to a log file and check
+  the file periodically with short, distinct commands, the same reasoning as `L2_execution.md`'s
+  "never block silently" rule: a stage that goes quiet for 10+ minutes gets killed by a
+  no-progress watchdog whether or not it's actually stuck, so waiting has to stay visible.
 - If you truly cannot wait (hard time/turn budget), do not present that as a finished review.
   Return verdict `INCOMPLETE`, state exactly what ran to completion and what didn't, and hand
   back whatever partial evidence you have — so the orchestrator knows to verify directly rather

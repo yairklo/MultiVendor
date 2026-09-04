@@ -43,6 +43,18 @@ test suite twice adversarially. `pipeline_triage.py --risk low --files tests/con
 correctly returns `fast_path` for that exact case — run `python -m pytest
 scripts/test_pipeline_triage.py -q` if you want to see it (and other cases) verified.
 
+## Investigating? Never block silently on a long run
+
+If confirming a hypothesis needs a real test run and it takes more than ~1-2 minutes, don't
+block on it synchronously. This happened for real: an earlier L1 run here started the full
+backend suite (~20 minutes) as one blocking call and was killed by a 600s no-progress watchdog
+— going quiet that long looks identical to being stuck, whether or not it is. Run it in the
+background to a log file, then check the file periodically with short, distinct commands
+(`tail`, `wc -l`) instead of one long wait. If you can't get a cheap enough reproduction within a
+reasonable budget, that's a legitimate finding — report confidence as "probable, not confirmed"
+rather than either faking certainty or stalling trying to force it (see `L2_execution.md` for the
+fuller mechanics of backgrounding a long verification run).
+
 ## Step 3 — plan (standard/high-risk only)
 
 Write a minimal plan to `.claude/plan.json`:

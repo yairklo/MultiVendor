@@ -21,6 +21,18 @@ whenever the tooling is reachable. If required infra (DB, Redis, network) isn't 
 locally, say so plainly — don't silently skip verification and don't imply success you didn't
 observe.
 
+## Long-running verification: never block silently
+
+This happened for real, not hypothetically: an L1 stage was killed after a 600s no-progress
+watchdog because it started the full backend suite (~20 minutes) and waited on it as a single
+blocking call. A stage that goes quiet for that long looks identical to a stage that's stuck,
+whether or not it actually is.
+
+If a verification step takes longer than a couple of minutes (a full test suite, a long build):
+run it in the background, writing output to a file, then check the file periodically with short,
+distinct tool calls (`tail`, `wc -l`) rather than one long wait. Each check is itself visible
+progress. Never issue a single command that blocks silently for 10+ minutes.
+
 ## Commit
 
 Commit on the branch with a message explaining root cause + fix. Push the feature branch.
