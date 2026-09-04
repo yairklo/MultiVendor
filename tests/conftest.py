@@ -30,6 +30,7 @@ from app.main import app
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 import redis.asyncio as redis
 from app.core.security import create_access_token
+from app.core.limiter import limiter
 
 engine = create_async_engine(DATABASE_URL, echo=False)
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
@@ -147,6 +148,14 @@ async def auto_clear_db():
     # recreation, which is the dominant cost of this fixture in practice.
     from sqlalchemy import text
     global _clear_db_tables_cache
+
+    # slowapi's default in-memory rate-limit storage lives for the whole
+    # pytest process and is keyed by client IP via get_remote_address, which
+    # is constant across all requests under httpx's ASGITransport in tests.
+    # Without this, rate-limit counters accumulate across the full session
+    # (in alphabetical test-file order) even though the DB is reset per test
+    # below. Reset it here too so every test starts with a clean budget.
+    limiter.reset()
 
     async with engine.begin() as conn:
         await conn.execute(text('SET FOREIGN_KEY_CHECKS=0'))
