@@ -1,2 +1,3 @@
 - For UI/UX and animation tasks, follow guidelines in `./UI_UX_SKILL.md`
 - Before editing `frontend/`, read the durable lessons under `.agents/rules/` (e.g. `nextjs-client-components.md`) — they are glob-scoped to what they cover and take precedence over ad-hoc assumptions.
+- For multi-step AI pipeline tasks (plan → execute → review), follow `.claude/rules/L1_architecture.md`, `L2_execution.md`, `L3_review.md`. Only a human merges PRs — no agent stage ever merges or pushes to `main`.

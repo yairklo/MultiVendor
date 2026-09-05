@@ -2,7 +2,7 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
@@ -14,7 +14,8 @@ import app.models  # Ensure all models are registered with SQLAlchemy
 from app.core.limiter import limiter
 from app.db.session import redis_client
 from sqlalchemy import text
-from app.db.session import AsyncSessionLocal
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.db.session import AsyncSessionLocal, get_db
 from app.services.tasks import cleanup_abandoned_checkouts, cleanup_expired_guest_carts
 
 configure_observability()
@@ -143,13 +144,12 @@ async def security_headers_middleware(request: Request, call_next):
     return response
 
 @app.get("/health")
-async def health_check():
+async def health_check(db: AsyncSession = Depends(get_db)):
     db_status = "connected"
     redis_status = "connected"
-    
+
     try:
-        async with AsyncSessionLocal() as session:
-            await session.execute(text("SELECT 1"))
+        await db.execute(text("SELECT 1"))
     except Exception:
         db_status = "error"
         
