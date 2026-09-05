@@ -43,6 +43,26 @@ actually done, without a multi-minute silent block and without repeatedly re-pay
 cost for interim progress nobody needs to see. Don't use a mechanism designed for repeated
 ongoing events (a persistent monitor/watcher) for something that only has one outcome to report.
 
+## Diagnose connection errors before retrying — don't idle-wait for warm-up
+
+This recurred in a sibling project (JoinUpApp) running this same pattern, despite the rule
+above already being written down there. An L2 run hit a transient `ECONNREFUSED` from the
+shared dev DB (a cold-start/wake delay, not a real failure — reachable again within a minute),
+and instead of diagnosing the error class, re-ran the identical test 3 times, each time going
+idle to be "notified" — which replayed its entire accumulated context on every idle tick. Four
+such cycles cost ~405K tokens before an outside check confirmed the DB was fine and it just
+needed to run the command directly.
+
+- If the same command fails identically more than once, diagnose the actual error before
+  retrying again. A connection error (`ECONNREFUSED` etc.) means "is the dependency even
+  reachable right now," not "is my code wrong" — check that directly (a trivial one-off
+  query/ping) before assuming either.
+- For a command expected to finish in under a minute or two once the environment is warm, just
+  run it as a normal foreground call. The background+bounded-wait pattern is for genuinely long
+  steps, not to wait out a few seconds of connection warm-up. Going idle "waiting to be
+  notified" more than once for the same verification step is this failure mode — stop, run the
+  command directly, report the real result.
+
 ## A "completed" report has to mean actually completed
 
 If your own turn is ending before a verification run you started has actually finished, that is
