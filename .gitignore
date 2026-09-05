@@ -14,3 +14,7 @@ gen_hash.py
 gen_tokens.py
 test_conflict.py
 test_hash.py
+
+# Per-task pipeline scratch artifact (see .claude/rules/L1_architecture.md) --
+# never meant to be committed to main, only to a task branch if at all.
+.claude/plan.json

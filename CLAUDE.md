@@ -1,1 +1,2 @@
 - For UI/UX and animation tasks, follow guidelines in `./UI_UX_SKILL.md`
+- For multi-step AI pipeline tasks (plan → execute → review), follow `.claude/rules/L1_architecture.md`, `L2_execution.md`, `L3_review.md`. Only a human merges PRs — no agent stage ever merges or pushes to `main`.
