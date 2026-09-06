@@ -32,7 +32,7 @@ if [ "$CONFIRM" != "$DB_NAME" ]; then
   exit 1
 fi
 
-gunzip -c "$DUMP_FILE" | docker compose -f docker-compose.prod.yml exec -T mysql \
+gunzip -c "$DUMP_FILE" | docker compose -f docker-compose.prod.yaml exec -T mysql \
   mysql -u root -p"$DB_ROOT_PASSWORD" "$DB_NAME"
 
 echo "restore_db.sh: restored $DUMP_FILE into $DB_NAME"

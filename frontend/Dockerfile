@@ -9,7 +9,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY frontend/ .
 # NEXT_PUBLIC_* values are baked into the client bundle at build time, not
 # read at runtime -- must be passed as build args, not just env on the
-# running container. See docker-compose.prod.yml.
+# running container. See docker-compose.prod.yaml.
 ARG NEXT_PUBLIC_API_BASE_URL
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
 RUN npm run build

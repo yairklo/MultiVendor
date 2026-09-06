@@ -3,7 +3,7 @@
 No Vercel — frontend, backend, MySQL, Redis and Caddy all run on your VPS,
 managed by Coolify. This keeps the tenant custom-domain feature (Caddy's
 on-demand TLS) working exactly as designed, since it already assumes
-frontend+backend+Caddy live together (`docker-compose.prod.yml`, `Caddyfile`).
+frontend+backend+Caddy live together (`docker-compose.prod.yaml`, `Caddyfile`).
 
 No code changes were needed for this — the existing prod compose file already
 does what Coolify needs. This is a deployment runbook, not a code change.
@@ -59,7 +59,7 @@ python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().d
 
 1. Coolify → Project → **+ New Resource → Docker Compose**.
 2. Point it at this git repo, branch `main`, compose file path
-   `docker-compose.prod.yml` (repo root — the build contexts inside it
+   `docker-compose.prod.yaml` (repo root — the build contexts inside it
    already reference `server/Dockerfile` and `frontend/Dockerfile` relative
    to the repo root, so don't change the working directory).
 3. Do **not** let Coolify auto-inject domains/proxy labels for these

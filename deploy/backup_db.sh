@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Dumps the production MySQL database and prunes old dumps. Meant to run on
-# the VPS itself (not in a container) via cron, alongside docker-compose.prod.yml:
+# the VPS itself (not in a container) via cron, alongside docker-compose.prod.yaml:
 #
 #   0 3 * * * cd /path/to/MultiVendor && ./deploy/backup_db.sh >> /var/log/multivendor-backup.log 2>&1
 #
@@ -33,7 +33,7 @@ OUT_FILE="$BACKUP_DIR/${DB_NAME}_${TIMESTAMP}.sql.gz"
 
 # --single-transaction: a consistent snapshot without locking tables for the
 # duration of the dump (InnoDB, which this project's tables all use).
-docker compose -f docker-compose.prod.yml exec -T mysql \
+docker compose -f docker-compose.prod.yaml exec -T mysql \
   mysqldump -u root -p"$DB_ROOT_PASSWORD" --single-transaction --routines --triggers "$DB_NAME" \
   | gzip > "$OUT_FILE"
 

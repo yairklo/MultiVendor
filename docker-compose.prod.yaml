@@ -4,7 +4,7 @@
 # file is for an actual VPS deploy.
 #
 # Usage: copy .env.example to .env, fill it in, then:
-#   docker compose -f docker-compose.prod.yml up -d --build
+#   docker compose -f docker-compose.prod.yaml up -d --build
 services:
   mysql:
     image: mysql:8.0

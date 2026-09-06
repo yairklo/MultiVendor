@@ -9,13 +9,13 @@ import crypto from 'crypto'
 // server-side only and the value must never ship to the client bundle.
 const JWT_SECRET = process.env.JWT_SECRET_KEY
 
-// The platform's own frontend domain (see docker-compose.prod.yml / Caddyfile).
+// The platform's own frontend domain (see docker-compose.prod.yaml / Caddyfile).
 // Unset in local dev, which means isPlatformHost() below always returns true --
 // no request is ever treated as a tenant custom domain locally.
 const APP_DOMAIN = process.env.APP_DOMAIN
 
 // Reaches the backend directly over the docker network in prod
-// (docker-compose.prod.yml sets this to http://backend:8000) rather than
+// (docker-compose.prod.yaml sets this to http://backend:8000) rather than
 // bouncing back out through Caddy/the public API domain. Falls back to the
 // same base URL the browser bundle uses, which is already correct for local
 // dev (both point at localhost).
