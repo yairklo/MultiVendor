@@ -70,6 +70,14 @@ services:
       S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
       S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
       S3_PUBLIC_URL_BASE: ${S3_PUBLIC_URL_BASE:-}
+      # Optional -- automates adding a tenant's custom domain to the
+      # `frontend` service below via Coolify's API instead of an admin doing
+      # it by hand in the Coolify UI. Leave all three blank to keep that
+      # manual step. See docs/DEPLOY_COOLIFY.md and
+      # app/services/coolify_service.py.
+      COOLIFY_API_URL: ${COOLIFY_API_URL:-}
+      COOLIFY_API_TOKEN: ${COOLIFY_API_TOKEN:-}
+      COOLIFY_FRONTEND_APP_UUID: ${COOLIFY_FRONTEND_APP_UUID:-}
     # No `ports:` published to the host -- Coolify's Traefik reaches this
     # container over the internal docker network once you assign it a
     # domain in the Coolify UI (container port 8000).

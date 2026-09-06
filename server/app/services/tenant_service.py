@@ -8,6 +8,7 @@ from app.schemas.tenant_schemas import TenantSettingsSchema, TenantUpdateSchema,
 from app.schemas.ai_schemas import TopSellingProduct
 from app.services.order_service import PAID_ORDER_STATUSES
 from app.services.image_url_verifier import require_reachable_image_urls
+from app.services.coolify_service import sync_tenant_domain
 from datetime import datetime, timezone
 import json
 
@@ -20,13 +21,18 @@ async def update_tenant_service(tenant_slug: str, req: TenantUpdateSchema, db: A
     tenant = tenant_result.scalar_one_or_none()
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
-        
+
+    old_custom_domain = tenant.custom_domain
     if req.custom_domain:
         # Normalized so resolve_tenant_by_domain_service's lookup (fed a Host
         # header, which browsers/Caddy always lowercase) reliably matches.
         tenant.custom_domain = req.custom_domain.strip().lower()
 
     await db.commit()
+
+    # Best-effort, never raises -- see coolify_service's module docstring.
+    # No-op entirely unless the Coolify env vars are set (see .env.example).
+    await sync_tenant_domain(old_custom_domain, tenant.custom_domain)
 
     tenant_result = await db.execute(
         select(Tenant)
