@@ -51,6 +51,11 @@ docs/
 
 tests/              backend test suite (pytest, 300+ tests)
 db/                 raw SQL schema/seed reference
+
+.claude/, .agents/, scripts/pipeline_triage.py
+                    AI-agent development workflow config (task-risk gating, durable
+                    per-directory lessons) -- not application code, safe to ignore
+                    when reading the app itself.
 ```
 
 ## Running locally

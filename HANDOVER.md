@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-08-31.
+Last updated: 2026-09-06.
 
 ## Current state
 
@@ -17,6 +17,8 @@ Test suite, as of this update:
 | E2E (`playwright`) | 11 spec files | Covered in CI history; see `docs/QA_AUDIT_REPORT.md` for the audit that established this baseline |
 
 The database-isolation issue this file used to describe (test runs corrupting the dev DB via `IntegrityError`/duplicate entries) is resolved: `tests/conftest.py` now points the whole test run at a separate `multivendor_test` database, distinct from `multivendor_dev`, before `app.main` is even imported. `docker-compose.yml` (dev) and `.github/workflows/ci.yml` both reflect this split.
+
+**CI itself was red on every run since it was added** (`server/requirements.txt` never listed `pytest`/`pytest-asyncio`, so "Run backend tests" failed at `pip install` with "No module named pytest" before a single test could run; the frontend job separately failed typecheck on a missing `next typegen` step). Both are fixed on `main` now, along with a handful of real test-isolation bugs found while getting the suite green in CI specifically (not just locally): the rate limiter's in-memory counters weren't reset between tests, `tests/conftest.py` and the app's own request handling used two separate, unpooled DB engines against the same schema (intermittent `OperationalError 1412`), and `/health` bypassed that fix by opening its own session instead of using `Depends(get_db)`. All confirmed via a live run of the full suite (334 passed) against real MySQL/Redis, not just a clean `git diff`.
 
 ## Known gaps
 
