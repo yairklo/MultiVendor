@@ -148,6 +148,20 @@ async def test_create_product_review_auto_approved_by_default(async_client: Asyn
     assert any(r["comment"] == "Loved it" for r in list_resp.json())
 
 @pytest.mark.asyncio
+async def test_create_product_review_rejects_tenant_admin_reviewing_own_store(async_client: AsyncClient, seed_tokens, db_session):
+    # tenant_admin_a (user 2) is the tenant_admin of tenant-a -- without this
+    # guard, get_tenant_customer would happily pass them through (they hold
+    # an active membership, just not a 'customer' one), letting a seller
+    # post a review -- and, combined with a self-purchase, a *verified
+    # buyer* review -- on their own product.
+    await _delete_seeded_review(db_session)
+    headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+    payload = {"product_id": 1, "rating": 5, "comment": "Great product (mine)"}
+    response = await async_client.post("/api/v1/store/tenant-a/reviews", json=payload, headers=headers)
+    assert response.status_code == 403
+    assert "own store" in response.json()["detail"]
+
+@pytest.mark.asyncio
 async def test_create_product_review_requires_authentication(async_client: AsyncClient):
     payload = {"product_id": 1, "rating": 5, "comment": "Nice"}
     response = await async_client.post("/api/v1/store/tenant-a/reviews", json=payload)

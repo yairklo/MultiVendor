@@ -21,7 +21,7 @@ from app.schemas.marketplace_schemas import (
 )
 from app.schemas.order_schemas import OrderResponse, OrderItemResponse, PaymentIntentInfo
 from app.services.checkout_service import (
-    CartCookieAction, PLATFORM_COMMISSION_RATE, ensure_stock, round2 as _round2,
+    CartCookieAction, PLATFORM_COMMISSION_RATE, ensure_stock, get_admin_tenant_ids, round2 as _round2,
 )
 from app.services.order_service import ORDER_ITEMS_WITH_FILE, order_item_download_url
 from app.services.payments import get_payment_provider, get_or_create_payment_intent
@@ -341,6 +341,19 @@ async def marketplace_checkout_service(
     by_tenant: dict[int, list[MarketplaceCartItem]] = defaultdict(list)
     for item in cart_items:
         by_tenant[item.tenant_id].append(item)
+
+    # Reject the whole checkout rather than silently dropping the offending
+    # vendor's items -- a partial, unannounced charge would be far more
+    # confusing than asking the shopper to remove those items and retry.
+    # See checkout_service.get_admin_tenant_ids for why this exists at all.
+    admin_tenant_ids = await get_admin_tenant_ids(user_id, set(by_tenant.keys()), db)
+    if admin_tenant_ids:
+        names_result = await db.execute(select(Tenant.name).where(Tenant.id.in_(admin_tenant_ids)))
+        names = names_result.scalars().all()
+        raise HTTPException(
+            status_code=400,
+            detail=f"You can't purchase from your own store -- remove items from: {', '.join(names)}",
+        )
 
     needs_shipping_address = any(
         item.variant.product.product_type != 'digital'

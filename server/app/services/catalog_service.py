@@ -26,6 +26,7 @@ from fastapi.responses import StreamingResponse
 from typing import Any
 from app.services.i18n_utils import validate_i18n
 from app.services.image_url_verifier import require_reachable_image_urls
+from app.services.checkout_service import get_admin_tenant_ids
 
 async def get_store_config_service(tenant_slug: str, db: AsyncSession, admin_preview: bool = False) -> TenantSettingsSchema:
     result = await db.execute(select(Tenant).where(Tenant.slug == tenant_slug).options(selectinload(Tenant.settings)))
@@ -729,6 +730,9 @@ async def create_product_review_service(
     product = product_result.scalar_one_or_none()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
+
+    if await get_admin_tenant_ids(user_id, {tenant.id}, db):
+        raise HTTPException(status_code=403, detail="You can't review your own store's products")
 
     existing = await db.execute(
         select(ProductReview).where(

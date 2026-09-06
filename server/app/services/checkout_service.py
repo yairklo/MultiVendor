@@ -16,6 +16,7 @@ from app.models.tenant import Tenant
 from app.models.catalog import ProductVariant, Product, ProductBundleItem, tracks_inventory
 from app.models.order import Cart, CartItem, Order, OrderItem, ShippingMethod
 from app.models.coupon import Coupon
+from app.models.user import UserStoreMembership
 from app.schemas.order_schemas import (
     AddToCartRequest, CartResponse, CartItemResponse,
     CheckoutRequest, OrderResponse, OrderItemResponse
@@ -42,6 +43,30 @@ def ensure_stock(variant: ProductVariant, quantity: int) -> None:
 
 def round2(value: Decimal) -> Decimal:
     return value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+
+async def get_admin_tenant_ids(user_id: int, tenant_ids: set[int], db: AsyncSession) -> set[int]:
+    """Which of `tenant_ids` this user holds a tenant_admin membership at.
+
+    Shared by this module, marketplace_service (multi-vendor checkout) and
+    catalog_service (product reviews) to block a seller from transacting
+    with their own store: "buying" from yourself only costs the platform
+    commission and, via create_product_review_service, nets a verified-buyer
+    review on your own product for free -- the same wash-trading pattern
+    eBay/Etsy/Amazon explicitly prohibit, not a real transaction. A global
+    customer's *customer* membership at some other tenant is unaffected;
+    this only ever matches tenant_admin.
+    """
+    if not tenant_ids:
+        return set()
+    result = await db.execute(
+        select(UserStoreMembership.tenant_id).where(
+            UserStoreMembership.user_id == user_id,
+            UserStoreMembership.tenant_id.in_(tenant_ids),
+            UserStoreMembership.role == "tenant_admin",
+        )
+    )
+    return set(result.scalars().all())
 
 
 @dataclass
@@ -311,6 +336,9 @@ async def checkout_service(
         raise HTTPException(status_code=400, detail="Cart is empty or not found")
 
     _assert_cart_ownership(cart, user_id, cart_token, claim=True, cookie_action=cookie_action)
+
+    if await get_admin_tenant_ids(user_id, {tenant_id}, db):
+        raise HTTPException(status_code=403, detail="You can't purchase from your own store")
 
     # Analyze order type and gather variants to lock
     is_entirely_digital = True

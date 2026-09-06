@@ -122,6 +122,26 @@ async def test_checkout_success_creates_order_and_snapshot(async_client: AsyncCl
     assert response.status_code == 201
 
 
+@pytest.mark.asyncio
+async def test_checkout_rejects_tenant_admin_buying_from_own_store(async_client: AsyncClient, seed_tokens):
+    # tenant_admin_a (user 2) holds a tenant_admin membership at tenant-a --
+    # "buying" from your own store only costs the platform commission and
+    # (via create_product_review_service) nets a free verified-buyer review
+    # on your own product. Not a real transaction.
+    headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+    cart_id = str(uuid.uuid4())
+    await async_client.post(f"/api/v1/store/tenant-a/cart/{cart_id}/items", json={"variant_id": 1, "quantity": 1})
+    payload = {
+        "cart_id": cart_id,
+        "coupon_code": None,
+        "shipping_address": {"city": "Tel Aviv"},
+        "payment_token": str(uuid.uuid4()),
+    }
+    response = await async_client.post("/api/v1/store/tenant-a/cart/checkout", json=payload, headers=headers)
+    assert response.status_code == 403
+    assert "own store" in response.json()["detail"]
+
+
 async def _checkout_one_item(async_client: AsyncClient, headers: dict) -> dict:
     cart_id = str(uuid.uuid4())
     await async_client.post(f"/api/v1/store/tenant-a/cart/{cart_id}/items", json={"variant_id": 1, "quantity": 1})

@@ -166,6 +166,31 @@ async def test_marketplace_checkout_fails_on_insufficient_stock(async_client: As
     assert cart.json()["items"][0]["quantity"] == 10
 
 @pytest.mark.asyncio
+async def test_marketplace_checkout_rejects_own_store_even_in_a_mixed_cart(async_client: AsyncClient, seed_tokens):
+    # tenant_admin_a (user 2, tenant_admin at tenant-a) mixes their own
+    # store's product (variant 1, tenant-a) with a real vendor's (variant 2,
+    # tenant-b). The whole checkout must be rejected -- not silently split
+    # into "one real sub-order + one dropped" -- so the shopper gets an
+    # explicit, actionable error instead of a surprise partial charge.
+    headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+    cart_id = str(uuid.uuid4())
+    await async_client.post(f"/api/v1/marketplace/cart/{cart_id}/items", json={"variant_id": 1, "quantity": 1}, headers=headers)
+    await async_client.post(f"/api/v1/marketplace/cart/{cart_id}/items", json={"variant_id": 2, "quantity": 1}, headers=headers)
+
+    checkout = await async_client.post(
+        "/api/v1/marketplace/checkout",
+        json={"cart_id": cart_id, "shipping_address": {"city": "Tel Aviv"}, "payment_token": str(uuid.uuid4())},
+        headers=headers,
+    )
+    assert checkout.status_code == 400
+    assert "Store A" in checkout.json()["detail"]
+    assert "Store B" not in checkout.json()["detail"]
+
+    # Rejected checkout must not have consumed the cart or touched stock.
+    cart = await async_client.get(f"/api/v1/marketplace/cart/{cart_id}")
+    assert len(cart.json()["items"]) == 2
+
+@pytest.mark.asyncio
 async def test_marketplace_checkout_requires_shipping_address_for_physical_goods(async_client: AsyncClient, seed_tokens):
     headers = {"Authorization": seed_tokens["customer_a"]}
     cart_id = str(uuid.uuid4())
