@@ -115,6 +115,8 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 See the comments in `.env.example`, `Caddyfile`, and `docker-compose.prod.yml` for what's required vs. optional at each stage.
 
+For a step-by-step runbook deploying this same stack on a single VPS via Coolify (no domain purchase required to start — uses a free sslip.io hostname), see [docs/DEPLOY_COOLIFY.md](docs/DEPLOY_COOLIFY.md).
+
 **Backups:** `deploy/backup_db.sh` dumps the production MySQL DB (gzip, pruned after `BACKUP_RETENTION_DAYS`, default 14) — run it on the VPS via cron:
 
 ```bash
