@@ -14,6 +14,7 @@ from app.db.tenant_context import unscoped
 from app.core.cart_token import issue_guest_cart_token, verify_guest_cart_token
 from app.models.tenant import Tenant
 from app.models.catalog import ProductVariant, Product, ProductBundleItem, tracks_inventory
+from app.services.product_completeness import assert_store_eligible_or_404
 from app.models.order import Cart, CartItem, Order, OrderItem, ShippingMethod
 from app.models.coupon import Coupon
 from app.schemas.order_schemas import (
@@ -131,6 +132,7 @@ async def add_to_cart_service(
     variant = variant_result.scalar_one_or_none()
     if not variant:
         raise HTTPException(status_code=404, detail="Variant not found or product inactive")
+    await assert_store_eligible_or_404(db, variant.product)
 
     ensure_stock(variant, req.quantity)
 

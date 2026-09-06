@@ -8,6 +8,12 @@ from app.schemas.tenant_schemas import TenantSettingsSchema, TenantUpdateSchema,
 from app.schemas.ai_schemas import TopSellingProduct
 from app.services.order_service import PAID_ORDER_STATUSES
 from app.services.image_url_verifier import require_reachable_image_urls
+from app.services.product_completeness import (
+    completeness_required,
+    deactivate_incomplete_store_products,
+    supported_languages_of,
+    validate_nav_labels,
+)
 from datetime import datetime, timezone
 import json
 
@@ -122,8 +128,18 @@ async def update_store_settings_service(tenant_slug: str, req: TenantSettingsUpd
             langs = settings.supported_languages or ["he"]
         if update_data["default_language"] not in langs:
             raise HTTPException(status_code=422, detail="default_language must be one of supported_languages")
+    if settings.force_product_completeness:
+        # Platform lock wins: store managers can still save other settings, but
+        # they cannot turn the completeness rule off.
+        update_data.pop("require_product_completeness", None)
     for key, value in update_data.items():
         setattr(settings, key, value)
+
+    effective_langs = supported_languages_of(settings)
+    if completeness_required(settings):
+        nav_items = update_data["nav_items"] if "nav_items" in update_data else settings.nav_items
+        validate_nav_labels(nav_items, effective_langs)
+        await deactivate_incomplete_store_products(db, tenant.id, settings)
 
     await db.commit()
     await db.refresh(settings)

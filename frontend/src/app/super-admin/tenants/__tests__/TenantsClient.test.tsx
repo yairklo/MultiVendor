@@ -47,6 +47,8 @@ const storeA: TenantAdmin = {
   show_all_products_in_marketplace: true,
   stripe_connected: false,
   created_at: '2026-01-01T00:00:00Z',
+  require_product_completeness: false,
+  force_product_completeness: false,
 }
 
 describe('TenantsClient', () => {

@@ -72,6 +72,7 @@ class TenantSettingsUpdateSchema(BaseModel):
     allow_unverified_reviews: Optional[bool] = None
     template_key: Optional[str] = None
     nav_items: Optional[List[NavItemSchema]] = None
+    require_product_completeness: Optional[bool] = None
 
     @field_validator("logo_url", "banner_url")
     @classmethod
@@ -113,6 +114,8 @@ class TenantSettingsSchema(BaseModel):
     allow_unverified_reviews: bool = True
     template_key: Optional[str] = None
     nav_items: Optional[List[NavItemSchema]] = None
+    require_product_completeness: bool = False
+    force_product_completeness: bool = False
 
     @field_validator('supported_languages', mode='before')
     @classmethod

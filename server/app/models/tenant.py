@@ -59,5 +59,9 @@ class TenantSettings(TenantScoped, Base):
     # Seller-editable storefront navbar. JSON list of {id, enabled, kind, page_key, href, label}.
     # NULL means "use the platform defaults" (home/shop/marketplace/about/contact).
     nav_items = Column(JSON, nullable=True)
+    # When true, incomplete products (missing fields or language texts) stay out of the store.
+    require_product_completeness = Column(Boolean, nullable=False, default=False)
+    # Platform-admin hard lock. Store managers cannot turn the requirement off while this is true.
+    force_product_completeness = Column(Boolean, nullable=False, default=False)
 
     tenant = relationship("Tenant", back_populates="settings")

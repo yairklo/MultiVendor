@@ -117,6 +117,33 @@ export function TenantsClient({
     }
   }
 
+  async function toggleCompleteness(tenant: TenantAdmin) {
+    const next = !tenant.force_product_completeness
+    if (next) {
+      const ok = await confirm({
+        title: `Require complete catalog for ${tenant.name}?`,
+        description: 'Incomplete products will leave the store until every field and every language is filled. The store manager cannot turn this off.',
+        confirmLabel: 'Lock completeness',
+        cancelLabel: 'Cancel',
+        variant: 'destructive',
+      })
+      if (!ok) return
+    }
+    setBusyId(tenant.id)
+    try {
+      await apiClient(`/api/v1/super-admin/tenants/${tenant.id}/completeness`, {
+        method: 'PATCH',
+        body: JSON.stringify({ force_product_completeness: next }),
+      })
+      await reload()
+      showToast(next ? 'Completeness requirement locked' : 'Completeness lock removed', 'success')
+    } catch (err) {
+      showToast(errorMessage(err) || 'Failed to update completeness', 'error')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
   async function toggleMarketplace(tenant: TenantAdmin) {
     setBusyId(tenant.id)
     try {
@@ -261,6 +288,7 @@ export function TenantsClient({
               <TableHead>Plan</TableHead>
               <TableHead>Products</TableHead>
               <TableHead>Marketplace</TableHead>
+              <TableHead>Completeness</TableHead>
               <TableHead>Payouts</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-end">Actions</TableHead>
@@ -269,7 +297,7 @@ export function TenantsClient({
           <TableBody>
             {visible.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="py-12 text-center text-muted-foreground">
+                <TableCell colSpan={8} className="py-12 text-center text-muted-foreground">
                   <Store className="mx-auto mb-2 h-8 w-8 opacity-40" />
                   No tenants match this filter.
                 </TableCell>
@@ -309,6 +337,16 @@ export function TenantsClient({
                     onClick={() => toggleMarketplace(tenant)}
                   >
                     {tenant.show_all_products_in_marketplace ? 'Listed' : 'Off'}
+                  </Button>
+                </TableCell>
+                <TableCell>
+                  <Button
+                    variant={tenant.force_product_completeness ? 'secondary' : 'outline'}
+                    size="sm"
+                    disabled={busyId === tenant.id}
+                    onClick={() => toggleCompleteness(tenant)}
+                  >
+                    {tenant.force_product_completeness ? 'Forced' : tenant.require_product_completeness ? 'Store on' : 'Off'}
                   </Button>
                 </TableCell>
                 <TableCell>

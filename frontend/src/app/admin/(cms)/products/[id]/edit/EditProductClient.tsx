@@ -24,6 +24,7 @@ import { resolveImageUrl } from '@/lib/media'
 import { useUiLocale } from '@/context/UiLocaleContext'
 import { useStorefrontTheme } from '@/context/StorefrontThemeContext'
 import { extraLanguageCodes, languageDisplayName } from '@/lib/languages'
+import { buildProductI18nFields } from '@/lib/product-i18n'
 import { isValidDigitalFileUrl } from '@/lib/digitalFileUrl'
 import { errorMessage } from '@/lib/errors'
 import type { Category, ProductVariant } from '@/lib/types'
@@ -62,8 +63,9 @@ export function EditProductClient({
   const router = useRouter()
   const { updateProduct, updateVariant } = useProducts()
   const { t, locale } = useUiLocale()
-  const { supportedLanguages } = useStorefrontTheme()
+  const { supportedLanguages, requireProductCompleteness, forceProductCompleteness } = useStorefrontTheme()
   const extraLangs = extraLanguageCodes(supportedLanguages)
+  const completenessRequired = requireProductCompleteness || forceProductCompleteness
   const [extraNames, setExtraNames] = useState<Record<string, string>>(initialExtraNames)
   const [extraDescs, setExtraDescs] = useState<Record<string, string>>(initialExtraDescs)
   const [slug] = useState(initialSlug)
@@ -80,11 +82,27 @@ export function EditProductClient({
     setLoading(true)
     setError('')
     try {
-      const descriptionEn = values.description_en?.trim()
-      const descriptionHe = values.description_he?.trim()
-      const name: Record<string, string> = { en: values.name_en, he: values.name_he || values.name_en }
-      for (const lang of extraLangs) {
-        name[lang] = extraNames[lang]?.trim() || values.name_he || values.name_en
+      const copyFallbacks = !completenessRequired
+      const { name, description } = buildProductI18nFields({
+        nameEn: values.name_en,
+        nameHe: values.name_he,
+        extraNames,
+        extraLangs,
+        descriptionEn: values.description_en,
+        descriptionHe: values.description_he,
+        extraDescs,
+        copyFallbacks,
+      })
+      if (completenessRequired && values.is_active) {
+        const missingName = ['en', 'he', ...extraLangs].some((lang) => !name[lang]?.trim())
+        const missingDesc = !description || ['en', 'he', ...extraLangs].some((lang) => !description[lang]?.trim())
+        const missingImage = !values.image_url?.trim()
+        const missingDigital = values.is_digital && !values.digital_file_url?.trim()
+        if (missingName || missingDesc || missingImage || missingDigital) {
+          setError(t('products.completenessBlocked'))
+          setLoading(false)
+          return
+        }
       }
       const payload: Record<string, unknown> = {
         name,
@@ -94,14 +112,7 @@ export function EditProductClient({
         product_type: values.is_digital ? 'digital' : 'physical',
         digital_file_url: values.is_digital ? (values.digital_file_url?.trim() || null) : null,
       }
-
-      if (descriptionEn || descriptionHe || extraLangs.some((l) => extraDescs[l]?.trim())) {
-        const description: Record<string, string> = { en: descriptionEn || '', he: descriptionHe || descriptionEn || '' }
-        for (const lang of extraLangs) {
-          description[lang] = extraDescs[lang]?.trim() || descriptionHe || descriptionEn || ''
-        }
-        payload.description = description
-      }
+      if (description) payload.description = description
 
       // NOTE: server/app/schemas/catalog_schemas.py's ProductUpdateRequest doesn't declare an
       // `images` field yet (only ProductCreateRequest does), so the backend currently ignores
@@ -386,7 +397,7 @@ export function EditProductClient({
                   <div className="space-y-1 leading-none">
                     <FormLabel>{t('products.active')}</FormLabel>
                     <p className="text-sm text-muted-foreground">
-                      {t('products.activeHint')}
+                      {completenessRequired ? t('products.activeHintCompleteness') : t('products.activeHint')}
                     </p>
                   </div>
                 </FormItem>

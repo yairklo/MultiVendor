@@ -13,6 +13,7 @@ from app.models.catalog import Product
 from app.models.order import Order
 from app.models.storefront_template import StorefrontTemplate
 from app.models.tenant import SubscriptionPlan, Tenant, TenantSettings
+from app.services.product_completeness import deactivate_incomplete_store_products
 from app.models.user import AuditLog, User, UserStoreMembership
 
 
@@ -40,6 +41,8 @@ def tenant_admin_dict(tenant: Tenant, product_count: int = 0) -> dict[str, Any]:
         "show_all_products_in_marketplace": bool(tenant.show_all_products_in_marketplace),
         "stripe_connected": bool(tenant.stripe_account_id),
         "created_at": tenant.created_at,
+        "require_product_completeness": bool(tenant.settings.require_product_completeness) if tenant.settings else False,
+        "force_product_completeness": bool(tenant.settings.force_product_completeness) if tenant.settings else False,
     }
 
 
@@ -52,9 +55,10 @@ async def product_counts_by_tenant(db: AsyncSession) -> dict[int, int]:
 
 
 async def load_tenant(db: AsyncSession, tenant_id: int) -> Tenant:
-    result = await db.execute(
-        select(Tenant).options(joinedload(Tenant.plan)).where(Tenant.id == tenant_id)
-    )
+    with unscoped():
+        result = await db.execute(
+            select(Tenant).options(joinedload(Tenant.plan), joinedload(Tenant.settings)).where(Tenant.id == tenant_id)
+        )
     tenant = result.unique().scalar_one_or_none()
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
@@ -67,13 +71,14 @@ async def list_tenants_admin(
     q: Optional[str] = None,
 ) -> list[dict[str, Any]]:
     counts = await product_counts_by_tenant(db)
-    stmt = select(Tenant).options(joinedload(Tenant.plan)).order_by(Tenant.created_at.desc())
+    stmt = select(Tenant).options(joinedload(Tenant.plan), joinedload(Tenant.settings)).order_by(Tenant.created_at.desc())
     if status_filter:
         stmt = stmt.where(Tenant.status == status_filter)
     if q:
         like = f"%{q.strip()}%"
         stmt = stmt.where(or_(Tenant.name.ilike(like), Tenant.slug.ilike(like)))
-    tenants = (await db.execute(stmt)).unique().scalars().all()
+    with unscoped():
+        tenants = (await db.execute(stmt)).unique().scalars().all()
     return [tenant_admin_dict(t, counts.get(t.id, 0)) for t in tenants]
 
 
@@ -325,3 +330,38 @@ async def create_tenant_admin(
 
     tenant = await load_tenant(db, tenant.id)
     return tenant_admin_dict(tenant, 0)
+
+
+async def set_force_product_completeness(
+    db: AsyncSession,
+    tenant_id: int,
+    force: bool,
+    actor: User,
+) -> dict[str, Any]:
+    tenant = await load_tenant(db, tenant_id)
+    settings = tenant.settings
+    if settings is None:
+        with unscoped():
+            settings = TenantSettings(tenant_id=tenant.id)
+            db.add(settings)
+            await db.flush()
+            tenant.settings = settings
+
+    previous = bool(settings.force_product_completeness)
+    settings.force_product_completeness = force
+    if force:
+        with unscoped():
+            await deactivate_incomplete_store_products(db, tenant.id, settings)
+
+    await write_audit(
+        db,
+        actor,
+        action="tenant.force_product_completeness",
+        resource=f"tenant:{tenant.id}",
+        details={"from": previous, "to": force},
+        tenant_id=tenant.id,
+    )
+    await db.commit()
+    tenant = await load_tenant(db, tenant_id)
+    counts = await product_counts_by_tenant(db)
+    return tenant_admin_dict(tenant, counts.get(tenant.id, 0))
