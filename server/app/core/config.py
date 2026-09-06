@@ -102,6 +102,20 @@ class Settings(BaseSettings):
     #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
     SHIPPING_CREDENTIALS_ENCRYPTION_KEY: str | None = None
 
+    # Automates adding a tenant's custom domain to this app's frontend
+    # service in Coolify (see app/services/coolify_service.py,
+    # docs/DEPLOY_COOLIFY.md) whenever a seller sets one, instead of an
+    # admin adding it by hand in the Coolify UI. All three must be set
+    # together or this is a no-op -- e.g. local dev, or a
+    # docker-compose.prod.yaml deploy that uses Caddy's on-demand TLS
+    # instead and doesn't need this at all.
+    COOLIFY_API_URL: str | None = None  # e.g. "https://coolify.example.com/api/v1"
+    COOLIFY_API_TOKEN: str | None = None
+    COOLIFY_FRONTEND_APP_UUID: str | None = None
+    # Must match the `frontend:` service key in docker-compose.coolify.yaml
+    # -- Coolify's docker_compose_domains keys off this container name.
+    COOLIFY_FRONTEND_CONTAINER_NAME: str = "frontend"
+
     model_config = SettingsConfigDict(env_file=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), ".env"), env_file_encoding="utf-8", extra="ignore")
 
 settings = Settings()

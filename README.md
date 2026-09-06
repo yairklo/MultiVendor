@@ -107,13 +107,20 @@ CI (`.github/workflows/ci.yml`) runs backend migrations + pytest, and frontend t
 
 ## Deployment
 
-`docker-compose.prod.yml` brings up the full stack (MySQL, Redis, backend, frontend, and Caddy for automatic TLS via Let's Encrypt) behind two domains (`APP_DOMAIN`, `API_DOMAIN`). Copy `.env.example` to `.env`, fill it in, then:
+`docker-compose.prod.yaml` brings up the full stack (MySQL, Redis, backend, frontend, and Caddy for automatic TLS via Let's Encrypt) behind two domains (`APP_DOMAIN`, `API_DOMAIN`). Copy `.env.example` to `.env`, fill it in, then:
 
 ```bash
-docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yaml up -d --build
 ```
 
-See the comments in `.env.example`, `Caddyfile`, and `docker-compose.prod.yml` for what's required vs. optional at each stage.
+See the comments in `.env.example`, `Caddyfile`, and `docker-compose.prod.yaml` for what's required vs. optional at each stage.
+
+For deploying via Coolify instead of raw `docker compose`, see
+[docs/DEPLOY_COOLIFY.md](docs/DEPLOY_COOLIFY.md) — it also covers the
+`docker-compose.coolify.yaml` variant (no bundled Caddy) needed when the VPS
+already runs other apps behind Coolify's own shared proxy.
+
+For a step-by-step runbook deploying this same stack on a single VPS via Coolify (no domain purchase required to start — uses a free sslip.io hostname), see [docs/DEPLOY_COOLIFY.md](docs/DEPLOY_COOLIFY.md).
 
 **Backups:** `deploy/backup_db.sh` dumps the production MySQL DB (gzip, pruned after `BACKUP_RETENTION_DAYS`, default 14) — run it on the VPS via cron:
 
