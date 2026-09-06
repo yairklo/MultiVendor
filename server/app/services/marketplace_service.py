@@ -13,6 +13,7 @@ from app.db.session import redis_client
 from app.db.tenant_context import platform_plane
 from app.models.tenant import Tenant
 from app.models.catalog import ProductVariant, Product, tracks_inventory
+from app.services.product_completeness import assert_store_eligible_or_404
 from app.models.order import MarketplaceCartItem, MasterOrder, Order, OrderItem
 from app.models.user import UserStoreMembership
 from app.schemas.marketplace_schemas import (
@@ -77,6 +78,7 @@ async def add_to_marketplace_cart_service(
     variant = variant_result.scalar_one_or_none()
     if not variant:
         raise HTTPException(status_code=404, detail="Variant not found or product inactive")
+    await assert_store_eligible_or_404(db, variant.product)
 
     ensure_stock(variant, req.quantity)
 

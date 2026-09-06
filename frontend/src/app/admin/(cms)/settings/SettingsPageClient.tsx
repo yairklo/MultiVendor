@@ -33,6 +33,8 @@ export interface StoreSettings {
   custom_css: string
   template_key: string
   nav_items: StoreNavItem[] | null
+  require_product_completeness: boolean
+  force_product_completeness: boolean
 }
 
 export function SettingsPageClient({
@@ -78,7 +80,9 @@ export function SettingsPageClient({
       custom_css: formData.custom_css || null,
       template_key: formData.template_key || null,
       nav_items: navItems,
+      require_product_completeness: formData.force_product_completeness || formData.require_product_completeness,
     }
+    delete (payload as { force_product_completeness?: boolean }).force_product_completeness
 
     if (!tenantSlug) {
       showToast(t('settings.storeUnresolved'), 'error')
@@ -380,6 +384,27 @@ export function SettingsPageClient({
               {t('settings.navAddCustom')}
             </button>
           </div>
+        </section>
+
+        <section className="bg-card p-6 rounded-xl shadow-sm border border-border">
+          <h2 className="text-xl font-semibold mb-1 pb-2 border-b border-border">{t('settings.completeness')}</h2>
+          <p className="text-sm text-muted-foreground mt-3 mb-6">{t('settings.completenessHint')}</p>
+          <label className={`flex items-start gap-3 ${formData.force_product_completeness ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'}`}>
+            <input
+              type="checkbox"
+              className="mt-0.5 w-5 h-5 text-primary rounded border-input"
+              checked={formData.require_product_completeness || formData.force_product_completeness}
+              disabled={formData.force_product_completeness}
+              onChange={(e) => setFormData({ ...formData, require_product_completeness: e.target.checked })}
+            />
+            <div>
+              <span className="block text-sm font-medium text-foreground">{t('settings.requireCompleteness')}</span>
+              <span className="block text-sm text-muted-foreground">{t('settings.requireCompletenessHint')}</span>
+              {formData.force_product_completeness && (
+                <span className="mt-2 block text-sm text-amber-700 dark:text-amber-400">{t('settings.completenessForced')}</span>
+              )}
+            </div>
+          </label>
         </section>
 
         <section className="bg-card p-6 rounded-xl shadow-sm border border-border">

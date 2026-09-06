@@ -20,6 +20,8 @@ interface StorefrontThemeContextValue {
   currency: string
   defaultLanguage: string
   supportedLanguages: string[]
+  requireProductCompleteness: boolean
+  forceProductCompleteness: boolean
   /** The shopper's currently selected display language -- starts at defaultLanguage
    * once /config loads, but can be switched live (see setLang) independently of it. */
   lang: string
@@ -76,6 +78,8 @@ export function StorefrontThemeProvider({
   const [currency, setCurrency] = useState<string>('ILS')
   const [defaultLanguage, setDefaultLanguage] = useState<string>('he')
   const [supportedLanguages, setSupportedLanguages] = useState<string[]>(['he', 'en'])
+  const [requireProductCompleteness, setRequireProductCompleteness] = useState(false)
+  const [forceProductCompleteness, setForceProductCompleteness] = useState(false)
   const [lang, setLang] = useState<string>(isVitest() ? 'en' : 'he')
   const langInitialized = useRef(false)
 
@@ -108,6 +112,8 @@ export function StorefrontThemeProvider({
           }
         }
         if (data.supported_languages?.length) setSupportedLanguages(data.supported_languages)
+        setRequireProductCompleteness(Boolean(data.require_product_completeness))
+        setForceProductCompleteness(Boolean(data.force_product_completeness))
       })
       .catch(() => {
         if (!cancelled) setTemplateKey(null)
@@ -137,6 +143,8 @@ export function StorefrontThemeProvider({
     currency,
     defaultLanguage,
     supportedLanguages,
+    requireProductCompleteness,
+    forceProductCompleteness,
     lang,
     setLang,
   }
@@ -155,6 +163,8 @@ const NO_PROVIDER_FALLBACK_BASE: Omit<StorefrontThemeContextValue, 'lang' | 'set
   // Tests of product forms (no provider) still need both fields; live stores
   // overwrite this from /config as soon as it loads.
   supportedLanguages: ['he', 'en'],
+  requireProductCompleteness: false,
+  forceProductCompleteness: false,
 }
 
 /**

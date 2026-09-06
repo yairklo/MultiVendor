@@ -19,6 +19,8 @@ export default async function SettingsPage() {
     custom_css: '',
     template_key: '',
     nav_items: null as null,
+    require_product_completeness: false,
+    force_product_completeness: false,
   }
   try {
     const config = await serverApiClient(`/api/v1/store/${tenantSlug}/config`)
@@ -35,6 +37,8 @@ export default async function SettingsPage() {
       custom_css: config.custom_css ?? '',
       template_key: config.template_key ?? '',
       nav_items: config.nav_items ?? null,
+      require_product_completeness: Boolean(config.require_product_completeness),
+      force_product_completeness: Boolean(config.force_product_completeness),
     }
   } catch (e) {
     if (e instanceof ApiError && e.status === 401) redirect('/admin/login')

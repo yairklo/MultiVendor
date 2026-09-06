@@ -50,6 +50,8 @@ CREATE TABLE tenant_settings (
     template_key VARCHAR(50) NULL,
     draft_template_key VARCHAR(50) NULL,
     nav_items JSON NULL,
+    require_product_completeness BOOLEAN NOT NULL DEFAULT FALSE,
+    force_product_completeness BOOLEAN NOT NULL DEFAULT FALSE,
     FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 

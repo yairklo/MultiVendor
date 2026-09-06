@@ -14,6 +14,8 @@ export type TenantAdmin = {
   show_all_products_in_marketplace: boolean
   stripe_connected: boolean
   created_at: string | null
+  require_product_completeness: boolean
+  force_product_completeness: boolean
 }
 
 export type PlatformOrder = {

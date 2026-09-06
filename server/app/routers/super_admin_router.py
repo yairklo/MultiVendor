@@ -27,6 +27,7 @@ from app.services.super_admin_service import (
     list_users_admin,
     load_tenant,
     product_counts_by_tenant,
+    set_force_product_completeness,
     tenant_admin_dict,
     write_audit,
 )
@@ -40,6 +41,10 @@ class TenantSubscriptionUpdate(BaseModel):
 
 class TenantMarketplaceUpdate(BaseModel):
     show_all_products_in_marketplace: bool
+
+
+class TenantCompletenessUpdate(BaseModel):
+    force_product_completeness: bool
 
 
 class TenantCreateRequest(BaseModel):
@@ -80,6 +85,8 @@ class TenantAdminResponse(BaseModel):
     show_all_products_in_marketplace: bool
     stripe_connected: bool
     created_at: Optional[datetime] = None
+    require_product_completeness: bool = False
+    force_product_completeness: bool = False
 
 
 class TenantListResponse(BaseModel):
@@ -314,6 +321,18 @@ async def update_tenant_marketplace(
     counts = await product_counts_by_tenant(db)
     tenant = await load_tenant(db, tenant_id)
     return tenant_admin_dict(tenant, counts.get(tenant.id, 0))
+
+
+@super_admin_router.patch("/tenants/{tenant_id}/completeness", response_model=TenantAdminResponse)
+async def update_tenant_completeness(
+    tenant_id: int,
+    req: TenantCompletenessUpdate,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(get_super_admin),
+):
+    return await set_force_product_completeness(
+        db, tenant_id, req.force_product_completeness, admin
+    )
 
 
 @super_admin_router.get("/plans", response_model=PlansListResponse)

@@ -26,6 +26,13 @@ from fastapi.responses import StreamingResponse
 from typing import Any
 from app.services.i18n_utils import validate_i18n
 from app.services.image_url_verifier import require_reachable_image_urls
+from app.services.product_completeness import (
+    completeness_required,
+    product_completeness_gaps,
+    product_is_store_eligible,
+    raise_if_cannot_enter_store,
+    supported_languages_of,
+)
 
 async def get_store_config_service(tenant_slug: str, db: AsyncSession, admin_preview: bool = False) -> TenantSettingsSchema:
     result = await db.execute(select(Tenant).where(Tenant.slug == tenant_slug).options(selectinload(Tenant.settings)))
@@ -121,6 +128,10 @@ async def list_public_products_service(tenant_slug: str, page: int, page_size: i
     result = await db.execute(query)
     products = result.scalars().all()
 
+    settings_result = await db.execute(select(TenantSettings).where(TenantSettings.tenant_id == tenant_id))
+    settings = settings_result.scalar_one_or_none()
+    products = [p for p in products if product_is_store_eligible(p, settings)]
+
     review_stats = await _fetch_review_stats([p.id for p in products], db)
     product_responses = [_build_product_response(p, review_stats) for p in products]
 
@@ -142,6 +153,10 @@ async def get_public_product_service(tenant_slug: str, product_slug: str, db: As
     product = result.scalar_one_or_none()
 
     if not product:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+
+    settings_result = await db.execute(select(TenantSettings).where(TenantSettings.tenant_id == tenant_id))
+    if not product_is_store_eligible(product, settings_result.scalar_one_or_none()):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
 
     review_stats = await _fetch_review_stats([product.id], db)
@@ -315,10 +330,22 @@ async def create_product_service(tenant_slug: str, req: ProductCreateRequest, db
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
         
-    supported_langs = tenant.settings.supported_languages if tenant.settings and tenant.settings.supported_languages else ["he"]
+    supported_langs = supported_languages_of(tenant.settings)
     validate_i18n(req.name, supported_langs, "name")
     if req.description:
         validate_i18n(req.description, supported_langs, "description")
+    if req.is_active and completeness_required(tenant.settings):
+        raise_if_cannot_enter_store(product_completeness_gaps(
+            name=req.name,
+            description=req.description,
+            slug=req.slug,
+            base_price=req.base_price,
+            product_type=req.product_type,
+            digital_file_url=req.digital_file_url,
+            variant_skus=[v.sku for v in req.variants],
+            image_urls=req.images,
+            supported_langs=supported_langs,
+        ))
 
     # Enforce max products
     plan_result = await db.execute(select(SubscriptionPlan).where(SubscriptionPlan.id == tenant.plan_id))
@@ -471,10 +498,13 @@ async def _replace_product_images(
 
 
 async def update_product_service(tenant_slug: str, product_id: int, req: ProductUpdateRequest, db: AsyncSession) -> ProductResponse:
-    tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
-    tenant_id = tenant_result.scalar_one_or_none()
-    if not tenant_id:
+    tenant_result = await db.execute(
+        select(Tenant).where(Tenant.slug == tenant_slug).options(selectinload(Tenant.settings))
+    )
+    tenant = tenant_result.scalar_one_or_none()
+    if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
+    tenant_id = tenant.id
 
     query = select(Product).where(Product.id == product_id, Product.tenant_id == tenant_id)
     query = query.options(selectinload(Product.variants), selectinload(Product.images))
@@ -506,6 +536,19 @@ async def update_product_service(tenant_slug: str, product_id: int, req: Product
         # refresh() would otherwise keep the old ProductImage rows (and omit
         # the new ones), so the API/tool result would lie that images are empty.
         await _replace_product_images(db, tenant_id, product, req.images)
+
+    if product.is_active and completeness_required(tenant.settings):
+        raise_if_cannot_enter_store(product_completeness_gaps(
+            name=product.name,
+            description=product.description,
+            slug=product.slug,
+            base_price=product.base_price,
+            product_type=product.product_type,
+            digital_file_url=product.digital_file_url,
+            variant_skus=[v.sku for v in product.variants],
+            image_urls=[img.image_url for img in product.images],
+            supported_langs=supported_languages_of(tenant.settings),
+        ))
 
     await db.commit()
     await db.refresh(product)
@@ -924,6 +967,19 @@ async def list_marketplace_products_service(page: int, page_size: int, q: str | 
     )
     result = await db.execute(query)
     rows = result.all()
+
+    tenant_ids = {tenant.id for _, tenant in rows}
+    settings_rows = []
+    if tenant_ids:
+        settings_rows = (await db.execute(
+            select(TenantSettings).where(TenantSettings.tenant_id.in_(tenant_ids))
+        )).scalars().all()
+    settings_by_tenant = {s.tenant_id: s for s in settings_rows}
+    rows = [
+        (product, tenant)
+        for product, tenant in rows
+        if product_is_store_eligible(product, settings_by_tenant.get(tenant.id))
+    ]
 
     review_stats = await _fetch_review_stats([p.id for p, _ in rows], db)
     data = [_build_marketplace_product_response(p, tenant, review_stats) for p, tenant in rows]
