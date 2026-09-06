@@ -1,0 +1,117 @@
+# Variant of docker-compose.prod.yaml for a VPS where Coolify's own shared
+# proxy (Traefik) already fronts other apps on 80/443. No Caddy service here
+# -- Coolify's proxy handles TLS/domain routing for `backend` and `frontend`
+# instead, via a domain assigned to each service in the Coolify UI (not via
+# env vars here, since the exact mechanism -- UI field vs. a
+# SERVICE_FQDN_<name> env var -- depends on your Coolify version). This
+# trades away Caddy's fully-automatic on-demand TLS for arbitrary tenant
+# custom domains: adding a tenant's custom domain now means an admin adds it
+# to the `frontend` service's Domains list in Coolify, same as adding
+# APP_DOMAIN/API_DOMAIN below. See docs/DEPLOY_COOLIFY.md.
+#
+# Usage: copy .env.example to .env, fill it in (skip APP_DOMAIN/API_DOMAIN/
+# ACME_EMAIL -- those are only consumed by Caddy, not used here), then let
+# Coolify deploy this file as a Docker Compose resource.
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:latest
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    environment:
+      APP_ENV: production
+      SECRET_KEY: ${SECRET_KEY}
+      DATABASE_URL: mysql+aiomysql://root:${DB_ROOT_PASSWORD}@mysql:3306/${DB_NAME}
+      REDIS_URL: redis://redis:6379/0
+      # Real public https:// hostname you assign to the `frontend` service
+      # in Coolify's UI (e.g. https://app.<something>.sslip.io, or your own
+      # domain) -- must match exactly what's typed there.
+      CORS_ALLOWED_ORIGINS: https://${APP_DOMAIN}
+      FRONTEND_URL: https://${APP_DOMAIN}
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-console}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      EMAILS_FROM_EMAIL: ${EMAILS_FROM_EMAIL:-}
+      PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-mock}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      SHIPPING_CREDENTIALS_ENCRYPTION_KEY: ${SHIPPING_CREDENTIALS_ENCRYPTION_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      STORAGE_TYPE: ${STORAGE_TYPE:-local}
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-}
+      S3_REGION: ${S3_REGION:-auto}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
+      S3_PUBLIC_URL_BASE: ${S3_PUBLIC_URL_BASE:-}
+    # No `ports:` published to the host -- Coolify's Traefik reaches this
+    # container over the internal docker network once you assign it a
+    # domain in the Coolify UI (container port 8000).
+    expose:
+      - "8000"
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        # Baked into the client bundle at build time -- must be the public
+        # https:// API domain you assign to the `backend` service in
+        # Coolify, not the internal "backend:8000" service name.
+        NEXT_PUBLIC_API_BASE_URL: https://${API_DOMAIN}
+    environment:
+      JWT_SECRET_KEY: ${SECRET_KEY}
+      # Lets proxy.ts (frontend/src/proxy.ts) tell "the platform's own
+      # domain" apart from "a tenant's custom domain" at runtime -- same
+      # public hostname you assign to this service in Coolify.
+      APP_DOMAIN: ${APP_DOMAIN}
+      # proxy.ts's custom-domain resolver calls this at request time (not
+      # baked into the client bundle) -- the internal docker network address
+      # is faster and doesn't depend on Coolify's proxy being up.
+      INTERNAL_API_BASE_URL: http://backend:8000
+    # No `ports:` published to the host -- same reasoning as `backend`
+    # (container port 3000).
+    expose:
+      - "3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+  redis_data:
+  uploads:
