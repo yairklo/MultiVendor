@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { setCookie } from 'cookies-next'
+import { setAuthTokens } from '@/lib/auth/tokenStorage'
 import { apiClient, ApiError } from '@/lib/api/apiClient'
 import { useUiLocale } from '@/context/UiLocaleContext'
 import { UiLanguageSwitcher } from '@/components/ui/UiLanguageSwitcher'
@@ -29,7 +29,10 @@ export default function CustomerLoginPage() {
       })
 
       if (data && data.access_token) {
-        setCookie('token', data.access_token, { maxAge: 60 * 60 * 24 * 7, path: '/' })
+        setAuthTokens({
+          accessToken: data.access_token,
+          tenantSlug,
+        })
         // Redirect to the test storefront
         router.push(`/store/${tenantSlug}`)
       }

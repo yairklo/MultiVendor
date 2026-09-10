@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { setCookie } from 'cookies-next'
+import { setAuthTokens } from '@/lib/auth/tokenStorage'
 import { apiClient, ApiError } from '@/lib/api/apiClient'
 import { useUiLocale } from '@/context/UiLocaleContext'
 import { UiLanguageSwitcher } from '@/components/ui/UiLanguageSwitcher'
@@ -32,11 +32,11 @@ export default function AdminLoginPage() {
       })
 
       if (data && data.access_token) {
-        // Store the token in a cookie
-        setCookie('token', data.access_token, { maxAge: 60 * 60 * 24 * 7, path: '/' })
-        if (tenantSlug) {
-          setCookie('tenantSlug', tenantSlug, { maxAge: 60 * 60 * 24 * 7, path: '/' })
-        }
+        // Store the tokens securely with hardened cookie flags
+        setAuthTokens({
+          accessToken: data.access_token,
+          tenantSlug: tenantSlug || undefined,
+        })
 
         // Route based on the role the backend actually returned, not a guess
         // from the email — a customer account has no admin permissions and

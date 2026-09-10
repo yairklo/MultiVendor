@@ -1,15 +1,14 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { deleteCookie } from 'cookies-next'
+import { clearAuthTokens } from '@/lib/auth/tokenStorage'
 import React from 'react'
 
 export function AdminLogoutButton({ className, children }: { className?: string; children: React.ReactNode }) {
   const router = useRouter()
 
   const handleLogout = () => {
-    deleteCookie('token')
-    deleteCookie('tenantSlug')
+    clearAuthTokens()
     router.push('/admin/login')
   }
 

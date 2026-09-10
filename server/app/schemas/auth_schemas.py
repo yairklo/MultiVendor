@@ -16,7 +16,7 @@ class LoginRequest(BaseModel):
     })
 
 class RefreshTokenRequest(BaseModel):
-    refresh_token: str
+    refresh_token: Optional[str] = None
     model_config = ConfigDict(json_schema_extra={
         "example": {"refresh_token": "eyJhbGciOiJIUzI1NiIsInR..."}
     })

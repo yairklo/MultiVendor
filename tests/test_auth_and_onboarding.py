@@ -97,6 +97,35 @@ async def test_login_super_admin_success(async_client: AsyncClient, db_session):
     assert replay.status_code == 401
 
 @pytest.mark.asyncio
+async def test_cookie_based_refresh_and_logout(async_client: AsyncClient, db_session):
+    payload = {
+        "email": "superadmin@platform.com",
+        "password": "password",
+    }
+    response = await async_client.post("/api/v1/auth/login", json=payload)
+    assert response.status_code == 200
+    assert "refresh_token" in response.cookies
+    cookie_val = response.cookies.get("refresh_token")
+    assert cookie_val is not None
+
+    # Call refresh without body, passing the cookie
+    refresh_resp = await async_client.post("/api/v1/auth/refresh", cookies={"refresh_token": cookie_val})
+    assert refresh_resp.status_code == 200
+    data = refresh_resp.json()
+    assert "access_token" in data
+    new_cookie = refresh_resp.cookies.get("refresh_token")
+    assert new_cookie is not None
+    assert new_cookie != cookie_val
+
+    # Logout clears the cookie and invalidates token
+    logout_resp = await async_client.post("/api/v1/auth/logout", cookies={"refresh_token": new_cookie})
+    assert logout_resp.status_code == 200
+
+    # Old token shouldn't work
+    revoked_resp = await async_client.post("/api/v1/auth/refresh", cookies={"refresh_token": new_cookie})
+    assert revoked_resp.status_code == 401
+
+@pytest.mark.asyncio
 async def test_login_tenant_admin_success(async_client: AsyncClient, db_session):
     # tenant_slug is accepted but no longer required or checked at login time
     # -- identity is global, store-level authorization is re-checked per

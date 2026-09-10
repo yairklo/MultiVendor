@@ -140,4 +140,30 @@ describe('CheckoutPage', () => {
     // Total should now be 99.00 - 9.90 + 15.00 = 104.10
     expect(screen.getByText('$104.10')).toBeInTheDocument()
   })
+
+  it('displays a friendly error message when checkout fails with 409 (variant locked)', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.post('http://localhost:8000/api/v1/store/test-tenant/cart/checkout', () => {
+        return HttpResponse.json(
+          { detail: 'Variant 10 is currently being checked out by someone else' },
+          { status: 409 }
+        )
+      })
+    )
+    renderCheckout()
+
+    await screen.findByTestId('item-summary')
+    await user.type(screen.getByLabelText(/full name/i), 'Ada Lovelace')
+    await user.type(screen.getByLabelText(/^phone$/i), '0500000000')
+    await user.type(screen.getByLabelText(/^city$/i), 'Tel Aviv')
+    await user.type(screen.getByLabelText(/street & house number/i), '1 Rothschild')
+    const submitButton = screen.getByRole('button', { name: /place order/i })
+    await user.click(submitButton)
+
+    // Should display the user-friendly locked message, not a generic raw error
+    expect(
+      await screen.findByText(/This item is currently being purchased by another customer, please try again in a few seconds/i)
+    ).toBeInTheDocument()
+  })
 })

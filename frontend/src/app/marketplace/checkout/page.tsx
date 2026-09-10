@@ -115,6 +115,8 @@ export default function MarketplaceCheckoutPage() {
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) {
         setError(t('checkout.loginToCheckout'))
+      } else if (e instanceof ApiError && e.status === 409) {
+        setError(t('checkout.itemLocked'))
       } else {
         setError(errorMessage(e) || t('checkout.placeFailed'))
       }

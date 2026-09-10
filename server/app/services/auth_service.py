@@ -34,7 +34,7 @@ async def _issue_token_pair(user: User, store_role: str | None = None) -> tuple[
         role=user.role,
         store_role=store_role,
     )
-    refresh, jti = create_refresh_token(user.id)
+    refresh, jti = create_refresh_token(user.id, store_role=store_role)
     await _persist_refresh_jti(jti, user.id)
     return access, refresh
 
@@ -162,8 +162,9 @@ async def refresh_tokens_service(refresh_token: str, db: AsyncSession) -> TokenR
     if user is None or not user.is_active:
         raise credentials_exception
 
-    access, refresh = await _issue_token_pair(user)
-    return _token_response(user, access, refresh)
+    store_role = payload.get("store_role")
+    access, refresh = await _issue_token_pair(user, store_role=store_role)
+    return _token_response(user, access, refresh, store_role=store_role)
 
 
 async def register_customer_global_service(req: CustomerRegisterRequest, db: AsyncSession) -> TokenResponse:

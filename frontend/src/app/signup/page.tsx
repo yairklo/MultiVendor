@@ -2,7 +2,7 @@
 
 import React, { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { setCookie } from 'cookies-next'
+import { setAuthTokens } from '@/lib/auth/tokenStorage'
 import { apiClient } from '@/lib/api/apiClient'
 import { useUiLocale } from '@/context/UiLocaleContext'
 import { UiLanguageSwitcher } from '@/components/ui/UiLanguageSwitcher'
@@ -68,7 +68,9 @@ function SignupForm() {
           body: JSON.stringify({ email, password, full_name: fullName }),
         })
         if (data && data.access_token) {
-          setCookie('token', data.access_token, { maxAge: 60 * 60 * 24 * 7, path: '/' })
+          setAuthTokens({
+            accessToken: data.access_token,
+          })
           router.push('/marketplace')
         }
       } else {
@@ -83,12 +85,10 @@ function SignupForm() {
           }),
         })
         if (data && data.access_token) {
-          setCookie('token', data.access_token, { maxAge: 60 * 60 * 24 * 7, path: '/' })
-          // The admin dashboard resolves which store to render from this
-          // cookie server-side (see lib/api/serverApiClient.ts) — without it
-          // the RSC request falls back to whatever tenantSlug is already
-          // set, same as admin/login/page.tsx.
-          setCookie('tenantSlug', storeSlug, { maxAge: 60 * 60 * 24 * 7, path: '/' })
+          setAuthTokens({
+            accessToken: data.access_token,
+            tenantSlug: storeSlug,
+          })
           // Hard navigation so the next (RSC) request carries the cookies we
           // just set — same reasoning as admin/login/page.tsx.
           window.location.assign('/admin/dashboard')
