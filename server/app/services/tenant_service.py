@@ -14,7 +14,7 @@ from app.services.product_completeness import (
     supported_languages_of,
     validate_nav_labels,
 )
-from app.services.coolify_service import sync_tenant_domain
+from app.services.coolify_service import regenerate_traefik_dynamic_config
 from datetime import datetime, timezone
 import json
 
@@ -28,7 +28,6 @@ async def update_tenant_service(tenant_slug: str, req: TenantUpdateSchema, db: A
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
 
-    old_custom_domain = tenant.custom_domain
     if req.custom_domain:
         # Normalized so resolve_tenant_by_domain_service's lookup (fed a Host
         # header, which browsers/Caddy always lowercase) reliably matches.
@@ -37,8 +36,11 @@ async def update_tenant_service(tenant_slug: str, req: TenantUpdateSchema, db: A
     await db.commit()
 
     # Best-effort, never raises -- see coolify_service's module docstring.
-    # No-op entirely unless the Coolify env vars are set (see .env.example).
-    await sync_tenant_domain(old_custom_domain, tenant.custom_domain)
+    # No-op entirely unless the TRAEFIK_* env vars are set (see .env.example).
+    # Regenerates the whole dynamic-config file from the DB rather than
+    # patching just this one domain, so it stays correct regardless of what
+    # changed.
+    await regenerate_traefik_dynamic_config(db)
 
     tenant_result = await db.execute(
         select(Tenant)

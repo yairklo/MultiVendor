@@ -1,13 +1,11 @@
 # Variant of docker-compose.prod.yaml for a VPS where Coolify's own shared
 # proxy (Traefik) already fronts other apps on 80/443. No Caddy service here
 # -- Coolify's proxy handles TLS/domain routing for `backend` and `frontend`
-# instead, via a domain assigned to each service in the Coolify UI (not via
-# env vars here, since the exact mechanism -- UI field vs. a
-# SERVICE_FQDN_<name> env var -- depends on your Coolify version). This
-# trades away Caddy's fully-automatic on-demand TLS for arbitrary tenant
-# custom domains: adding a tenant's custom domain now means an admin adds it
-# to the `frontend` service's Domains list in Coolify, same as adding
-# APP_DOMAIN/API_DOMAIN below. See docs/DEPLOY_COOLIFY.md.
+# instead, via a domain assigned to each service in the Coolify UI. Tenant
+# custom domains (a seller's own domain) route through the same shared
+# Traefik too, automatically, via coolify_service.py writing a Traefik
+# dynamic-config file -- see the `backend` service's TRAEFIK_* env vars and
+# volume mount below, and docs/DEPLOY_COOLIFY.md.
 #
 # Usage: copy .env.example to .env, fill it in (skip APP_DOMAIN/API_DOMAIN/
 # ACME_EMAIL -- those are only consumed by Caddy, not used here), then let
@@ -70,14 +68,17 @@ services:
       S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
       S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
       S3_PUBLIC_URL_BASE: ${S3_PUBLIC_URL_BASE:-}
-      # Optional -- automates adding a tenant's custom domain to the
-      # `frontend` service below via Coolify's API instead of an admin doing
-      # it by hand in the Coolify UI. Leave all three blank to keep that
-      # manual step. See docs/DEPLOY_COOLIFY.md and
-      # app/services/coolify_service.py.
-      COOLIFY_API_URL: ${COOLIFY_API_URL:-}
-      COOLIFY_API_TOKEN: ${COOLIFY_API_TOKEN:-}
-      COOLIFY_FRONTEND_APP_UUID: ${COOLIFY_FRONTEND_APP_UUID:-}
+      # Optional -- automates tenant custom domains by writing a Traefik
+      # dynamic-config file (see the `volumes:` bind-mount below) instead of
+      # an admin adding each domain by hand in the Coolify UI. Leave both
+      # blank to keep that manual step. See docs/DEPLOY_COOLIFY.md and
+      # app/services/coolify_service.py -- in particular, verify
+      # TRAEFIK_CERT_RESOLVER/TRAEFIK_HTTPS_ENTRYPOINT/the host-side path
+      # below against your own server's Server -> Proxy page before trusting
+      # the defaults.
+      TRAEFIK_DYNAMIC_CONFIG_PATH: ${TRAEFIK_DYNAMIC_CONFIG_PATH:-}
+      TRAEFIK_CERT_RESOLVER: ${TRAEFIK_CERT_RESOLVER:-}
+      TRAEFIK_HTTPS_ENTRYPOINT: ${TRAEFIK_HTTPS_ENTRYPOINT:-https}
     # No `ports:` published to the host -- Coolify's Traefik reaches this
     # container over the internal docker network once you assign it a
     # domain in the Coolify UI (container port 8000).
@@ -85,6 +86,14 @@ services:
       - "8000"
     volumes:
       - uploads:/app/uploads
+      # Harmless to leave mounted even with the feature off (coolify_service.py
+      # only writes here if TRAEFIK_DYNAMIC_CONFIG_PATH is also set). Bind-mounts
+      # Coolify's Traefik dynamic-config directory from the HOST (left side --
+      # verify this path in Server -> Proxy -> Dynamic Configuration first, it
+      # can differ by install) into the container at a fixed path (right side).
+      # If the host path doesn't exist, Docker just creates an empty directory
+      # there -- not a deploy blocker, but a sign the path is wrong.
+      - ${TRAEFIK_DYNAMIC_CONFIG_HOST_DIR:-/data/coolify/proxy/dynamic}:/coolify-proxy-dynamic
     depends_on:
       mysql:
         condition: service_healthy

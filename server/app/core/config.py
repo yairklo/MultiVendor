@@ -102,19 +102,35 @@ class Settings(BaseSettings):
     #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
     SHIPPING_CREDENTIALS_ENCRYPTION_KEY: str | None = None
 
-    # Automates adding a tenant's custom domain to this app's frontend
-    # service in Coolify (see app/services/coolify_service.py,
-    # docs/DEPLOY_COOLIFY.md) whenever a seller sets one, instead of an
-    # admin adding it by hand in the Coolify UI. All three must be set
-    # together or this is a no-op -- e.g. local dev, or a
-    # docker-compose.prod.yaml deploy that uses Caddy's on-demand TLS
+    # Automates tenant custom domains under Coolify (see
+    # app/services/coolify_service.py, docs/DEPLOY_COOLIFY.md) by writing a
+    # Traefik file-provider "dynamic configuration" YAML -- Coolify's own
+    # documented mechanism for adding routes without creating a full Coolify
+    # resource -- instead of an admin adding each domain by hand in the
+    # Coolify UI. Both must be set or this is a no-op -- e.g. local dev, or
+    # a docker-compose.prod.yaml deploy that uses Caddy's on-demand TLS
     # instead and doesn't need this at all.
-    COOLIFY_API_URL: str | None = None  # e.g. "https://coolify.example.com/api/v1"
-    COOLIFY_API_TOKEN: str | None = None
-    COOLIFY_FRONTEND_APP_UUID: str | None = None
-    # Must match the `frontend:` service key in docker-compose.coolify.yaml
-    # -- Coolify's docker_compose_domains keys off this container name.
-    COOLIFY_FRONTEND_CONTAINER_NAME: str = "frontend"
+    #
+    # TRAEFIK_DYNAMIC_CONFIG_PATH: container-side path to the YAML file this
+    # app owns and rewrites in full on every tenant custom-domain change --
+    # must land inside Coolify's dynamic-config directory (bind-mounted in
+    # docker-compose.coolify.yaml from the host's
+    # /data/coolify/proxy/dynamic/, but verify that path against your own
+    # server's Server -> Proxy -> Dynamic Configuration page first, it can
+    # differ by install).
+    TRAEFIK_DYNAMIC_CONFIG_PATH: str | None = None
+    # Name of the ACME resolver Coolify's Traefik is configured with -- see
+    # the Static Configuration shown on that same Proxy page (commonly, but
+    # not always, "letsencrypt"). Get this wrong and the file loads fine but
+    # Traefik never requests a cert for the domain.
+    TRAEFIK_CERT_RESOLVER: str | None = None
+    # Internal docker-network address of the `frontend` service that
+    # dynamically-added tenant domains should route to -- matches
+    # docker-compose.coolify.yaml's `frontend:` service/port by default.
+    TRAEFIK_FRONTEND_UPSTREAM_URL: str = "http://frontend:3000"
+    # Name of Coolify's HTTPS entrypoint -- also shown on the Proxy page's
+    # Static Configuration; verify rather than trust this default.
+    TRAEFIK_HTTPS_ENTRYPOINT: str = "https"
 
     model_config = SettingsConfigDict(env_file=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), ".env"), env_file_encoding="utf-8", extra="ignore")
 
