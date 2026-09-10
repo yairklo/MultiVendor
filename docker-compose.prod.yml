@@ -1,7 +1,12 @@
-# Production stack: mysql + redis + backend + frontend + Caddy (reverse
-# proxy / automatic HTTPS). Local dev keeps using docker-compose.yml (just
-# mysql+redis) with the app run natively via .claude/launch.json -- this
-# file is for an actual VPS deploy.
+# Production stack: mysql + redis + backend + frontend, for the APP VPS.
+# Local dev keeps using docker-compose.yml (just mysql+redis) with the app
+# run natively via .claude/launch.json -- this file is for an actual VPS
+# deploy.
+#
+# Caddy (reverse proxy / automatic HTTPS) is deliberately NOT in this file
+# -- see deploy/edge/README.md for why it runs on its own separate VPS
+# instead, and set up that edge VPS (plus the firewall rule it depends on)
+# before exposing this stack to the internet at all.
 #
 # Usage: copy .env.example to .env, fill it in, then:
 #   docker compose -f docker-compose.prod.yml up -d --build
@@ -60,6 +65,12 @@ services:
       S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
       S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
       S3_PUBLIC_URL_BASE: ${S3_PUBLIC_URL_BASE:-}
+    # Published so the edge VPS's Caddy can reach it (deploy/edge/Caddyfile) --
+    # MUST be firewalled to only accept connections from the edge VPS's IP
+    # (or bound to a private-network interface instead), never left open to
+    # the internet. See deploy/edge/README.md step 2.
+    ports:
+      - "8000:8000"
     volumes:
       - uploads:/app/uploads
     depends_on:
@@ -84,33 +95,19 @@ services:
       APP_DOMAIN: ${APP_DOMAIN}
       # proxy.ts's custom-domain resolver calls this at request time (not
       # baked into the client bundle) -- the internal docker network address
-      # is faster and doesn't depend on Caddy being up.
+      # is faster and doesn't depend on the edge VPS's Caddy being up (see
+      # deploy/edge/README.md -- frontend and backend still share this one
+      # docker network even though Caddy no longer does).
       INTERNAL_API_BASE_URL: http://backend:8000
-    depends_on:
-      - backend
-    restart: unless-stopped
-
-  caddy:
-    image: caddy:2-alpine
+    # Published so the edge VPS's Caddy can reach it -- same firewall
+    # requirement as the backend's ports block above.
     ports:
-      - "80:80"
-      - "443:443"
-    environment:
-      APP_DOMAIN: ${APP_DOMAIN}
-      API_DOMAIN: ${API_DOMAIN}
-      ACME_EMAIL: ${ACME_EMAIL}
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
+      - "3000:3000"
     depends_on:
       - backend
-      - frontend
     restart: unless-stopped
 
 volumes:
   mysql_data:
   redis_data:
   uploads:
-  caddy_data:
-  caddy_config:

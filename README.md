@@ -52,6 +52,10 @@ docs/
 tests/              backend test suite (pytest, 300+ tests)
 db/                 raw SQL schema/seed reference
 
+deploy/
+  backup_db.sh / restore_db.sh   app-VPS MySQL backup/restore (cron-friendly)
+  edge/                          the separate edge VPS's Caddy stack -- see Deployment below
+
 .claude/, .agents/, scripts/pipeline_triage.py
                     AI-agent development workflow config (task-risk gating, durable
                     per-directory lessons) -- not application code, safe to ignore
@@ -107,13 +111,14 @@ CI (`.github/workflows/ci.yml`) runs backend migrations + pytest, and frontend t
 
 ## Deployment
 
-`docker-compose.prod.yml` brings up the full stack (MySQL, Redis, backend, frontend, and Caddy for automatic TLS via Let's Encrypt) behind two domains (`APP_DOMAIN`, `API_DOMAIN`). Copy `.env.example` to `.env`, fill it in, then:
+Two separate VPS's, not one:
 
-```bash
-docker compose -f docker-compose.prod.yml up -d --build
-```
+- **App VPS** — `docker-compose.prod.yml` at the repo root: MySQL, Redis, backend, frontend. Copy `.env.example` to `.env`, fill it in, then `docker compose -f docker-compose.prod.yml up -d --build`.
+- **Edge VPS** — `deploy/edge/`: just Caddy, terminating TLS (automatic via Let's Encrypt, `APP_DOMAIN`/`API_DOMAIN`) and reverse-proxying to the app VPS, plus on-demand TLS for tenant custom domains.
 
-See the comments in `.env.example`, `Caddyfile`, and `docker-compose.prod.yml` for what's required vs. optional at each stage.
+They're split onto separate boxes because the app VPS may be a shared machine already running other services on ports 80/443, which Caddy needs exclusively — see [deploy/edge/README.md](deploy/edge/README.md) for the full topology, setup order, and the firewall rule the app VPS needs before it's reachable from the edge VPS at all. If you have a VPS dedicated solely to this project, running Caddy alongside the app stack on that one box is simpler; that's a straightforward merge of `deploy/edge/docker-compose.yml`'s `caddy` service back into `docker-compose.prod.yml`.
+
+See the comments in `.env.example`, `deploy/edge/.env.example`, `deploy/edge/Caddyfile`, and `docker-compose.prod.yml` for what's required vs. optional at each stage.
 
 **Backups:** `deploy/backup_db.sh` dumps the production MySQL DB (gzip, pruned after `BACKUP_RETENTION_DAYS`, default 14) — run it on the VPS via cron:
 
