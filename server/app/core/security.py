@@ -35,12 +35,12 @@ def create_access_token(
         to_encode["store_role"] = store_role
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
-def create_refresh_token(subject: Union[str, Any], store_role: Optional[str] = None) -> tuple[str, str]:
+def create_refresh_token(subject: Union[str, Any], tenant_id: Optional[int] = None) -> tuple[str, str]:
     jti = uuid4().hex
     expire = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     payload: dict[str, Any] = {"exp": expire, "sub": str(subject), "typ": "refresh", "jti": jti}
-    if store_role:
-        payload["store_role"] = store_role
+    if tenant_id is not None:
+        payload["tenant_id"] = tenant_id
     token = jwt.encode(
         payload,
         settings.SECRET_KEY,

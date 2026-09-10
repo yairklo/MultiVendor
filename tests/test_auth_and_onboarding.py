@@ -105,25 +105,58 @@ async def test_cookie_based_refresh_and_logout(async_client: AsyncClient, db_ses
     response = await async_client.post("/api/v1/auth/login", json=payload)
     assert response.status_code == 200
     assert "refresh_token" in response.cookies
-    cookie_val = response.cookies.get("refresh_token")
-    assert cookie_val is not None
+    initial_cookie = response.cookies.get("refresh_token")
+    assert initial_cookie is not None
 
-    # Call refresh without body, passing the cookie
-    refresh_resp = await async_client.post("/api/v1/auth/refresh", cookies={"refresh_token": cookie_val})
+    # Call refresh without body or explicit cookies - relying on client cookie jar and Path scoping
+    refresh_resp = await async_client.post("/api/v1/auth/refresh")
     assert refresh_resp.status_code == 200
     data = refresh_resp.json()
     assert "access_token" in data
     new_cookie = refresh_resp.cookies.get("refresh_token")
     assert new_cookie is not None
-    assert new_cookie != cookie_val
+    assert new_cookie != initial_cookie
 
-    # Logout clears the cookie and invalidates token
-    logout_resp = await async_client.post("/api/v1/auth/logout", cookies={"refresh_token": new_cookie})
+    # Logout without explicit cookies - verifying browser sends cookie to /api/v1/auth/logout under path="/api/v1/auth"
+    logout_resp = await async_client.post("/api/v1/auth/logout")
     assert logout_resp.status_code == 200
 
-    # Old token shouldn't work
-    revoked_resp = await async_client.post("/api/v1/auth/refresh", cookies={"refresh_token": new_cookie})
+    # Old rotated token should now be revoked in Redis
+    revoked_resp = await async_client.post("/api/v1/auth/refresh", json={"refresh_token": new_cookie})
     assert revoked_resp.status_code == 401
+
+@pytest.mark.asyncio
+async def test_refresh_revalidates_membership_from_live_db(async_client: AsyncClient, db_session):
+    from sqlalchemy import update
+    from app.models.user import UserStoreMembership
+
+    # Login as tenant admin
+    payload = {
+        "email": "admin.store1@platform.com",
+        "password": "password",
+        "tenant_slug": "tenant-a",
+    }
+    response = await async_client.post("/api/v1/auth/login", json=payload)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["store_role"] == "tenant_admin"
+    refresh_token = body["refresh_token"]
+
+    # Revoke the seller's tenant_admin membership in the live DB
+    await db_session.execute(
+        update(UserStoreMembership)
+        .where(UserStoreMembership.user_id == body["user_id"])
+        .values(is_active=False)
+    )
+    await db_session.commit()
+
+    # Perform refresh
+    refresh_resp = await async_client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
+    assert refresh_resp.status_code == 200
+    refreshed_data = refresh_resp.json()
+
+    # The store_role MUST be None because the membership was revoked in the DB
+    assert refreshed_data.get("store_role") is None
 
 @pytest.mark.asyncio
 async def test_login_tenant_admin_success(async_client: AsyncClient, db_session):

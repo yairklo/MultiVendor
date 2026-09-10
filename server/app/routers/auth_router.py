@@ -29,13 +29,13 @@ def _set_refresh_cookie(response: Response, refresh_token: str) -> None:
         httponly=True,
         secure=is_production,
         samesite="lax",
-        path="/api/v1/auth/refresh",
+        path="/api/v1/auth",
     )
 
 def _clear_refresh_cookie(response: Response) -> None:
     response.delete_cookie(
         key="refresh_token",
-        path="/api/v1/auth/refresh",
+        path="/api/v1/auth",
     )
 
 @auth_router.post(

@@ -47,6 +47,13 @@ async function requestTokenRefresh(): Promise<string | null> {
   return refreshPromise
 }
 
+function redirectToLogin(): void {
+  if (typeof window !== 'undefined') {
+    const isAdminRoute = /^\/(admin|super-admin)(\/|$)/.test(window.location.pathname)
+    window.location.href = isAdminRoute ? '/admin/login' : '/login'
+  }
+}
+
 export const apiClient = async (url: string, options: ApiClientOptions = {}): Promise<any> => {
   const token = getAccessToken()
   const headers = new Headers(options.headers)
@@ -70,29 +77,24 @@ export const apiClient = async (url: string, options: ApiClientOptions = {}): Pr
   // without it the browser drops Set-Cookie from the response entirely.
   const response = await fetch(fullUrl, { ...options, headers, credentials: 'include' })
 
-  // Identify auth endpoints that should NOT trigger a refresh loop on 401
+  // Identify auth endpoints that should NOT trigger a refresh loop or session invalidation on 401
   const isAuthEndpoint = url.includes('/api/v1/auth/login') || url.includes('/api/v1/auth/refresh')
 
-  if (response.status === 401 && token && !isAuthEndpoint && !options._retry) {
-    const newAccessToken = await requestTokenRefresh()
-    if (newAccessToken) {
-      const retryHeaders = new Headers(options.headers)
-      retryHeaders.set('Authorization', `Bearer ${newAccessToken}`)
-      return apiClient(url, { ...options, headers: retryHeaders, _retry: true })
+  if (response.status === 401 && !isAuthEndpoint) {
+    if (token && !options._retry) {
+      const newAccessToken = await requestTokenRefresh()
+      if (newAccessToken) {
+        const retryHeaders = new Headers(options.headers)
+        retryHeaders.set('Authorization', `Bearer ${newAccessToken}`)
+        return apiClient(url, { ...options, headers: retryHeaders, _retry: true })
+      }
     }
 
-    // Refresh failed or returned null — perform full cleanup and redirect
-    clearAuthTokens()
-    if (typeof window !== 'undefined') {
-      const isAdminRoute = /^\/(admin|super-admin)(\/|$)/.test(window.location.pathname)
-      window.location.href = isAdminRoute ? '/admin/login' : '/login'
-    }
-  } else if (response.status === 401 && token && (isAuthEndpoint || options._retry)) {
-    // Only clear tokens if an active session expired on retry or on an authenticated route
-    clearAuthTokens()
-    if (typeof window !== 'undefined' && options._retry) {
-      const isAdminRoute = /^\/(admin|super-admin)(\/|$)/.test(window.location.pathname)
-      window.location.href = isAdminRoute ? '/admin/login' : '/login'
+    // If an authenticated session received 401 and could not be refreshed (or was already retried),
+    // tear down the session cleanly and redirect to the appropriate login page.
+    if (token) {
+      clearAuthTokens()
+      redirectToLogin()
     }
   }
 

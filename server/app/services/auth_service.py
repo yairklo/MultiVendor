@@ -27,14 +27,14 @@ async def _persist_refresh_jti(jti: str, user_id: int) -> None:
     await redis_client.set(f"{REFRESH_KEY_PREFIX}{jti}", str(user_id), ex=refresh_token_ttl_seconds())
 
 
-async def _issue_token_pair(user: User, store_role: str | None = None) -> tuple[str, str]:
+async def _issue_token_pair(user: User, tenant_id: int | None = None, store_role: str | None = None) -> tuple[str, str]:
     access = create_access_token(
         subject=user.id,
         is_super_admin=(user.role == UserRole.SUPER_ADMIN),
         role=user.role,
         store_role=store_role,
     )
-    refresh, jti = create_refresh_token(user.id, store_role=store_role)
+    refresh, jti = create_refresh_token(user.id, tenant_id=tenant_id)
     await _persist_refresh_jti(jti, user.id)
     return access, refresh
 
@@ -49,20 +49,21 @@ def _token_response(user: User, access: str, refresh: str, store_role: str | Non
     )
 
 
-async def _lookup_store_role(user_id: int, tenant_slug: str | None, db: AsyncSession) -> str | None:
+async def _lookup_tenant_and_store_role(user_id: int, tenant_slug: str | None, db: AsyncSession) -> tuple[int | None, str | None]:
     if not tenant_slug:
-        return None
+        return None, None
     tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
     tenant_id = tenant_result.scalar_one_or_none()
     if not tenant_id:
-        return None
+        return None, None
     membership_result = await db.execute(
         select(UserStoreMembership.role).where(
             UserStoreMembership.user_id == user_id,
             UserStoreMembership.tenant_id == tenant_id,
+            UserStoreMembership.is_active == True,
         )
     )
-    return membership_result.scalar_one_or_none()
+    return tenant_id, membership_result.scalar_one_or_none()
 
 
 async def register_tenant_service(req: TenantRegisterRequest, db: AsyncSession) -> TokenResponse:
@@ -118,7 +119,7 @@ async def register_tenant_service(req: TenantRegisterRequest, db: AsyncSession) 
     await db.commit()
     await db.refresh(user)
 
-    access, refresh = await _issue_token_pair(user, store_role='tenant_admin')
+    access, refresh = await _issue_token_pair(user, tenant_id=tenant.id, store_role='tenant_admin')
     return _token_response(user, access, refresh, store_role='tenant_admin')
 
 
@@ -129,8 +130,8 @@ async def login_service(req: LoginRequest, db: AsyncSession) -> TokenResponse:
     if not user or not verify_password(req.password, user.password_hash) or not user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
-    store_role = await _lookup_store_role(user.id, req.tenant_slug, db)
-    access, refresh = await _issue_token_pair(user, store_role=store_role)
+    tenant_id, store_role = await _lookup_tenant_and_store_role(user.id, req.tenant_slug, db)
+    access, refresh = await _issue_token_pair(user, tenant_id=tenant_id, store_role=store_role)
     return _token_response(user, access, refresh, store_role=store_role)
 
 
@@ -162,8 +163,20 @@ async def refresh_tokens_service(refresh_token: str, db: AsyncSession) -> TokenR
     if user is None or not user.is_active:
         raise credentials_exception
 
-    store_role = payload.get("store_role")
-    access, refresh = await _issue_token_pair(user, store_role=store_role)
+    # Always re-verify tenant membership against live DB rather than trusting refresh token claims
+    tenant_id = payload.get("tenant_id")
+    store_role = None
+    if tenant_id is not None:
+        membership_result = await db.execute(
+            select(UserStoreMembership.role).where(
+                UserStoreMembership.user_id == user.id,
+                UserStoreMembership.tenant_id == int(tenant_id),
+                UserStoreMembership.is_active == True,
+            )
+        )
+        store_role = membership_result.scalar_one_or_none()
+
+    access, refresh = await _issue_token_pair(user, tenant_id=tenant_id if store_role else None, store_role=store_role)
     return _token_response(user, access, refresh, store_role=store_role)
 
 

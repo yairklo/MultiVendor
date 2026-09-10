@@ -165,7 +165,8 @@ describe('API Client', () => {
       expect(refreshCalls).toBe(1)
     })
 
-    it('does not attempt refresh when 401 occurs on /api/v1/auth/login', async () => {
+    it('does not attempt refresh or tear down session when 401 occurs on /api/v1/auth/login', async () => {
+      setCookie('token', 'existing-token')
       global.fetch = vi.fn().mockResolvedValue({
         ok: false,
         status: 401,
@@ -180,6 +181,10 @@ describe('API Client', () => {
       const fetchCalls = vi.mocked(global.fetch).mock.calls
       const refreshCalls = fetchCalls.filter(([callUrl]) => String(callUrl).includes('/auth/refresh'))
       expect(refreshCalls.length).toBe(0)
+
+      // Should not have called /logout or deleted the existing token
+      const logoutCalls = fetchCalls.filter(([callUrl]) => String(callUrl).includes('/auth/logout'))
+      expect(logoutCalls.length).toBe(0)
     })
 
     it('prevents infinite loops by immediately rejecting when a retried request receives 401', async () => {
