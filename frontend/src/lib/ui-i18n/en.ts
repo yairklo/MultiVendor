@@ -4,6 +4,7 @@ export const en: NestedDict = {
   common: {
     save: 'Save',
     saving: 'Saving…',
+    view: 'View',
     cancel: 'Cancel',
     confirm: 'Confirm',
     delete: 'Delete',
@@ -230,6 +231,13 @@ export const en: NestedDict = {
     paymentSuccess: 'Payment successful',
     paymentFailed: 'Payment failed',
     loadFailed: 'Failed to load orders',
+    orderDetails: 'Order Details',
+    backToOrders: 'Back to Orders',
+    items: 'Items',
+    quantity: 'Qty',
+    subtotal: 'Subtotal',
+    discount: 'Discount',
+    shipping: 'Shipping',
   },
   orderStatus: {
     pending: 'Pending',
