@@ -9,6 +9,11 @@ vi.mock('@/hooks/useCurrency', () => ({
   }),
 }))
 
+vi.mock('next/navigation', () => ({
+  usePathname: () => '/admin/dashboard',
+  useRouter: () => ({ push: vi.fn() }),
+}))
+
 // Data fetching for the dashboard now happens server-side in
 // admin/(cms)/dashboard/page.tsx (an async Server Component, not renderable
 // with RTL) — this exercises the client presentation component it feeds.
@@ -21,6 +26,7 @@ describe('Admin Dashboard', () => {
         recentOrders={[]}
         lowStockProducts={[]}
         recentReviews={[]}
+        rangeDays={30}
       />
     )
 
