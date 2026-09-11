@@ -1,6 +1,10 @@
-from fastapi import APIRouter, Depends, status, BackgroundTasks
+from typing import Optional
+from fastapi import APIRouter, Depends, status, BackgroundTasks, Request, Response, HTTPException, Body
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.db.session import get_db
+from jose import jwt, JWTError
+from app.core.config import settings
+from app.core.security import refresh_token_ttl_seconds
+from app.db.session import get_db, redis_client
 from app.schemas.tenant_schemas import TenantRegisterRequest
 from app.schemas.auth_schemas import (
     TokenResponse, LoginRequest, CustomerRegisterRequest, UserResponse, RefreshTokenRequest,
@@ -9,11 +13,30 @@ from app.schemas.auth_schemas import (
 from app.services.auth_service import (
     register_tenant_service, login_service, register_customer_service, register_customer_global_service,
     refresh_tokens_service, request_password_reset_service, confirm_password_reset_service,
+    REFRESH_KEY_PREFIX,
 )
-from fastapi import Request
 from app.core.limiter import limiter
 
 auth_router = APIRouter(prefix="/api/v1/auth", tags=["Authentication & Onboarding"])
+
+def _set_refresh_cookie(response: Response, refresh_token: str) -> None:
+    # secure=True is enabled only in production (HTTPS) so localhost plain http development does not break
+    is_production = settings.APP_ENV.lower() == "production"
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        max_age=refresh_token_ttl_seconds(),
+        httponly=True,
+        secure=is_production,
+        samesite="lax",
+        path="/api/v1/auth",
+    )
+
+def _clear_refresh_cookie(response: Response) -> None:
+    response.delete_cookie(
+        key="refresh_token",
+        path="/api/v1/auth",
+    )
 
 @auth_router.post(
     "/register-tenant", 
@@ -28,8 +51,10 @@ auth_router = APIRouter(prefix="/api/v1/auth", tags=["Authentication & Onboardin
     }
 )
 @limiter.limit("10/minute")
-async def register_tenant(request: Request, req: TenantRegisterRequest, bg_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
-    return await register_tenant_service(req, db)
+async def register_tenant(request: Request, response: Response, req: TenantRegisterRequest, bg_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
+    res = await register_tenant_service(req, db)
+    _set_refresh_cookie(response, res.refresh_token)
+    return res
 
 @auth_router.post(
     "/login", 
@@ -43,8 +68,10 @@ async def register_tenant(request: Request, req: TenantRegisterRequest, bg_tasks
     }
 )
 @limiter.limit("10/minute")
-async def login(request: Request, req: LoginRequest, db: AsyncSession = Depends(get_db)):
-    return await login_service(req, db)
+async def login(request: Request, response: Response, req: LoginRequest, db: AsyncSession = Depends(get_db)):
+    res = await login_service(req, db)
+    _set_refresh_cookie(response, res.refresh_token)
+    return res
 
 @auth_router.post(
     "/refresh",
@@ -54,8 +81,36 @@ async def login(request: Request, req: LoginRequest, db: AsyncSession = Depends(
     description="Exchanges a valid refresh token for a new access token and a rotated refresh token. The previous refresh token is invalidated.",
 )
 @limiter.limit("10/minute")
-async def refresh_tokens(request: Request, req: RefreshTokenRequest, db: AsyncSession = Depends(get_db)):
-    return await refresh_tokens_service(req.refresh_token, db)
+async def refresh_tokens(request: Request, response: Response, req: Optional[RefreshTokenRequest] = Body(None), db: AsyncSession = Depends(get_db)):
+    token = (req.refresh_token if req and req.refresh_token else None) or request.cookies.get("refresh_token")
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    res = await refresh_tokens_service(token, db)
+    _set_refresh_cookie(response, res.refresh_token)
+    return res
+
+@auth_router.post(
+    "/logout",
+    status_code=status.HTTP_200_OK,
+    summary="Logout User",
+    description="Clears the HttpOnly refresh token cookie and invalidates the session in Redis.",
+)
+async def logout(request: Request, response: Response):
+    _clear_refresh_cookie(response)
+    token = request.cookies.get("refresh_token")
+    if token:
+        try:
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+            jti = payload.get("jti")
+            if jti:
+                await redis_client.delete(f"{REFRESH_KEY_PREFIX}{jti}")
+        except JWTError:
+            pass
+    return {"detail": "Successfully logged out"}
 
 @auth_router.post(
     "/register",
@@ -70,8 +125,10 @@ async def refresh_tokens(request: Request, req: RefreshTokenRequest, db: AsyncSe
     }
 )
 @limiter.limit("10/minute")
-async def register_customer_global(request: Request, req: CustomerRegisterRequest, db: AsyncSession = Depends(get_db)):
-    return await register_customer_global_service(req, db)
+async def register_customer_global(request: Request, response: Response, req: CustomerRegisterRequest, db: AsyncSession = Depends(get_db)):
+    res = await register_customer_global_service(req, db)
+    _set_refresh_cookie(response, res.refresh_token)
+    return res
 
 @auth_router.post(
     "/password-reset/request",
