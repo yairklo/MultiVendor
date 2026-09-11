@@ -481,6 +481,7 @@ export const he: NestedDict = {
     empty: 'העגלה ריקה. הוסיפו פריטים מהחנות קודם.',
     emptyMarketplace: 'עגלת המרקטפלייס ריקה. הוסיפו פריטים מהמרקטפלייס קודם.',
     loginToCheckout: 'יש להתחבר כדי להשלים את הרכישה.',
+    logInLink: 'התחברות',
     placeFailed: 'ביצוע ההזמנה נכשל.',
     paymentFailed: 'התשלום נכשל.',
     paymentSuccess: 'התשלום הצליח! הזמנה #{number} בטיפול.',

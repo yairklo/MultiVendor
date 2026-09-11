@@ -1,15 +1,33 @@
 'use client'
 
-import React, { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import React, { Suspense, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { setCookie } from 'cookies-next'
 import { apiClient, ApiError } from '@/lib/api/apiClient'
 import { useUiLocale } from '@/context/UiLocaleContext'
 import { UiLanguageSwitcher } from '@/components/ui/UiLanguageSwitcher'
 import { errorMessage } from '@/lib/errors'
 
+// Only a same-origin relative path is ever honored -- "//evil.com" and
+// "https://evil.com" both start with something other than a single "/" and
+// are rejected, so ?redirect= can never send a logged-in user off-site.
+function sanitizeRedirect(raw: string | null): string | null {
+  if (!raw) return null
+  if (!raw.startsWith('/') || raw.startsWith('//')) return null
+  return raw
+}
+
 export default function CustomerLoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background" />}>
+      <CustomerLoginForm />
+    </Suspense>
+  )
+}
+
+function CustomerLoginForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { t } = useUiLocale()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -30,8 +48,8 @@ export default function CustomerLoginPage() {
 
       if (data && data.access_token) {
         setCookie('token', data.access_token, { maxAge: 60 * 60 * 24 * 7, path: '/' })
-        // Redirect to the test storefront
-        router.push(`/store/${tenantSlug}`)
+        const redirectTo = sanitizeRedirect(searchParams.get('redirect'))
+        router.push(redirectTo || `/store/${tenantSlug}`)
       }
     } catch (err) {
       // The backend's 401 detail ("Invalid credentials") is a fixed,
