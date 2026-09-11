@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import Link from 'next/link'
 
 import {
   Table,
@@ -10,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { buttonVariants } from '@/components/ui/button'
 import { useCurrency } from '@/hooks/useCurrency'
 import { useUiLocale } from '@/context/UiLocaleContext'
 import { formatUiDate } from '@/lib/utils'
@@ -33,12 +35,13 @@ export function CustomersPageClient({ initialCustomers }: { initialCustomers: Cu
               <TableHead>{t('customers.orders')}</TableHead>
               <TableHead className="text-end">{t('customers.totalSpent')}</TableHead>
               <TableHead>{t('customers.lastOrder')}</TableHead>
+              <TableHead className="text-end">{t('common.actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {customers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">{t('customers.none')}</TableCell>
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{t('customers.none')}</TableCell>
               </TableRow>
             ) : (
               customers.map(customer => (
@@ -52,6 +55,14 @@ export function CustomersPageClient({ initialCustomers }: { initialCustomers: Cu
                   <TableCell className="text-end font-medium tabular-nums">{formatCurrency(Number(customer.total_spent))}</TableCell>
                   <TableCell className="text-muted-foreground">
                     {formatUiDate(customer.last_order_at, locale)}
+                  </TableCell>
+                  <TableCell className="text-end whitespace-nowrap">
+                    <Link
+                      href={`/admin/customers/${customer.id}`}
+                      className={buttonVariants({ variant: 'ghost', size: 'sm' })}
+                    >
+                      {t('common.view')}
+                    </Link>
                   </TableCell>
                 </TableRow>
               ))

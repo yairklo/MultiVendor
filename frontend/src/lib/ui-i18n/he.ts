@@ -262,6 +262,9 @@ export const he: NestedDict = {
     totalSpent: 'סה״כ רכישות',
     lastOrder: 'הזמנה אחרונה',
     none: 'עדיין אין לקוחות.',
+    orderHistory: 'היסטוריית הזמנות',
+    backToCustomers: 'חזרה ללקוחות',
+    noOrdersForCustomer: 'ללקוח הזה עדיין אין הזמנות.',
   },
   coupons: {
     title: 'קופונים',

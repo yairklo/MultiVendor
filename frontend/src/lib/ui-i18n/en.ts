@@ -262,6 +262,9 @@ export const en: NestedDict = {
     totalSpent: 'Total Spent',
     lastOrder: 'Last Order',
     none: 'No customers yet.',
+    orderHistory: 'Order History',
+    backToCustomers: 'Back to Customers',
+    noOrdersForCustomer: 'This customer has no orders yet.',
   },
   coupons: {
     title: 'Coupons',
