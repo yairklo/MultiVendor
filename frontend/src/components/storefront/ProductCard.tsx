@@ -85,7 +85,7 @@ export function ProductCard({
       </Link>
       <Link
         href={`/store/${tenantSlug}/products/${product.slug}`}
-        className="line-clamp-2 font-heading text-lg font-medium leading-snug text-foreground transition-opacity hover:opacity-70"
+        className="line-clamp-2 min-h-[3.1rem] font-heading text-lg font-medium leading-snug text-foreground transition-opacity hover:opacity-70"
       >
         {name}
       </Link>
