@@ -17,7 +17,7 @@ from app.schemas.catalog_schemas import (
 )
 from app.schemas.order_schemas import (
     OrderResponse, CouponCreateRequest, CouponUpdateRequest, CouponResponse,
-    OrderStatusUpdateResponse
+    OrderStatusUpdateResponse, CustomerDetailResponse
 )
 from app.schemas.shipping_schemas import (
     ShippingProviderCode, TenantShippingConfigCreate, TenantShippingConfigResponse,
@@ -43,7 +43,7 @@ from app.services.tenant_service import (
 )
 from app.services.order_service import (
     update_order_status_service, list_tenant_orders_service, get_tenant_order_service,
-    list_tenant_customers_service
+    list_tenant_customers_service, get_tenant_customer_detail_service
 )
 from app.services.coupon_service import (
     list_tenant_coupons_service, create_tenant_coupon_service, update_coupon_service,
@@ -500,6 +500,20 @@ async def get_tenant_customers(
     db: AsyncSession = Depends(get_db)
 ):
     return await list_tenant_customers_service(tenant_slug, db)
+
+@tenant_admin_router.get(
+    '/customers/{customer_id}',
+    response_model=CustomerDetailResponse,
+    summary="Get Customer Detail",
+    description="A single customer's summary stats plus their full order history with this store."
+)
+async def get_tenant_customer_detail(
+    customer_id: int,
+    tenant_slug: str = Path(...),
+    admin: User = Depends(get_tenant_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    return await get_tenant_customer_detail_service(tenant_slug, customer_id, db)
 
 # COUPONS
 @tenant_admin_router.get('/coupons', response_model=list[CouponResponse])

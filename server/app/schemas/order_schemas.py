@@ -4,6 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 from app.schemas.common_schemas import PaginatedResponse, OrderStatus, DiscountType
+from app.schemas.auth_schemas import CustomerSummaryResponse
 
 class AddToCartRequest(BaseModel):
     variant_id: int
@@ -122,6 +123,10 @@ class OrderResponse(BaseModel):
 
 class PaginatedOrderResponse(PaginatedResponse):
     data: List[OrderResponse]
+
+class CustomerDetailResponse(BaseModel):
+    customer: CustomerSummaryResponse
+    orders: List[OrderResponse]
 
 class CouponCreateRequest(BaseModel):
     code: str = Field(..., min_length=3, max_length=20)

@@ -10,7 +10,7 @@ from app.models.tenant import Tenant
 from app.models.order import Order, OrderItem, MasterOrder
 from app.models.user import User, UserStoreMembership
 from app.models.catalog import ProductVariant, Product, ProductBundleItem, tracks_inventory
-from app.schemas.order_schemas import PaginatedOrderResponse, OrderResponse, OrderItemResponse, PaymentIntentInfo
+from app.schemas.order_schemas import PaginatedOrderResponse, OrderResponse, OrderItemResponse, PaymentIntentInfo, CustomerDetailResponse
 from app.schemas.auth_schemas import CustomerSummaryResponse
 from app.db.tenant_context import platform_plane
 from app.services.payments import get_payment_provider, get_or_create_payment_intent
@@ -79,6 +79,7 @@ async def list_tenant_orders_service(
     start_date: datetime | None = None,
     end_date: datetime | None = None,
     customer_email: str | None = None,
+    customer_id: int | None = None,
     limit: int | None = None,
 ) -> list[OrderResponse]:
     tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
@@ -101,6 +102,8 @@ async def list_tenant_orders_service(
         query = query.where(Order.created_at <= end_date)
     if customer_email:
         query = query.where(User.email == customer_email)
+    if customer_id:
+        query = query.where(Order.user_id == customer_id)
     if limit:
         query = query.limit(limit)
 
@@ -158,6 +161,49 @@ async def list_tenant_customers_service(tenant_slug: str, db: AsyncSession) -> l
         )
         for user, orders_count, total_spent, last_order_at in result.all()
     ]
+
+async def get_tenant_customer_detail_service(tenant_slug: str, customer_id: int, db: AsyncSession) -> CustomerDetailResponse:
+    tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
+    tenant_id = tenant_result.scalar_one_or_none()
+    if not tenant_id:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    # Require an active customer membership on THIS tenant -- a customer_id
+    # that's valid on a different store (or a non-customer user) must 404,
+    # the same isolation list_tenant_customers_service already enforces for
+    # the list view.
+    paid_amount = case((Order.status.in_(PAID_ORDER_STATUSES), Order.total_amount), else_=0)
+    result = await db.execute(
+        select(
+            User,
+            func.count(Order.id).label('orders_count'),
+            func.coalesce(func.sum(paid_amount), 0).label('total_spent'),
+            func.max(Order.created_at).label('last_order_at'),
+        )
+        .join(UserStoreMembership, (UserStoreMembership.user_id == User.id) & (UserStoreMembership.tenant_id == tenant_id))
+        .outerjoin(Order, (Order.user_id == User.id) & (Order.tenant_id == tenant_id))
+        .where(UserStoreMembership.role == 'customer', UserStoreMembership.is_active == True, User.id == customer_id)
+        .group_by(User.id)
+    )
+    row = result.first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    user, orders_count, total_spent, last_order_at = row
+
+    orders = await list_tenant_orders_service(tenant_slug, db, customer_id=customer_id)
+
+    return CustomerDetailResponse(
+        customer=CustomerSummaryResponse(
+            id=user.id,
+            email=user.email,
+            full_name=user.full_name,
+            created_at=user.created_at,
+            orders_count=orders_count,
+            total_spent=float(total_spent),
+            last_order_at=last_order_at,
+        ),
+        orders=orders,
+    )
 
 async def restore_stock_for_order(order: Order, db: AsyncSession):
     # Determine variants to restore
