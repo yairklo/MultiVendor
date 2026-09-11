@@ -2,6 +2,7 @@
 
 import React from 'react'
 import Link from 'next/link'
+import { useRouter, usePathname } from 'next/navigation'
 import { motion, useReducedMotion } from 'motion/react'
 import { orderStatusClass, orderStatusLabel } from '@/lib/orderStatus'
 import { stockLevel, stockLevelClass } from '@/lib/stock'
@@ -41,6 +42,8 @@ interface CategorySales {
 
 type LowStockProduct = Product & { _stock: number }
 
+const RANGE_OPTIONS = [7, 30, 90, 365] as const
+
 const kpiContainerVariants = {
   hidden: {},
   show: {
@@ -64,6 +67,7 @@ export function DashboardClient({
   recentOrders,
   lowStockProducts,
   recentReviews,
+  rangeDays,
 }: {
   metrics: DashboardMetrics | null
   topProducts: TopProduct[]
@@ -71,10 +75,16 @@ export function DashboardClient({
   recentOrders: Order[]
   lowStockProducts: LowStockProduct[]
   recentReviews: ProductReview[]
+  rangeDays: 7 | 30 | 90 | 365
 }) {
   const { formatCurrency } = useCurrency()
   const { t, locale } = useUiLocale()
   const prefersReducedMotion = useReducedMotion()
+  const router = useRouter()
+  const pathname = usePathname()
+
+  const rangeLabel = (days: number) =>
+    days === 7 ? t('dashboard.range7') : days === 30 ? t('dashboard.range30') : days === 90 ? t('dashboard.range90') : t('dashboard.range365')
   const chartData = metrics?.data?.map((d) => ({
     date: formatUiChartDay(d.date, locale),
     Revenue: d.total_sales,
@@ -88,7 +98,16 @@ export function DashboardClient({
           <h1 className="font-heading text-4xl font-medium tracking-tight text-foreground">{t('dashboard.title')}</h1>
           <p className="mt-2 text-sm text-muted-foreground">{t('dashboard.subtitle')}</p>
         </div>
-        <Badge variant="outline" className="rounded-none px-3 py-1 text-[11px] uppercase tracking-[0.16em]">{t('dashboard.last30')}</Badge>
+        <select
+          aria-label={t('dashboard.selectRange')}
+          value={rangeDays}
+          onChange={(e) => router.push(`${pathname}?days=${e.target.value}`)}
+          className="rounded-none border border-border bg-transparent px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring/50"
+        >
+          {RANGE_OPTIONS.map((days) => (
+            <option key={days} value={days}>{rangeLabel(days)}</option>
+          ))}
+        </select>
       </div>
 
       {/* KPI strip — typographic, not icon cards */}
