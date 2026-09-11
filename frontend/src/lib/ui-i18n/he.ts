@@ -529,6 +529,7 @@ export const he: NestedDict = {
   },
   account: {
     myOrders: 'ההזמנות שלי',
+    store: 'חנות',
     none: 'עדיין לא ביצעתם הזמנות.',
     cancelConfirm: 'לבטל את ההזמנה?',
     keepOrder: 'להשאיר את ההזמנה',

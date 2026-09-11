@@ -91,6 +91,9 @@ export function OrdersList({ initialOrders, initialError }: { initialOrders: Ord
               >
                 <div className="flex justify-between items-start mb-3">
                   <div>
+                    {order.tenant_slug && (
+                      <div className="text-sm font-semibold text-primary">{t('account.store')}: {order.tenant_slug}</div>
+                    )}
                     <div className="font-bold">#{order.order_number}</div>
                     <div className="text-sm text-muted-foreground">{formatUiDateTime(order.created_at, locale)}</div>
                   </div>
