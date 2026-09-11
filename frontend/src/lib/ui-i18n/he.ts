@@ -134,7 +134,7 @@ export const he: NestedDict = {
     topSellingDesc: 'המוצרים המובילים לפי הכנסות.',
     noSales: 'עדיין אין נתוני מכירות.',
     sold: '{count} נמכרו',
-    skuLine: 'מק״ט: {sku} · {count} נמכרו',
+    skuLine: 'מק״ט: ⁦{sku}⁩ · ⁦{count}⁩ נמכרו',
     recentOrdersDesc: 'העסקאות האחרונות בחנות.',
     noOrdersYet: 'עדיין אין הזמנות.',
     orderHash: 'הזמנה #{id}',
