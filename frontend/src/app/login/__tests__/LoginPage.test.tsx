@@ -7,6 +7,7 @@ const pushMock = vi.fn()
 const apiClientMock = vi.fn()
 const setCookieMock = vi.fn()
 let currentSearch = ''
+let activeCart: { tenantSlug: string; cartId: string } | null = null
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock }),
@@ -24,6 +25,10 @@ vi.mock('@/lib/api/apiClient', () => ({
   },
 }))
 
+vi.mock('@/lib/cart', () => ({
+  getActiveCart: () => activeCart,
+}))
+
 vi.mock('cookies-next', () => ({
   setCookie: (...args: unknown[]) => setCookieMock(...args),
 }))
@@ -31,11 +36,8 @@ vi.mock('cookies-next', () => ({
 async function submitLogin() {
   const user = userEvent.setup()
   render(<LoginPage />)
-  // The email/password labels aren't programmatically associated with their
-  // inputs (no htmlFor/id) -- pre-existing, out of scope here -- so query by
-  // placeholder instead of label text.
-  await user.type(screen.getByPlaceholderText('customer@example.com'), 'buyer@example.com')
-  await user.type(screen.getByPlaceholderText('••••••••'), 'securepass123')
+  await user.type(screen.getByLabelText(/email address/i), 'buyer@example.com')
+  await user.type(screen.getByLabelText(/^password$/i), 'securepass123')
   await user.click(screen.getByRole('button', { name: /sign in/i }))
 }
 
@@ -45,6 +47,7 @@ describe('LoginPage', () => {
     apiClientMock.mockReset()
     setCookieMock.mockReset()
     currentSearch = ''
+    activeCart = null
   })
 
   it('redirects to the ?redirect target on successful login', async () => {
@@ -57,12 +60,29 @@ describe('LoginPage', () => {
     expect(pushMock).toHaveBeenCalledWith('/checkout')
   })
 
-  it('falls back to the storefront when there is no redirect param', async () => {
+  it('falls back to the marketplace when there is no redirect param and no active cart', async () => {
     apiClientMock.mockResolvedValueOnce({ access_token: 'tok' })
 
     await submitLogin()
 
-    expect(pushMock).toHaveBeenCalledWith('/store/test-tenant')
+    expect(apiClientMock).toHaveBeenCalledWith('/api/v1/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email: 'buyer@example.com', password: 'securepass123' }),
+    })
+    expect(pushMock).toHaveBeenCalledWith('/marketplace')
+  })
+
+  it('sends the active cart\'s store as tenant_slug and redirects there when no ?redirect is given', async () => {
+    activeCart = { tenantSlug: 'coffee-shop', cartId: 'cart-1' }
+    apiClientMock.mockResolvedValueOnce({ access_token: 'tok' })
+
+    await submitLogin()
+
+    expect(apiClientMock).toHaveBeenCalledWith('/api/v1/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email: 'buyer@example.com', password: 'securepass123', tenant_slug: 'coffee-shop' }),
+    })
+    expect(pushMock).toHaveBeenCalledWith('/store/coffee-shop')
   })
 
   it('never redirects off-site, even if ?redirect points elsewhere', async () => {
@@ -71,6 +91,6 @@ describe('LoginPage', () => {
 
     await submitLogin()
 
-    expect(pushMock).toHaveBeenCalledWith('/store/test-tenant')
+    expect(pushMock).toHaveBeenCalledWith('/marketplace')
   })
 })
