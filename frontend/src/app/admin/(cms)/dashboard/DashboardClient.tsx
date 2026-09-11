@@ -2,6 +2,7 @@
 
 import React from 'react'
 import Link from 'next/link'
+import { useRouter, usePathname } from 'next/navigation'
 import { motion, useReducedMotion } from 'motion/react'
 import { orderStatusClass, orderStatusLabel } from '@/lib/orderStatus'
 import { stockLevel, stockLevelClass } from '@/lib/stock'
@@ -14,7 +15,8 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useCurrency } from '@/hooks/useCurrency'
 import { useUiLocale } from '@/context/UiLocaleContext'
 import { formatUiChartDay, formatUiDate } from '@/lib/utils'
-import type { Order, Product, ProductReview } from '@/lib/types'
+import { resolveI18nText } from '@/lib/i18n-text'
+import type { Order, Product, ProductReview, I18nText } from '@/lib/types'
 
 interface DashboardMetrics {
   data: { date?: string | null; total_sales: number; order_count: number }[]
@@ -30,7 +32,17 @@ interface TopProduct {
   revenue: number
 }
 
+interface CategorySales {
+  category_id: number | null
+  category_name: I18nText | null
+  quantity_sold: number
+  revenue: number
+  order_count: number
+}
+
 type LowStockProduct = Product & { _stock: number }
+
+const RANGE_OPTIONS = [7, 30, 90, 365] as const
 
 const kpiContainerVariants = {
   hidden: {},
@@ -51,19 +63,28 @@ const kpiCardVariants = {
 export function DashboardClient({
   metrics,
   topProducts,
+  categorySales,
   recentOrders,
   lowStockProducts,
   recentReviews,
+  rangeDays,
 }: {
   metrics: DashboardMetrics | null
   topProducts: TopProduct[]
+  categorySales: CategorySales[]
   recentOrders: Order[]
   lowStockProducts: LowStockProduct[]
   recentReviews: ProductReview[]
+  rangeDays: 7 | 30 | 90 | 365
 }) {
   const { formatCurrency } = useCurrency()
   const { t, locale } = useUiLocale()
   const prefersReducedMotion = useReducedMotion()
+  const router = useRouter()
+  const pathname = usePathname()
+
+  const rangeLabel = (days: number) =>
+    days === 7 ? t('dashboard.range7') : days === 30 ? t('dashboard.range30') : days === 90 ? t('dashboard.range90') : t('dashboard.range365')
   const chartData = metrics?.data?.map((d) => ({
     date: formatUiChartDay(d.date, locale),
     Revenue: d.total_sales,
@@ -77,7 +98,16 @@ export function DashboardClient({
           <h1 className="font-heading text-4xl font-medium tracking-tight text-foreground">{t('dashboard.title')}</h1>
           <p className="mt-2 text-sm text-muted-foreground">{t('dashboard.subtitle')}</p>
         </div>
-        <Badge variant="outline" className="rounded-none px-3 py-1 text-[11px] uppercase tracking-[0.16em]">{t('dashboard.last30')}</Badge>
+        <select
+          aria-label={t('dashboard.selectRange')}
+          value={rangeDays}
+          onChange={(e) => router.push(`${pathname}?days=${e.target.value}`)}
+          className="rounded-none border border-border bg-transparent px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring/50"
+        >
+          {RANGE_OPTIONS.map((days) => (
+            <option key={days} value={days}>{rangeLabel(days)}</option>
+          ))}
+        </select>
       </div>
 
       {/* KPI strip — typographic, not icon cards */}
@@ -190,6 +220,40 @@ export function DashboardClient({
         </Card>
       </div>
 
+      <Card className="shadow-sm">
+        <CardHeader>
+          <CardTitle>{t('dashboard.salesByCategory')}</CardTitle>
+          <CardDescription>{t('dashboard.salesByCategoryDesc')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {categorySales.length === 0 ? (
+            <p className="text-muted-foreground text-sm py-4 text-center">{t('dashboard.noSales')}</p>
+          ) : (
+            <div className="space-y-4">
+              {(() => {
+                const maxRevenue = Math.max(...categorySales.map((c) => c.revenue), 1)
+                return categorySales.map((c) => (
+                  <div key={c.category_id ?? 'uncategorized'}>
+                    <div className="mb-1 flex items-center justify-between text-sm">
+                      <span className="font-medium text-foreground">
+                        {c.category_name ? resolveI18nText(c.category_name, locale) : t('dashboard.uncategorized')}
+                      </span>
+                      <span className="tabular-nums text-muted-foreground">{formatCurrency(c.revenue)}</span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full bg-primary"
+                        style={{ width: `${Math.max(4, Math.round((c.revenue / maxRevenue) * 100))}%` }}
+                      />
+                    </div>
+                  </div>
+                ))
+              })()}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Lists / Tabs */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="shadow-sm">
@@ -277,6 +341,9 @@ export function DashboardClient({
                           {r.rating} <Star className="h-3 w-3 ml-0.5 fill-yellow-500 text-yellow-500" />
                         </div>
                         <div>
+                          {r.product_name && (
+                            <p className="text-xs font-medium text-foreground truncate">{r.product_name}</p>
+                          )}
                           <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{r.comment}</p>
                           <p className="text-xs text-muted-foreground/70 mt-1">{t('reviews.by', { name: r.customer_name ?? t('orders.guest') })}</p>
                         </div>

@@ -6,9 +6,9 @@ import {
 } from '@dnd-kit/core'
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, Pencil, Columns2, Ungroup } from 'lucide-react'
+import { GripVertical, Pencil, Columns2, Ungroup, Plus } from 'lucide-react'
 import { MouseEvent as ReactMouseEvent, useCallback, useLayoutEffect, useRef, useState } from 'react'
-import { DispatchedAction, Section, StorePageSchema } from '@/lib/ai/types'
+import { DispatchedAction, Section, SectionType, StorePageSchema } from '@/lib/ai/types'
 import { renderSections } from '@/components/storefront/PageRenderer'
 import { resolveDesignVariantClasses } from '@/lib/design-tokens'
 import { usePreviewChrome } from './PreviewCanvas'
@@ -22,6 +22,87 @@ type RenderOpts = {
   onAskAI?: (id: string, prompt: string) => void
   onEditSection?: (id: string) => void
   onInlineEdit?: (sectionId: string, patch: Partial<Section>) => void
+}
+
+// Labels/order for the manual "Add Section" picker. Every one of these is a
+// valid `SectionType` the AI assistant can already create -- this just gives
+// the store owner the same capability without going through chat. Minimal
+// defaults are deliberate: localized text fields (title/headline/etc.) are
+// OMITTED rather than set to '', because the backend only enforces every
+// supported language be present when a text field key exists at all
+// (store_page_service._validate_and_upgrade_text_field returns early if the
+// field is absent) -- every section renderer already falls back to sane
+// empty-state copy (see PageRenderer's section components), and the
+// Properties panel (pencil icon) is where the owner fills in real content.
+const ADD_SECTION_TYPES: { type: SectionType; label: string }[] = [
+  { type: 'hero_banner', label: 'Hero Banner' },
+  { type: 'product_grid', label: 'Product Grid' },
+  { type: 'text_block', label: 'Text Block' },
+  { type: 'gallery', label: 'Gallery' },
+  { type: 'video_embed', label: 'Video' },
+  { type: 'button_group', label: 'Button Group' },
+  { type: 'feature_highlights', label: 'Feature Highlights' },
+  { type: 'testimonials', label: 'Testimonials' },
+  { type: 'table', label: 'Table' },
+  { type: 'grid_container', label: 'Grid Container' },
+  { type: 'two_column_layout', label: 'Two Column Layout' },
+]
+
+function createDefaultSection(type: SectionType): Section {
+  const id = `sec_${crypto.randomUUID().slice(0, 8)}`
+  switch (type) {
+    case 'hero_banner':
+      return { id, type, settings: { size: 'medium', alignment: 'center' } }
+    case 'product_grid':
+      return { id, type, settings: { columns: 3 } }
+    case 'gallery':
+      return { id, type, settings: { layout: 'grid' } }
+    case 'grid_container':
+      return { id, type, settings: { columns: 3 }, children: [] }
+    case 'two_column_layout':
+      return { id, type, settings: { split: 50 }, zones: { left: [], right: [] } }
+    case 'button_group':
+      return { id, type, settings: { buttons: [] } }
+    case 'feature_highlights':
+    case 'testimonials':
+      return { id, type, settings: { items: [] } }
+    case 'table':
+      return { id, type, settings: { headers: [], rows: [] } }
+    default:
+      return { id, type, settings: {} }
+  }
+}
+
+function AddSectionControl({ onAdd }: { onAdd: (type: SectionType) => void }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="relative pl-7">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1.5 rounded-md border border-dashed border-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:border-solid hover:bg-muted hover:text-foreground"
+      >
+        <Plus className="h-4 w-4" /> Add Section
+      </button>
+      {open && (
+        <div className="absolute z-30 mt-1 w-56 rounded-md border border-border bg-card p-1 shadow-lg">
+          {ADD_SECTION_TYPES.map(({ type, label }) => (
+            <button
+              key={type}
+              type="button"
+              className="block w-full rounded px-3 py-1.5 text-start text-sm text-foreground transition-colors hover:bg-muted"
+              onClick={() => {
+                onAdd(type)
+                setOpen(false)
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 function SortableSectionCard({
@@ -389,6 +470,15 @@ export function DraggablePageEditor({
             onInlineEdit: patchSection,
           }}
         />
+        <div className="mt-4">
+          <AddSectionControl
+            onAdd={(type) => {
+              const section = createDefaultSection(type)
+              onChange([...page.sections, section])
+              setEditingSectionId(section.id)
+            }}
+          />
+        </div>
       </div>
     </div>
   )

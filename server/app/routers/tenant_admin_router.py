@@ -17,7 +17,7 @@ from app.schemas.catalog_schemas import (
 )
 from app.schemas.order_schemas import (
     OrderResponse, CouponCreateRequest, CouponUpdateRequest, CouponResponse,
-    OrderStatusUpdateResponse
+    OrderStatusUpdateResponse, CustomerDetailResponse
 )
 from app.schemas.shipping_schemas import (
     ShippingProviderCode, TenantShippingConfigCreate, TenantShippingConfigResponse,
@@ -28,7 +28,7 @@ from app.schemas.tenant_schemas import (
     TenantSettingsSchema, TenantUpdateSchema, TenantResponse, TenantSettingsUpdateSchema,
     SubscriptionPlanInfo, TenantAnalyticsResponse, TenantMarketplaceVisibilityUpdateSchema
 )
-from app.schemas.ai_schemas import TopSellingProduct
+from app.schemas.ai_schemas import TopSellingProduct, CategorySales
 from app.schemas.common_schemas import PlanCode
 from app.services.catalog_service import (
     create_category_service, update_category_service, delete_category_service,
@@ -39,11 +39,11 @@ from app.services.catalog_service import (
 from app.services.tenant_service import (
     update_store_settings_service, update_tenant_service, get_tenant_analytics_service,
     upgrade_subscription_service, get_current_subscription_service, get_top_selling_products_service,
-    update_marketplace_visibility_service
+    get_sales_by_category_service, update_marketplace_visibility_service
 )
 from app.services.order_service import (
     update_order_status_service, list_tenant_orders_service, get_tenant_order_service,
-    list_tenant_customers_service
+    list_tenant_customers_service, get_tenant_customer_detail_service
 )
 from app.services.coupon_service import (
     list_tenant_coupons_service, create_tenant_coupon_service, update_coupon_service,
@@ -468,6 +468,20 @@ async def get_top_selling_products(
 ):
     return await get_top_selling_products_service(tenant_slug, start_date, end_date, db, limit)
 
+@tenant_admin_router.get(
+    "/analytics/sales-by-category",
+    response_model=list[CategorySales],
+    summary="Get Sales By Category"
+)
+async def get_sales_by_category(
+    start_date: str = Query(...),
+    end_date: str = Query(...),
+    tenant_slug: str = Path(...),
+    admin: User = Depends(get_tenant_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    return await get_sales_by_category_service(tenant_slug, start_date, end_date, db)
+
 
 # ORDERS
 @tenant_admin_router.get('/orders', response_model=list[OrderResponse])
@@ -500,6 +514,20 @@ async def get_tenant_customers(
     db: AsyncSession = Depends(get_db)
 ):
     return await list_tenant_customers_service(tenant_slug, db)
+
+@tenant_admin_router.get(
+    '/customers/{customer_id}',
+    response_model=CustomerDetailResponse,
+    summary="Get Customer Detail",
+    description="A single customer's summary stats plus their full order history with this store."
+)
+async def get_tenant_customer_detail(
+    customer_id: int,
+    tenant_slug: str = Path(...),
+    admin: User = Depends(get_tenant_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    return await get_tenant_customer_detail_service(tenant_slug, customer_id, db)
 
 # COUPONS
 @tenant_admin_router.get('/coupons', response_model=list[CouponResponse])

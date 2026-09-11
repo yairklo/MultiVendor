@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { apiClient, ApiError } from '@/lib/api/apiClient'
 import { getActiveCart } from '@/lib/cart'
 import { useCart } from '@/context/CartContext'
@@ -13,6 +14,12 @@ import { DigitalDownloads } from '@/components/orders/DigitalDownloads'
 import { useUiLocale } from '@/context/UiLocaleContext'
 import { errorMessage } from '@/lib/errors'
 import type { Order, Coupon } from '@/lib/types'
+
+// Saved right before sending a guest to /login so the shipping details they
+// already typed survive the login round-trip instead of forcing a retype --
+// sessionStorage only (cleared on read), never sent anywhere, same
+// sensitivity as the plaintext form fields themselves.
+const CHECKOUT_DRAFT_KEY = 'checkout_shipping_draft'
 
 export default function CheckoutPage() {
   const { t } = useUiLocale()
@@ -39,9 +46,27 @@ export default function CheckoutPage() {
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null)
   const [applyingCoupon, setApplyingCoupon] = useState(false)
   const [shippingMethodId, setShippingMethodId] = useState<number>(1)
+  const [needsLogin, setNeedsLogin] = useState(false)
   const router = useRouter()
 
   const activeCart = getActiveCart()
+
+  useEffect(() => {
+    const saved = sessionStorage.getItem(CHECKOUT_DRAFT_KEY)
+    if (!saved) return
+    sessionStorage.removeItem(CHECKOUT_DRAFT_KEY)
+    try {
+      const draft = JSON.parse(saved)
+      if (draft.fullName) setFullName(draft.fullName)
+      if (draft.email) setEmail(draft.email)
+      if (draft.address) setAddress(draft.address)
+      if (draft.city) setCity(draft.city)
+      if (draft.phone) setPhone(draft.phone)
+      if (draft.shippingMethodId) setShippingMethodId(draft.shippingMethodId)
+    } catch {
+      // Malformed/foreign sessionStorage value -- ignore, just start blank.
+    }
+  }, [])
 
   const subtotal = cart ? Number(cart.subtotal) : 0
   const discountAmount = appliedCoupon
@@ -120,6 +145,10 @@ export default function CheckoutPage() {
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) {
         setError(t('checkout.loginToCheckout'))
+        setNeedsLogin(true)
+        sessionStorage.setItem(CHECKOUT_DRAFT_KEY, JSON.stringify({
+          fullName, email, address, city, phone, shippingMethodId,
+        }))
       } else if (e instanceof ApiError && e.status === 409) {
         setError(t('checkout.itemLocked'))
       } else {
@@ -277,7 +306,15 @@ export default function CheckoutPage() {
 
       {error && (
         <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-xl border border-red-100">
-          {error}
+          <p>{error}</p>
+          {needsLogin && (
+            <Link
+              href="/login?redirect=/checkout"
+              className="mt-2 inline-block font-medium text-red-700 underline underline-offset-2 hover:text-red-900"
+            >
+              {t('checkout.logInLink')}
+            </Link>
+          )}
         </div>
       )}
 
