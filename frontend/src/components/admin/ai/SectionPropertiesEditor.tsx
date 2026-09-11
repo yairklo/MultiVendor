@@ -1,9 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { LocalizedText, Section } from '@/lib/ai/types'
 import { Sparkles, Plus, Trash2 } from 'lucide-react'
 import { useStorefrontTheme } from '@/context/StorefrontThemeContext'
+import { useTenantSlug } from '@/hooks/useTenantSlug'
+import { apiClient } from '@/lib/api/apiClient'
+import { resolveI18nText } from '@/lib/i18n-text'
+import type { Category } from '@/lib/types'
 
 const FONT_FAMILIES: { label: string; value: string }[] = [
   { label: 'Default', value: '' },
@@ -171,6 +175,17 @@ export function SectionPropertiesEditor({
 }) {
   const [aiPrompt, setAiPrompt] = useState('')
   const { lang: editingLang, setLang: setEditingLang, supportedLanguages } = useStorefrontTheme()
+  const tenantSlug = useTenantSlug()
+  const [categories, setCategories] = useState<Category[]>([])
+
+  useEffect(() => {
+    if (!tenantSlug || section.type !== 'product_grid') return
+    let cancelled = false
+    apiClient(`/api/v1/admin/store/${tenantSlug}/categories`)
+      .then((data) => { if (!cancelled) setCategories(Array.isArray(data) ? data : (data.data || [])) })
+      .catch(() => { if (!cancelled) setCategories([]) })
+    return () => { cancelled = true }
+  }, [tenantSlug, section.type])
 
   const handleSettingChange = (key: string, value: unknown) => {
     onChange({ settings: { ...section.settings, [key]: value } })
@@ -315,6 +330,19 @@ export function SectionPropertiesEditor({
                 value={Number(section.settings.columns ?? 3)}
                 onChange={(e) => handleSettingChange('columns', parseInt(e.target.value) || 3)}
               />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold text-foreground">Category</label>
+              <select
+                className="rounded-md border p-2 text-sm"
+                value={section.settings.category_id != null ? String(section.settings.category_id) : ''}
+                onChange={(e) => handleSettingChange('category_id', e.target.value ? Number(e.target.value) : undefined)}
+              >
+                <option value="">All categories (newest products)</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>{resolveI18nText(c.name, editingLang)}</option>
+                ))}
+              </select>
             </div>
           </>
         )
