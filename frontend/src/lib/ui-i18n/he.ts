@@ -4,6 +4,7 @@ export const he: NestedDict = {
   common: {
     save: 'שמירה',
     saving: 'שומר…',
+    view: 'צפייה',
     cancel: 'ביטול',
     confirm: 'אישור',
     delete: 'מחיקה',
@@ -230,6 +231,13 @@ export const he: NestedDict = {
     paymentSuccess: 'התשלום הצליח',
     paymentFailed: 'התשלום נכשל',
     loadFailed: 'טעינת ההזמנות נכשלה',
+    orderDetails: 'פרטי הזמנה',
+    backToOrders: 'חזרה להזמנות',
+    items: 'פריטים',
+    quantity: 'כמות',
+    subtotal: 'סכום ביניים',
+    discount: 'הנחה',
+    shipping: 'משלוח',
   },
   orderStatus: {
     pending: 'ממתינה',

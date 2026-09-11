@@ -8,8 +8,9 @@ import { useToast } from '@/context/ToastContext'
 import { useCurrency } from '@/hooks/useCurrency'
 import { useTenantSlug } from '@/hooks/useTenantSlug'
 import { useUiLocale } from '@/context/UiLocaleContext'
+import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import {
   Table,
   TableBody,
@@ -100,12 +101,13 @@ export function OrdersPageClient({ initialOrders }: { initialOrders: Order[] }) 
               <TableHead>{t('orders.customer')}</TableHead>
               <TableHead className="text-end">{t('orders.total')}</TableHead>
               <TableHead>{t('common.status')}</TableHead>
+              <TableHead className="text-end">{t('common.actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {orders.length === 0 && (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">{t('orders.noOrders')}</TableCell>
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">{t('orders.noOrders')}</TableCell>
               </TableRow>
             )}
             {orders.map(order => (
@@ -138,6 +140,14 @@ export function OrdersPageClient({ initialOrders }: { initialOrders: Order[] }) 
                       ))}
                     </select>
                   </div>
+                </TableCell>
+                <TableCell className="text-end whitespace-nowrap">
+                  <Link
+                    href={`/admin/orders/${order.id}`}
+                    className={buttonVariants({ variant: 'ghost', size: 'sm' })}
+                  >
+                    {t('common.view')}
+                  </Link>
                 </TableCell>
               </TableRow>
             ))}
