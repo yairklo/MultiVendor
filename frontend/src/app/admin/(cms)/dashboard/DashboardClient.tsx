@@ -277,6 +277,9 @@ export function DashboardClient({
                           {r.rating} <Star className="h-3 w-3 ml-0.5 fill-yellow-500 text-yellow-500" />
                         </div>
                         <div>
+                          {r.product_name && (
+                            <p className="text-xs font-medium text-foreground truncate">{r.product_name}</p>
+                          )}
                           <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{r.comment}</p>
                           <p className="text-xs text-muted-foreground/70 mt-1">{t('reviews.by', { name: r.customer_name ?? t('orders.guest') })}</p>
                         </div>
