@@ -501,6 +501,7 @@ export const en: NestedDict = {
     emptyMarketplace: 'Your marketplace cart is empty. Add items from the marketplace first.',
     loginToCheckout: 'Please log in to complete checkout.',
     itemLocked: 'This item is currently being purchased by another customer, please try again in a few seconds.',
+    logInLink: 'Log in',
     placeFailed: 'Failed to place order.',
     paymentFailed: 'Payment failed.',
     paymentSuccess: 'Payment successful! Order #{number} is now being processed.',

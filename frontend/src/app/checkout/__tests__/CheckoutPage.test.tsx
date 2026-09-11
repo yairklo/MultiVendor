@@ -62,6 +62,7 @@ describe('CheckoutPage', () => {
   beforeEach(() => {
     mockedCart = physicalCart
     clearCartMock.mockClear()
+    sessionStorage.clear()
     server.use(
       http.post('http://localhost:8000/api/v1/store/test-tenant/cart/checkout', () => {
         return HttpResponse.json({ id: 1, order_number: 'ORD-1', total_amount: 99, status: 'pending_payment' }, { status: 201 })
@@ -111,6 +112,29 @@ describe('CheckoutPage', () => {
     await user.click(payButton)
 
     expect(await screen.findByText(/payment successful/i)).toBeInTheDocument()
+  })
+
+  it('shows a login link with a redirect back to checkout on a 401, and saves the typed shipping details', async () => {
+    server.use(
+      http.post('http://localhost:8000/api/v1/store/test-tenant/cart/checkout', () => {
+        return HttpResponse.json({ detail: 'Not authenticated' }, { status: 401 })
+      })
+    )
+    const user = userEvent.setup()
+    renderCheckout()
+
+    await screen.findByTestId('item-summary')
+    await user.type(screen.getByLabelText(/full name/i), 'Ada Lovelace')
+    await user.type(screen.getByLabelText(/^phone$/i), '0500000000')
+    await user.type(screen.getByLabelText(/^city$/i), 'Tel Aviv')
+    await user.type(screen.getByLabelText(/street & house number/i), '1 Rothschild')
+    await user.click(screen.getByRole('button', { name: /place order/i }))
+
+    const loginLink = await screen.findByRole('link', { name: /log in/i })
+    expect(loginLink).toHaveAttribute('href', '/login?redirect=/checkout')
+
+    const draft = JSON.parse(sessionStorage.getItem('checkout_shipping_draft')!)
+    expect(draft).toMatchObject({ fullName: 'Ada Lovelace', city: 'Tel Aviv' })
   })
 
   it('applies a coupon and reflects the discount in the total', async () => {

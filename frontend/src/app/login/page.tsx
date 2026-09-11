@@ -1,19 +1,45 @@
 'use client'
 
-import React, { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import React, { Suspense, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { setAuthTokens } from '@/lib/auth/tokenStorage'
 import { apiClient, ApiError } from '@/lib/api/apiClient'
+import { getActiveCart } from '@/lib/cart'
 import { useUiLocale } from '@/context/UiLocaleContext'
 import { UiLanguageSwitcher } from '@/components/ui/UiLanguageSwitcher'
 import { errorMessage } from '@/lib/errors'
 
+// Only a same-origin relative path is ever honored -- "//evil.com" and
+// "https://evil.com" both start with something other than a single "/" and
+// are rejected, so ?redirect= can never send a logged-in user off-site.
+function sanitizeRedirect(raw: string | null): string | null {
+  if (!raw) return null
+  if (!raw.startsWith('/') || raw.startsWith('//')) return null
+  return raw
+}
+
 export default function CustomerLoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background" />}>
+      <CustomerLoginForm />
+    </Suspense>
+  )
+}
+
+function CustomerLoginForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { t } = useUiLocale()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [tenantSlug] = useState('test-tenant')
+  // Not an input field here (that's the store-admin login's job, see
+  // admin/login/page.tsx) -- best-effort inferred from the store the guest
+  // was actually shopping in, if any, purely so a customer who also happens
+  // to be that store's admin gets the right store_role claim back. Login and
+  // checkout both work fine with this omitted entirely (see auth_schemas.py
+  // LoginRequest.tenant_slug: Optional, and _lookup_store_role returns None
+  // for a missing/unrecognized slug rather than failing).
+  const [tenantSlug] = useState(() => getActiveCart()?.tenantSlug)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -25,7 +51,7 @@ export default function CustomerLoginPage() {
     try {
       const data = await apiClient('/api/v1/auth/login', {
         method: 'POST',
-        body: JSON.stringify({ email, password, tenant_slug: tenantSlug })
+        body: JSON.stringify({ email, password, ...(tenantSlug ? { tenant_slug: tenantSlug } : {}) })
       })
 
       if (data && data.access_token) {
@@ -33,8 +59,8 @@ export default function CustomerLoginPage() {
           accessToken: data.access_token,
           tenantSlug,
         })
-        // Redirect to the test storefront
-        router.push(`/store/${tenantSlug}`)
+        const redirectTo = sanitizeRedirect(searchParams.get('redirect'))
+        router.push(redirectTo || (tenantSlug ? `/store/${tenantSlug}` : '/marketplace'))
       }
     } catch (err) {
       // The backend's 401 detail ("Invalid credentials") is a fixed,
@@ -81,8 +107,9 @@ export default function CustomerLoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="mb-2 block text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{t('auth.email')}</label>
+              <label htmlFor="loginEmail" className="mb-2 block text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{t('auth.email')}</label>
               <input
+                id="loginEmail"
                 type="email"
                 required
                 className="w-full border-0 border-b border-foreground/30 bg-transparent py-2 outline-none transition-colors focus:border-foreground"
@@ -93,12 +120,13 @@ export default function CustomerLoginPage() {
             </div>
             <div>
               <div className="mb-2 flex items-center justify-between">
-                <label className="block text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{t('auth.password')}</label>
+                <label htmlFor="loginPassword" className="block text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{t('auth.password')}</label>
                 <a href="/forgot-password" className="text-xs font-medium text-primary hover:underline">
                   {t('auth.forgotPasswordLink')}
                 </a>
               </div>
               <input
+                id="loginPassword"
                 type="password"
                 required
                 className="w-full border-0 border-b border-foreground/30 bg-transparent py-2 outline-none transition-colors focus:border-foreground"
