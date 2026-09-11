@@ -14,7 +14,8 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useCurrency } from '@/hooks/useCurrency'
 import { useUiLocale } from '@/context/UiLocaleContext'
 import { formatUiChartDay, formatUiDate } from '@/lib/utils'
-import type { Order, Product, ProductReview } from '@/lib/types'
+import { resolveI18nText } from '@/lib/i18n-text'
+import type { Order, Product, ProductReview, I18nText } from '@/lib/types'
 
 interface DashboardMetrics {
   data: { date?: string | null; total_sales: number; order_count: number }[]
@@ -28,6 +29,14 @@ interface TopProduct {
   product_name: string
   quantity_sold: number
   revenue: number
+}
+
+interface CategorySales {
+  category_id: number | null
+  category_name: I18nText | null
+  quantity_sold: number
+  revenue: number
+  order_count: number
 }
 
 type LowStockProduct = Product & { _stock: number }
@@ -51,12 +60,14 @@ const kpiCardVariants = {
 export function DashboardClient({
   metrics,
   topProducts,
+  categorySales,
   recentOrders,
   lowStockProducts,
   recentReviews,
 }: {
   metrics: DashboardMetrics | null
   topProducts: TopProduct[]
+  categorySales: CategorySales[]
   recentOrders: Order[]
   lowStockProducts: LowStockProduct[]
   recentReviews: ProductReview[]
@@ -189,6 +200,40 @@ export function DashboardClient({
           </CardContent>
         </Card>
       </div>
+
+      <Card className="shadow-sm">
+        <CardHeader>
+          <CardTitle>{t('dashboard.salesByCategory')}</CardTitle>
+          <CardDescription>{t('dashboard.salesByCategoryDesc')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {categorySales.length === 0 ? (
+            <p className="text-muted-foreground text-sm py-4 text-center">{t('dashboard.noSales')}</p>
+          ) : (
+            <div className="space-y-4">
+              {(() => {
+                const maxRevenue = Math.max(...categorySales.map((c) => c.revenue), 1)
+                return categorySales.map((c) => (
+                  <div key={c.category_id ?? 'uncategorized'}>
+                    <div className="mb-1 flex items-center justify-between text-sm">
+                      <span className="font-medium text-foreground">
+                        {c.category_name ? resolveI18nText(c.category_name, locale) : t('dashboard.uncategorized')}
+                      </span>
+                      <span className="tabular-nums text-muted-foreground">{formatCurrency(c.revenue)}</span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full bg-primary"
+                        style={{ width: `${Math.max(4, Math.round((c.revenue / maxRevenue) * 100))}%` }}
+                      />
+                    </div>
+                  </div>
+                ))
+              })()}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Lists / Tabs */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

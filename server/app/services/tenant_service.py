@@ -4,8 +4,9 @@ from sqlalchemy.orm import joinedload
 from fastapi import HTTPException, status
 from app.models.tenant import Tenant, TenantSettings, SubscriptionPlan
 from app.models.order import Order, OrderItem
+from app.models.catalog import Category, Product, ProductVariant
 from app.schemas.tenant_schemas import TenantSettingsSchema, TenantUpdateSchema, TenantResponse, TenantSettingsUpdateSchema, TenantMarketplaceVisibilityUpdateSchema
-from app.schemas.ai_schemas import TopSellingProduct
+from app.schemas.ai_schemas import TopSellingProduct, CategorySales
 from app.services.order_service import PAID_ORDER_STATUSES
 from app.services.image_url_verifier import require_reachable_image_urls
 from app.services.product_completeness import (
@@ -286,4 +287,57 @@ async def get_top_selling_products_service(
     return [
         TopSellingProduct(sku=sku, product_name=name, quantity_sold=int(qty), revenue=round(float(rev), 2))
         for sku, name, qty, rev in result.all()
+    ]
+
+async def get_sales_by_category_service(
+    tenant_slug: str, start_date: str, end_date: str, db: AsyncSession
+) -> list[CategorySales]:
+    tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
+    tenant_id = tenant_result.scalar_one_or_none()
+    if not tenant_id:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    try:
+        sd = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
+        ed = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid date format, use ISO8601")
+
+    # OrderItem -> ProductVariant -> Product -> Category, all LEFT joins:
+    # variant_id is nullable (SET NULL if the variant is later deleted) and a
+    # product's category_id is optional, so a real sale can legitimately have
+    # no category to attribute it to -- that still needs counting, just
+    # bucketed under category_id=None rather than dropped from the totals.
+    query = (
+        select(
+            Category.id.label("category_id"),
+            Category.name.label("category_name"),
+            func.sum(OrderItem.quantity).label("quantity_sold"),
+            func.sum(OrderItem.quantity * OrderItem.unit_price).label("revenue"),
+            func.count(func.distinct(Order.id)).label("order_count"),
+        )
+        .select_from(OrderItem)
+        .join(Order, Order.id == OrderItem.order_id)
+        .outerjoin(ProductVariant, ProductVariant.id == OrderItem.variant_id)
+        .outerjoin(Product, Product.id == ProductVariant.product_id)
+        .outerjoin(Category, Category.id == Product.category_id)
+        .where(
+            Order.tenant_id == tenant_id,
+            Order.created_at >= sd,
+            Order.created_at <= ed,
+            Order.status.in_(PAID_ORDER_STATUSES),
+        )
+        .group_by(Category.id, Category.name)
+        .order_by(func.sum(OrderItem.quantity * OrderItem.unit_price).desc())
+    )
+    result = await db.execute(query)
+    return [
+        CategorySales(
+            category_id=category_id,
+            category_name=category_name,
+            quantity_sold=int(qty),
+            revenue=round(float(rev), 2),
+            order_count=order_count,
+        )
+        for category_id, category_name, qty, rev, order_count in result.all()
     ]

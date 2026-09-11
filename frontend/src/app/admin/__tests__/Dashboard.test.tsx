@@ -18,6 +18,7 @@ describe('Admin Dashboard', () => {
       <DashboardClient
         metrics={{ data: [], total_revenue: 50000, aov: 125.5, orders_count: 400 }}
         topProducts={[]}
+        categorySales={[]}
         recentOrders={[]}
         lowStockProducts={[]}
         recentReviews={[]}

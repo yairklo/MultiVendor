@@ -142,6 +142,9 @@ export const en: NestedDict = {
     inventoryHealthy: 'Inventory levels look healthy.',
     inStockCount: '{count} in stock',
     fromLastMonthPct: '{pct} from last month',
+    salesByCategory: 'Sales by Category',
+    salesByCategoryDesc: 'How revenue splits across product categories.',
+    uncategorized: 'Uncategorized',
   },
   products: {
     title: 'Products',
