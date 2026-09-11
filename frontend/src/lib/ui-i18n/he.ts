@@ -141,6 +141,9 @@ export const he: NestedDict = {
     inventoryHealthy: 'רמות המלאי נראות תקינות.',
     inStockCount: '{count} במלאי',
     fromLastMonthPct: '{pct} מהחודש שעבר',
+    salesByCategory: 'מכירות לפי קטגוריה',
+    salesByCategoryDesc: 'התפלגות ההכנסות בין קטגוריות המוצרים.',
+    uncategorized: 'ללא קטגוריה',
   },
   products: {
     title: 'מוצרים',

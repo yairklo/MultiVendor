@@ -6,15 +6,17 @@ import type { Product } from '@/lib/types'
 export default async function Dashboard() {
   const slug = await getServerTenantSlug()
 
-  const [metrics, topProductsRes, ordersRes, productsRes, reviewsRes] = await Promise.all([
+  const [metrics, topProductsRes, categorySalesRes, ordersRes, productsRes, reviewsRes] = await Promise.all([
     adminApiClient(`/api/v1/admin/store/${slug}/analytics?start_date=2023-01-01&end_date=2026-12-31`),
     adminApiClient(`/api/v1/admin/store/${slug}/analytics/top-products?start_date=2023-01-01&end_date=2026-12-31&limit=5`),
+    adminApiClient(`/api/v1/admin/store/${slug}/analytics/sales-by-category?start_date=2023-01-01&end_date=2026-12-31`),
     adminApiClient(`/api/v1/admin/store/${slug}/orders`),
     adminApiClient(`/api/v1/store/${slug}/products`),
     adminApiClient(`/api/v1/admin/store/${slug}/reviews`),
   ])
 
   const topProducts = Array.isArray(topProductsRes) ? topProductsRes : []
+  const categorySales = Array.isArray(categorySalesRes) ? categorySalesRes : []
   const recentOrders = (Array.isArray(ordersRes) ? ordersRes : (ordersRes.data || [])).slice(0, 5)
 
   const products: Product[] = productsRes.data || []
@@ -30,6 +32,7 @@ export default async function Dashboard() {
     <DashboardClient
       metrics={metrics}
       topProducts={topProducts}
+      categorySales={categorySales}
       recentOrders={recentOrders}
       lowStockProducts={lowStockProducts}
       recentReviews={recentReviews}

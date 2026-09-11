@@ -165,6 +165,16 @@ class TopSellingProduct(BaseModel):
     quantity_sold: int
     revenue: float
 
+class CategorySales(BaseModel):
+    # None covers order items whose variant was hard-deleted (variant_id SET
+    # NULL) or whose product has no category assigned -- both are real, valid
+    # sales that must still be counted, just not attributable to one category.
+    category_id: Optional[int] = None
+    category_name: Optional[Dict[str, str]] = None
+    quantity_sold: int
+    revenue: float
+    order_count: int
+
 class SalesAnalyticsResponse(BaseModel):
     start_date: str
     end_date: str
