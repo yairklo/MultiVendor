@@ -52,10 +52,14 @@ INSERT INTO user_store_memberships (id, user_id, tenant_id, role) VALUES
 (3, 4, 1, 'customer'),
 (4, 4, 2, 'customer');
 
-INSERT INTO products (id, tenant_id, name, slug, base_price, is_active, show_in_marketplace) VALUES
-(1, 1, JSON_OBJECT('en', 'Product A1', 'he', 'מוצר א1'), 'product-a1', 10.00, 1, TRUE),
-(2, 2, JSON_OBJECT('en', 'Product B1', 'he', 'מוצר ב1'), 'product-b1', 20.00, 1, TRUE),
-(3, 2, JSON_OBJECT('en', 'Product B2 (store-only)', 'he', 'מוצר ב2'), 'product-b2', 15.00, 1, FALSE);
+INSERT INTO categories (id, tenant_id, name, slug) VALUES
+(1, 1, JSON_OBJECT('en', 'Coffee', 'he', 'קפה'), 'coffee'),
+(2, 2, JSON_OBJECT('en', 'Tea', 'he', 'תה'), 'tea');
+
+INSERT INTO products (id, tenant_id, category_id, name, slug, base_price, is_active, show_in_marketplace) VALUES
+(1, 1, 1, JSON_OBJECT('en', 'Product A1', 'he', 'מוצר א1'), 'product-a1', 10.00, 1, TRUE),
+(2, 2, 2, JSON_OBJECT('en', 'Product B1', 'he', 'מוצר ב1'), 'product-b1', 20.00, 1, TRUE),
+(3, 2, 2, JSON_OBJECT('en', 'Product B2 (store-only)', 'he', 'מוצר ב2'), 'product-b2', 15.00, 1, FALSE);
 
 INSERT INTO orders (id, tenant_id, user_id, order_number, subtotal, total_amount, status) VALUES
 (1, 1, 4, 'ORD-001', 100.00, 100.00, 'pending');

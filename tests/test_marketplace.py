@@ -67,6 +67,81 @@ async def test_marketplace_product_visibility_rules(async_client: AsyncClient):
     assert "product-b2" not in slugs
 
 @pytest.mark.asyncio
+async def test_list_marketplace_categories(async_client: AsyncClient):
+    resp = await async_client.get("/api/v1/marketplace/categories")
+    assert resp.status_code == 200
+    cats = resp.json()
+    assert isinstance(cats, list)
+    cat_slugs = {c["slug"] for c in cats}
+    assert "coffee" in cat_slugs
+    assert "tea" in cat_slugs
+    for c in cats:
+        assert c["product_count"] >= 1
+        assert "name" in c
+
+@pytest.mark.asyncio
+async def test_filter_marketplace_products_by_category(async_client: AsyncClient):
+    # Filter by slug "coffee"
+    resp_coffee = await async_client.get("/api/v1/marketplace/products", params={"category": "coffee"})
+    assert resp_coffee.status_code == 200
+    coffee_slugs = [p["slug"] for p in resp_coffee.json()["data"]]
+    assert "product-a1" in coffee_slugs
+    assert "product-b1" not in coffee_slugs
+
+    # Filter by slug "tea"
+    resp_tea = await async_client.get("/api/v1/marketplace/products", params={"category": "tea"})
+    assert resp_tea.status_code == 200
+    tea_slugs = [p["slug"] for p in resp_tea.json()["data"]]
+    assert "product-b1" in tea_slugs
+    assert "product-a1" not in tea_slugs
+
+    # Filter by numeric category id (id 1 = coffee)
+    resp_id = await async_client.get("/api/v1/marketplace/products", params={"category": "1"})
+    assert resp_id.status_code == 200
+    id_slugs = [p["slug"] for p in resp_id.json()["data"]]
+    assert "product-a1" in id_slugs
+    assert "product-b1" not in id_slugs
+
+    # Filter by nonexistent category
+    resp_none = await async_client.get("/api/v1/marketplace/products", params={"category": "nonexistent"})
+    assert resp_none.status_code == 200
+    assert len(resp_none.json()["data"]) == 0
+
+@pytest.mark.asyncio
+async def test_products_from_different_stores_with_same_category_displayed_together(async_client: AsyncClient, db_session):
+    from app.models.catalog import Category, Product
+    from app.db.tenant_context import platform_plane
+
+    @platform_plane
+    async def update_data():
+        cat2 = Category(tenant_id=2, name={"en": "Coffee", "he": "קפה"}, slug="coffee")
+        db_session.add(cat2)
+        await db_session.flush()
+
+        prod_b = await db_session.get(Product, 2)
+        prod_b.category_id = cat2.id
+        await db_session.commit()
+
+    await update_data()
+
+    # Query categories endpoint: "coffee" should be consolidated into one category entry with count 2
+    cats_resp = await async_client.get("/api/v1/marketplace/categories")
+    assert cats_resp.status_code == 200
+    coffee_cats = [c for c in cats_resp.json() if c["slug"] == "coffee"]
+    assert len(coffee_cats) == 1
+    assert coffee_cats[0]["product_count"] == 2
+
+    # Query marketplace products filtered by "coffee": BOTH products from BOTH stores appear together!
+    resp = await async_client.get("/api/v1/marketplace/products", params={"category": "coffee"})
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert len(data) == 2
+    tenants = {p["tenant_slug"] for p in data}
+    assert tenants == {"tenant-a", "tenant-b"}
+    slugs = {p["slug"] for p in data}
+    assert slugs == {"product-a1", "product-b1"}
+
+@pytest.mark.asyncio
 async def test_marketplace_checkout_splits_order_per_vendor(async_client: AsyncClient, seed_tokens):
     headers = {"Authorization": seed_tokens["customer_a"]}
     cart_id = str(uuid.uuid4())

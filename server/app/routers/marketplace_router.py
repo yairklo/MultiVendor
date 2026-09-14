@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, status, Query, Path, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Optional
+from typing import Optional, List
 from uuid import UUID
 from app.core.config import settings
 from app.core.cart_token import GUEST_CART_TTL_SECONDS
@@ -9,10 +9,13 @@ from app.deps import get_current_user
 from app.models.user import User
 from app.schemas.marketplace_schemas import (
     PaginatedMarketplaceProductResponse, MarketplaceAddToCartRequest, MarketplaceCartResponse,
-    MarketplaceCheckoutRequest, MasterOrderResponse,
+    MarketplaceCheckoutRequest, MasterOrderResponse, MarketplaceCategoryResponse,
 )
 from app.schemas.order_schemas import StatusResponse, UpdateCartItemRequest
-from app.services.catalog_service import list_marketplace_products_service
+from app.services.catalog_service import (
+    list_marketplace_products_service,
+    list_marketplace_categories_service,
+)
 from app.services.checkout_service import CartCookieAction
 from app.services.marketplace_service import (
     add_to_marketplace_cart_service, get_marketplace_cart_service, remove_from_marketplace_cart_service,
@@ -45,6 +48,17 @@ def _apply_cart_cookie(response: Response, action: CartCookieAction) -> None:
         response.delete_cookie(key=MARKETPLACE_CART_TOKEN_COOKIE, path="/")
 
 @marketplace_router.get(
+    "/categories",
+    response_model=List[MarketplaceCategoryResponse],
+    summary="List Marketplace Categories",
+    description="Lists categories derived from active products opted into the marketplace.",
+)
+async def list_marketplace_categories(
+    db: AsyncSession = Depends(get_db),
+):
+    return await list_marketplace_categories_service(db)
+
+@marketplace_router.get(
     "/products",
     response_model=PaginatedMarketplaceProductResponse,
     summary="List Marketplace Products",
@@ -54,9 +68,10 @@ async def list_marketplace_products(
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=100),
     q: Optional[str] = Query(None),
+    category: Optional[str] = Query(None, description="Filter by category slug or ID"),
     db: AsyncSession = Depends(get_db),
 ):
-    return await list_marketplace_products_service(page, page_size, q, db)
+    return await list_marketplace_products_service(page, page_size, q, category, db)
 
 @marketplace_router.post(
     "/cart/{cart_id}/items",

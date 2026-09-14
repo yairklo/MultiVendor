@@ -7,6 +7,12 @@ from app.schemas.common_schemas import PaginatedResponse
 from app.schemas.order_schemas import OrderResponse, PaymentIntentInfo
 from app.schemas.catalog_schemas import ProductVariantSchema
 
+class MarketplaceCategoryResponse(BaseModel):
+    id: int
+    slug: str
+    name: Any
+    product_count: int = 0
+
 class MarketplaceProductResponse(BaseModel):
     """A product surfaced on the cross-store marketplace. Carries its origin
     store alongside the usual product fields so the frontend can link back to
@@ -17,6 +23,8 @@ class MarketplaceProductResponse(BaseModel):
     tenant_slug: str
     tenant_name: str
     category_id: Optional[int]
+    category_slug: Optional[str] = None
+    category_name: Optional[Any] = None
     name: Any
     slug: str
     description: Any

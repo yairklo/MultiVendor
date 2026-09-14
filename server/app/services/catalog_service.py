@@ -1,7 +1,7 @@
 import math
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_, cast, String
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, joinedload
 from fastapi import HTTPException, status
 from app.models.tenant import Tenant, TenantSettings, SubscriptionPlan
 from app.models.catalog import Product, Category, ProductVariant, ProductReview, ProductImage, ProductBundleItem
@@ -14,7 +14,9 @@ from app.schemas.catalog_schemas import (
     ProductBundleItemSchema, ProductReviewCreateRequest
 )
 from app.schemas.ai_schemas import InventoryHealthItem, InventoryHealthResponse
-from app.schemas.marketplace_schemas import MarketplaceProductResponse, PaginatedMarketplaceProductResponse
+from app.schemas.marketplace_schemas import (
+    MarketplaceProductResponse, PaginatedMarketplaceProductResponse, MarketplaceCategoryResponse
+)
 from app.db.tenant_context import platform_plane
 
 # Matches frontend/src/lib/stock.ts's LOW_STOCK_THRESHOLD — per-product configurable
@@ -914,12 +916,17 @@ def _build_marketplace_product_response(p: "Product", tenant: Tenant, review_sta
 
     avg_rating, review_count = review_stats.get(p.id, (None, 0))
 
+    cat_slug = p.category.slug if getattr(p, 'category', None) else None
+    cat_name = p.category.name if getattr(p, 'category', None) else None
+
     return MarketplaceProductResponse(
         id=p.id,
         tenant_id=p.tenant_id,
         tenant_slug=tenant.slug,
         tenant_name=tenant.name,
         category_id=p.category_id,
+        category_slug=cat_slug,
+        category_name=cat_name,
         name=p.name,
         slug=p.slug,
         description=p.description,
@@ -934,7 +941,9 @@ def _build_marketplace_product_response(p: "Product", tenant: Tenant, review_sta
     )
 
 @platform_plane
-async def list_marketplace_products_service(page: int, page_size: int, q: str | None, db: AsyncSession) -> PaginatedMarketplaceProductResponse:
+async def list_marketplace_products_service(
+    page: int, page_size: int, q: str | None, category: str | None, db: AsyncSession
+) -> PaginatedMarketplaceProductResponse:
     # A product is marketplace-visible if it opted in individually, or its
     # store opted in wholesale (Tenant.show_all_products_in_marketplace) --
     # see models/tenant.py and models/catalog.py. A suspended/cancelled store
@@ -951,16 +960,31 @@ async def list_marketplace_products_service(page: int, page_size: int, q: str | 
             func.lower(cast(Product.description, String)).like(pattern, escape="\\"),
         ))
 
-    count_result = await db.execute(
-        select(func.count()).select_from(Product).join(Tenant, Tenant.id == Product.tenant_id).where(*conditions)
-    )
+    if category:
+        category_clean = category.strip()
+        if category_clean.isdigit():
+            conditions.append(or_(
+                Category.slug == category_clean,
+                Product.category_id == int(category_clean),
+            ))
+        else:
+            conditions.append(Category.slug == category_clean)
+
+    count_query = select(func.count()).select_from(Product).join(Tenant, Tenant.id == Product.tenant_id)
+    if category:
+        count_query = count_query.join(Category, Category.id == Product.category_id)
+    count_result = await db.execute(count_query.where(*conditions))
     total = count_result.scalar_one()
 
     query = (
         select(Product, Tenant)
         .join(Tenant, Tenant.id == Product.tenant_id)
-        .where(*conditions)
-        .options(selectinload(Product.images), selectinload(Product.variants))
+    )
+    if category:
+        query = query.join(Category, Category.id == Product.category_id)
+    query = (
+        query.where(*conditions)
+        .options(selectinload(Product.images), selectinload(Product.variants), joinedload(Product.category))
         .order_by(Product.created_at.desc())
         .limit(page_size)
         .offset((page - 1) * page_size)
@@ -989,3 +1013,48 @@ async def list_marketplace_products_service(page: int, page_size: int, q: str | 
         meta={"page": page, "page_size": page_size, "total": total, "total_pages": total_pages},
         data=data
     )
+
+@platform_plane
+async def list_marketplace_categories_service(db: AsyncSession) -> list[MarketplaceCategoryResponse]:
+    # Gathers distinct categories across all marketplace-visible products.
+    base_conditions = [
+        Product.is_active == True,
+        Tenant.status == 'active',
+        or_(Product.show_in_marketplace == True, Tenant.show_all_products_in_marketplace == True),
+        Product.category_id.isnot(None),
+    ]
+
+    query = (
+        select(Product, Tenant, Category)
+        .join(Tenant, Tenant.id == Product.tenant_id)
+        .join(Category, Category.id == Product.category_id)
+        .where(*base_conditions)
+    )
+    result = await db.execute(query)
+    rows = result.all()
+
+    tenant_ids = {tenant.id for _, tenant, _ in rows}
+    settings_rows = []
+    if tenant_ids:
+        settings_rows = (await db.execute(
+            select(TenantSettings).where(TenantSettings.tenant_id.in_(tenant_ids))
+        )).scalars().all()
+    settings_by_tenant = {s.tenant_id: s for s in settings_rows}
+
+    categories_by_slug: dict[str, dict[str, Any]] = {}
+    for product, tenant, category in rows:
+        if not product_is_store_eligible(product, settings_by_tenant.get(tenant.id)):
+            continue
+
+        slug = category.slug
+        if slug not in categories_by_slug:
+            categories_by_slug[slug] = {
+                "id": category.id,
+                "slug": slug,
+                "name": category.name,
+                "product_count": 0,
+            }
+        categories_by_slug[slug]["product_count"] += 1
+
+    sorted_cats = sorted(categories_by_slug.values(), key=lambda c: (-c["product_count"], c["slug"]))
+    return [MarketplaceCategoryResponse(**cat) for cat in sorted_cats]
