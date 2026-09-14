@@ -41,7 +41,13 @@ export function OrderDetailClient({ order }: { order: Order }) {
       </div>
 
       <div className="rounded-xl border border-border bg-card shadow-sm p-6 mb-6">
-        <p className="text-sm font-medium text-foreground">{order.customer_name || t('orders.guest')}</p>
+        {order.customer_id ? (
+          <Link href={`/admin/customers/${order.customer_id}`} className="text-sm font-medium text-foreground hover:underline">
+            {order.customer_name || t('orders.guest')}
+          </Link>
+        ) : (
+          <p className="text-sm font-medium text-foreground">{order.customer_name || t('orders.guest')}</p>
+        )}
         {order.customer_email && <p className="text-sm text-muted-foreground">{order.customer_email}</p>}
       </div>
 
