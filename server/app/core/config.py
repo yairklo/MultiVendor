@@ -1,3 +1,4 @@
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 import os
 
@@ -78,6 +79,19 @@ class Settings(BaseSettings):
     SMTP_USER: str | None = None
     SMTP_PASSWORD: str | None = None
     EMAILS_FROM_EMAIL: str | None = None
+
+    # docker-compose's `${SMTP_PORT:-}` (this codebase's usual passthrough
+    # for an unset optional setting -- see CORS_ALLOWED_ORIGIN_REGEX above
+    # for the same pattern) sends an empty string, not an absent var --
+    # str | None fields accept "" fine, but int | None doesn't: pydantic
+    # tries to parse "" as an int and fails hard at Settings() construction,
+    # crashing the whole app at startup. Confirmed for real (not
+    # hypothetical): this took the backend down on first deploy without a
+    # real SMTP_PORT set. Coerce "" to None before int parsing runs.
+    @field_validator("SMTP_PORT", mode="before")
+    @classmethod
+    def _empty_smtp_port_is_unset(cls, v):
+        return None if v == "" else v
 
     # Base URL of the Next.js frontend, used to build links (e.g. password
     # reset) that get emailed to users -- must not have a trailing slash.
