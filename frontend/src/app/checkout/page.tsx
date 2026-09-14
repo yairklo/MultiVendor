@@ -1,7 +1,8 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
+import { getCookie } from 'cookies-next'
 import { apiClient, ApiError } from '@/lib/api/apiClient'
 import { getActiveCart } from '@/lib/cart'
 import { useCart } from '@/context/CartContext'
@@ -14,6 +15,17 @@ import { DigitalDownloads } from '@/components/orders/DigitalDownloads'
 import { useUiLocale } from '@/context/UiLocaleContext'
 import { errorMessage } from '@/lib/errors'
 import type { Order, Coupon } from '@/lib/types'
+
+// SSR/hydration-safe cookie read to enforce login before checkout
+function subscribeNoop(): () => void {
+  return () => {}
+}
+function getLoggedInSnapshot(): boolean | null {
+  return !!getCookie('token')
+}
+function getLoggedInServerSnapshot(): boolean | null {
+  return null
+}
 
 // Saved right before sending a guest to /login so the shipping details they
 // already typed survive the login round-trip instead of forcing a retype --
@@ -31,6 +43,7 @@ export default function CheckoutPage() {
   const { formatCurrency } = useCurrency()
   const { payOrder, cancelOrder, fetchOrder } = useOrders()
   const { showToast } = useToast()
+  const isLoggedIn = useSyncExternalStore(subscribeNoop, getLoggedInSnapshot, getLoggedInServerSnapshot)
   const [error, setError] = useState<string>('')
   const [submitting, setSubmitting] = useState(false)
   const [payingOrder, setPayingOrder] = useState<Order | null>(null)
@@ -109,6 +122,14 @@ export default function CheckoutPage() {
     if (!activeCart || !cart) return
     if (requiresShippingAddress && (!fullName.trim() || !city.trim() || !address.trim() || !phone.trim())) {
       setError(t('checkout.shippingFieldsRequired'))
+      return
+    }
+    if (isLoggedIn === false) {
+      setError(t('checkout.loginToCheckout'))
+      setNeedsLogin(true)
+      sessionStorage.setItem(CHECKOUT_DRAFT_KEY, JSON.stringify({
+        fullName, email, address, city, phone, shippingMethodId,
+      }))
       return
     }
     try {
@@ -199,7 +220,50 @@ export default function CheckoutPage() {
     }
   }
 
-  if (loading) {
+  if (isLoggedIn === false) {
+    return (
+      <div className="max-w-4xl mx-auto p-6 bg-background min-h-screen">
+        <h1 className="text-3xl font-bold mb-8 text-foreground border-b border-border pb-4 font-heading">{t('checkout.title')}</h1>
+        <div className="bg-card p-6 rounded-xl shadow-sm border border-border">
+          <p className="text-foreground/80">{t('checkout.loginRequired')}</p>
+          <div className="mt-6 flex flex-wrap gap-4">
+            <button
+              onClick={() => {
+                sessionStorage.setItem(CHECKOUT_DRAFT_KEY, JSON.stringify({
+                  fullName, email, address, city, phone, shippingMethodId,
+                }))
+                router.push('/login?redirect=/checkout')
+              }}
+              className="bg-primary text-primary-foreground px-6 py-2.5 rounded-lg font-medium transition-colors duration-150 hover:bg-primary/90 active:scale-[0.98]"
+            >
+              {t('common.login')}
+            </button>
+            <button
+              onClick={() => {
+                sessionStorage.setItem(CHECKOUT_DRAFT_KEY, JSON.stringify({
+                  fullName, email, address, city, phone, shippingMethodId,
+                }))
+                router.push('/signup?redirect=/checkout')
+              }}
+              className="bg-card border border-border text-foreground px-6 py-2.5 rounded-lg font-medium transition-colors duration-150 hover:bg-muted active:scale-[0.98]"
+            >
+              {t('auth.createAccount')}
+            </button>
+            {activeCart?.tenantSlug && (
+              <button
+                onClick={() => router.push(`/store/${activeCart.tenantSlug}`)}
+                className="text-muted-foreground hover:text-foreground px-4 py-2.5 text-sm transition-colors"
+              >
+                {t('checkout.continueShopping')}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (loading || isLoggedIn === null) {
     return <div className="max-w-4xl mx-auto p-6 text-muted-foreground">{t('checkout.loadingCart')}</div>
   }
 

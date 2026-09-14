@@ -7,9 +7,11 @@ const pushMock = vi.fn()
 const apiClientMock = vi.fn()
 const setCookieMock = vi.fn()
 
+let searchParamsMock = new URLSearchParams()
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock }),
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => searchParamsMock,
 }))
 
 vi.mock('@/lib/api/apiClient', () => ({
@@ -25,6 +27,7 @@ describe('SignupPage', () => {
     pushMock.mockReset()
     apiClientMock.mockReset()
     setCookieMock.mockReset()
+    searchParamsMock = new URLSearchParams()
     // jsdom doesn't implement navigation; the seller flow triggers it after
     // a successful submit, which we don't need to observe.
     delete (window as unknown as { location?: unknown }).location
@@ -99,5 +102,23 @@ describe('SignupPage', () => {
     await user.click(screen.getByRole('button', { name: /create account/i }))
 
     expect(await screen.findByText(/email already registered/i)).toBeInTheDocument()
+  })
+
+  it('redirects to the ?redirect target on successful customer registration and preserves it on the login link', async () => {
+    searchParamsMock = new URLSearchParams('redirect=/checkout')
+    apiClientMock.mockResolvedValueOnce({ access_token: 'tok', role: 'user', store_role: null })
+    const user = userEvent.setup()
+
+    render(<SignupPage />)
+
+    const loginLink = screen.getByRole('link', { name: /log in/i })
+    expect(loginLink).toHaveAttribute('href', '/login?redirect=%2Fcheckout')
+
+    await user.type(screen.getByLabelText(/full name/i), 'Jane Doe')
+    await user.type(screen.getByLabelText(/email address/i), 'jane@example.com')
+    await user.type(screen.getByLabelText(/^password$/i), 'securepass123')
+    await user.click(screen.getByRole('button', { name: /create account/i }))
+
+    expect(pushMock).toHaveBeenCalledWith('/checkout')
   })
 })

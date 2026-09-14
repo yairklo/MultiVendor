@@ -157,12 +157,26 @@ export default function MarketplaceCheckoutPage() {
         <h1 className="text-3xl font-bold mb-8 text-foreground border-b border-border pb-4 font-heading">{t('checkout.title')}</h1>
         <div className="bg-card p-6 rounded-xl shadow-sm border border-border">
           <p className="text-foreground/80">{t('checkout.loginRequiredMarketplace')}</p>
-          <button
-            onClick={() => router.push('/login')}
-            className="mt-4 bg-primary text-primary-foreground px-6 py-2 rounded-lg font-medium transition-colors duration-150 hover:bg-primary/90 active:scale-[0.98]"
-          >
-            {t('common.login')}
-          </button>
+          <div className="mt-6 flex flex-wrap gap-4">
+            <button
+              onClick={() => router.push('/login?redirect=/marketplace/checkout')}
+              className="bg-primary text-primary-foreground px-6 py-2.5 rounded-lg font-medium transition-colors duration-150 hover:bg-primary/90 active:scale-[0.98]"
+            >
+              {t('common.login')}
+            </button>
+            <button
+              onClick={() => router.push('/signup?redirect=/marketplace/checkout')}
+              className="bg-card border border-border text-foreground px-6 py-2.5 rounded-lg font-medium transition-colors duration-150 hover:bg-muted active:scale-[0.98]"
+            >
+              {t('auth.createAccount')}
+            </button>
+            <button
+              onClick={() => router.push('/marketplace')}
+              className="text-muted-foreground hover:text-foreground px-4 py-2.5 text-sm transition-colors"
+            >
+              {t('checkout.continueShopping')}
+            </button>
+          </div>
         </div>
       </div>
     )
