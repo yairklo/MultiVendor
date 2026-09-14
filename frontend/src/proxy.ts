@@ -142,7 +142,18 @@ function canAccessAdmin(payload: Record<string, unknown>): boolean {
 }
 
 export async function proxy(request: NextRequest) {
-  const { pathname, hostname } = request.nextUrl
+  const { pathname } = request.nextUrl
+  // Deliberately NOT request.nextUrl.hostname: on this Next.js version's
+  // standalone server, with experimental.trustHostHeader unrecognized (Zod
+  // config validation silently drops it -- see server/config.js's
+  // unrecognized_keys handling for `experimental`), nextUrl is built from the
+  // server's own bind address (HOSTNAME=0.0.0.0 in the Dockerfile) instead of
+  // the incoming request, so nextUrl.hostname is always "0.0.0.0" in
+  // production. request.headers reads the raw incoming headers directly and
+  // isn't affected by that bug -- Traefik/Caddy forward the original Host
+  // header unmodified (verified: they're the only thing that can reach this
+  // container, see docker-compose.prod.yaml / docker-compose.coolify.yaml).
+  const hostname = (request.headers.get('host') || '').split(':')[0]
 
   if (!isPlatformHost(hostname)) {
     const isPlatformOnlyPath = PLATFORM_ONLY_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))

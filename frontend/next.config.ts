@@ -8,22 +8,14 @@ const nextConfig: NextConfig = {
   // the full node_modules tree, which is most of why the prod image is
   // small. No effect on `next dev`.
   output: "standalone",
-  experimental: {
-    // Without this, the standalone server builds Proxy's `request.nextUrl`
-    // (and thus `request.nextUrl.hostname`) from its own bind address
-    // (HOSTNAME=0.0.0.0, see Dockerfile) instead of the incoming `Host`
-    // header -- see resolve-routes.js's `initUrl` construction. Every
-    // request's hostname was literally "0.0.0.0" regardless of what Caddy/
-    // Traefik forwarded, so proxy.ts's isPlatformHost(hostname) always
-    // returned false and every non-whitelisted path (including
-    // /store/[tenant_slug] and even /) fell through to the "unresolved
-    // custom domain" 404. Safe to trust here because Caddy/Coolify's
-    // Traefik are the only things that can reach this container (no public
-    // ports exposed directly -- see docker-compose.prod.yaml /
-    // docker-compose.coolify.yaml), so the Host header they forward is
-    // trustworthy.
-    trustHostHeader: true,
-  } as NextConfig["experimental"],
+  // Tried experimental.trustHostHeader here to fix request.nextUrl.hostname
+  // always reading as the server's bind address (0.0.0.0) instead of the
+  // real incoming Host header on the standalone server -- doesn't work on
+  // this Next.js version: its config Zod schema doesn't recognize the key
+  // and silently strips it (see server/config.js's unrecognized_keys
+  // handling for `experimental`), so it's always false at runtime regardless
+  // of what's set here. Fixed instead in proxy.ts, which reads the Host
+  // header directly off request.headers rather than through nextUrl.
   async headers() {
     // No Content-Security-Policy here: with product/store images and logos
     // coming from arbitrary seller-supplied URLs (see app/services/storage
