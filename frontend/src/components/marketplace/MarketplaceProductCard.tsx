@@ -38,7 +38,9 @@ export function MarketplaceProductCard({
   const t = STRINGS[lang as keyof typeof STRINGS] || STRINGS.en
   const name = resolveI18nText(product.name, lang)
   const image = product.primary_image_url || product.images?.[0]
-  const href = `/store/${product.tenant_slug}/products/${product.slug}`
+  // /storefront/product (query-param), not /store/{slug}/products/{slug} --
+  // see frontend/src/app/storefront/product/page.tsx's module comment.
+  const href = `/storefront/product?tenant=${product.tenant_slug}&product=${product.slug}`
 
   const variant = product.variants?.[0]
   const stockKnown = Number.isFinite(variant?.stock_quantity)
