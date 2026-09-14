@@ -104,6 +104,18 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_allowed_origins,
+    # `or None`, not the raw setting: a bare "" (this codebase's usual
+    # docker-compose-passthrough default for an unset optional str, e.g.
+    # `${CORS_ALLOWED_ORIGIN_REGEX:-}`) is already a harmless no-op as-is --
+    # Starlette matches origins with `.fullmatch()`, and an empty pattern
+    # only fullmatches an empty string, never a real Origin header (verified
+    # against Starlette's source and a regression test, not assumed: see
+    # tests/test_cors_subdomain_regex.py). This still explicitly normalizes
+    # it to None rather than relying on that fullmatch nuance staying true
+    # forever. None disables regex matching entirely, leaving allow_origins
+    # as the sole check -- unchanged behavior for every deploy that doesn't
+    # set this. See CORS_ALLOWED_ORIGIN_REGEX's comment in core/config.py.
+    allow_origin_regex=settings.CORS_ALLOWED_ORIGIN_REGEX or None,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

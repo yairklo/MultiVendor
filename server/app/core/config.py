@@ -53,6 +53,17 @@ class Settings(BaseSettings):
     # local dev frontend ports so `docker compose up` and bare `npm run dev`
     # keep working with no .env changes; production must override this.
     CORS_ALLOWED_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3005,http://127.0.0.1:3005,http://localhost:3001"
+    # Alternative to the fixed list above for a subdomain-per-tenant deploy
+    # (see docs/DEPLOY_COOLIFY.md) -- an unbounded, unknown-in-advance set of
+    # origins (one per store subdomain) can't be enumerated in
+    # CORS_ALLOWED_ORIGINS, so this is matched instead when set. Passed
+    # straight through to Starlette's CORSMiddleware(allow_origin_regex=...),
+    # which -- unlike allow_origins -- still echoes back the exact matched
+    # Origin (required for allow_credentials=True; "*" is never valid with
+    # credentials). Anchor it (^...$) and escape literal dots, e.g. for
+    # "example.com" and every subdomain of it:
+    #   ^https://([a-z0-9-]+\.)*example\.com$
+    CORS_ALLOWED_ORIGIN_REGEX: str | None = None
 
     @property
     def cors_allowed_origins(self) -> list[str]:
