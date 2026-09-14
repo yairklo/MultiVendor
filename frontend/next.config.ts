@@ -8,20 +8,6 @@ const nextConfig: NextConfig = {
   // the full node_modules tree, which is most of why the prod image is
   // small. No effect on `next dev`.
   output: "standalone",
-  // The platform has no single-tenant "home" -- the marketplace listing is
-  // the natural landing page for a visitor who hasn't picked a store yet
-  // (see the removed app/page.tsx). Done here instead of an in-component
-  // redirect() call: on this deploy, a Server Component's redirect()/
-  // notFound() throw was surfacing as a bare 404 instead of performing the
-  // redirect/rendering the not-found UI -- a framework-level issue still
-  // being tracked, not something this app's code caused. A config-level
-  // redirect happens at the routing layer, before any component renders, so
-  // it isn't subject to whatever's breaking that throw-based mechanism.
-  async redirects() {
-    return [
-      { source: "/", destination: "/marketplace", permanent: false },
-    ];
-  },
   async headers() {
     // No Content-Security-Policy here: with product/store images and logos
     // coming from arbitrary seller-supplied URLs (see app/services/storage

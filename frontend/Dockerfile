@@ -12,6 +12,15 @@ COPY frontend/ .
 # running container. See docker-compose.prod.yaml.
 ARG NEXT_PUBLIC_API_BASE_URL
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
+# package.json's build script passes --turbopack -- confirmed necessary, not
+# just faster, on this Next.js version: a plain `next build` (webpack, the
+# default) produces a standalone server that 404s on every dynamic route
+# added/changed after the very first build, even though routes-manifest.json,
+# app-paths-manifest.json, and the compiled route files are all correct --
+# reproduced locally multiple times (fresh checkout, no Docker cache
+# involved). Switching to --turbopack (also `next dev`'s default already)
+# makes the exact same routes serve correctly. If a future Next.js patch
+# fixes the webpack path, this can revert to a plain `next build`.
 RUN npm run build
 
 # --- Runtime image: only what `output: "standalone"` says the server needs
