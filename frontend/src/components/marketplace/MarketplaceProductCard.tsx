@@ -38,9 +38,7 @@ export function MarketplaceProductCard({
   const t = STRINGS[lang as keyof typeof STRINGS] || STRINGS.en
   const name = resolveI18nText(product.name, lang)
   const image = product.primary_image_url || product.images?.[0]
-  // /storefront/product (query-param), not /store/{slug}/products/{slug} --
-  // see frontend/src/app/storefront/product/page.tsx's module comment.
-  const href = `/storefront/product?tenant=${product.tenant_slug}&product=${product.slug}`
+  const href = `/store/${product.tenant_slug}/products/${product.slug}`
 
   const variant = product.variants?.[0]
   const stockKnown = Number.isFinite(variant?.stock_quantity)
@@ -58,12 +56,15 @@ export function MarketplaceProductCard({
     }
   }
 
-  const addButton = (
+  const renderAddButton = (widthClassName: string) => (
     <button
       type="button"
       disabled={!variant?.id || outOfStock || adding}
       onClick={handleAddToCart}
-      className="self-start border-b border-foreground pb-0.5 text-sm font-medium text-foreground transition-opacity hover:opacity-60 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 motion-safe:transition-transform"
+      className={cn(
+        'rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition-colors duration-150 hover:bg-primary/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40',
+        widthClassName,
+      )}
     >
       {outOfStock ? t.outOfStock : adding ? t.adding : t.addToCart}
     </button>
@@ -105,7 +106,7 @@ export function MarketplaceProductCard({
           <span className="font-heading text-2xl tabular-nums text-foreground">
             {formatCurrency(product.base_price)}
           </span>
-          {addButton}
+          {renderAddButton('self-start')}
         </div>
       </article>
     )
@@ -145,7 +146,7 @@ export function MarketplaceProductCard({
         </div>
       )}
       <span className="mt-2 text-sm tabular-nums text-foreground">{formatCurrency(product.base_price)}</span>
-      <div className="mt-3">{addButton}</div>
+      <div className="mt-3">{renderAddButton('w-full')}</div>
     </article>
   )
 }
