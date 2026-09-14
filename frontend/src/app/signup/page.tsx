@@ -10,6 +10,12 @@ import { errorMessage } from '@/lib/errors'
 
 type SignupMode = 'customer' | 'seller'
 
+function sanitizeRedirect(raw: string | null): string | null {
+  if (!raw) return null
+  if (!raw.startsWith('/') || raw.startsWith('//')) return null
+  return raw
+}
+
 function slugify(value: string): string {
   return value
     .toLowerCase()
@@ -31,6 +37,7 @@ function SignupForm() {
   const router = useRouter()
   const { t } = useUiLocale()
   const searchParams = useSearchParams()
+  const redirectTo = sanitizeRedirect(searchParams.get('redirect'))
   const initialMode: SignupMode = searchParams.get('as') === 'seller' ? 'seller' : 'customer'
   const [mode, setMode] = useState<SignupMode>(initialMode)
   const [error, setError] = useState('')
@@ -71,7 +78,7 @@ function SignupForm() {
           setAuthTokens({
             accessToken: data.access_token,
           })
-          router.push('/marketplace')
+          router.push(redirectTo || '/marketplace')
         }
       } else {
         const data = await apiClient('/api/v1/auth/register-tenant', {
@@ -298,7 +305,10 @@ function SignupForm() {
 
             <p className="mt-6 text-sm text-muted-foreground">
               {t('auth.hasAccount')}{' '}
-              <a href="/login" className="font-medium text-foreground underline-offset-4 hover:underline">
+              <a
+                href={redirectTo ? `/login?redirect=${encodeURIComponent(redirectTo)}` : '/login'}
+                className="font-medium text-foreground underline-offset-4 hover:underline"
+              >
                 {t('auth.logIn')}
               </a>
             </p>

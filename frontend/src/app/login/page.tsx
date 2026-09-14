@@ -29,6 +29,7 @@ export default function CustomerLoginPage() {
 function CustomerLoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const redirectTo = sanitizeRedirect(searchParams.get('redirect'))
   const { t } = useUiLocale()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -59,7 +60,6 @@ function CustomerLoginForm() {
           accessToken: data.access_token,
           tenantSlug,
         })
-        const redirectTo = sanitizeRedirect(searchParams.get('redirect'))
         router.push(redirectTo || (tenantSlug ? `/store/${tenantSlug}` : '/marketplace'))
       }
     } catch (err) {
@@ -147,7 +147,10 @@ function CustomerLoginForm() {
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
             {t('auth.noAccount')}{' '}
-            <a href="/signup" className="font-medium text-primary hover:underline">
+            <a
+              href={redirectTo ? `/signup?redirect=${encodeURIComponent(redirectTo)}` : '/signup'}
+              className="font-medium text-primary hover:underline"
+            >
               {t('auth.signUp')}
             </a>
           </p>

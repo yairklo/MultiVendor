@@ -56,6 +56,7 @@ describe('LoginPage', () => {
 
     await submitLogin()
 
+    expect(screen.getByRole('link', { name: /sign up/i })).toHaveAttribute('href', '/signup?redirect=%2Fcheckout')
     expect(setCookieMock).toHaveBeenCalledWith('token', 'tok', expect.objectContaining({ path: '/' }))
     expect(pushMock).toHaveBeenCalledWith('/checkout')
   })

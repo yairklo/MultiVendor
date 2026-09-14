@@ -24,7 +24,9 @@ function makeJwt(payload: Record<string, unknown>, opts: { alg?: string; secret?
 }
 
 function makeRequest(pathname: string, token?: string, host = 'localhost:3000') {
-  const request = new NextRequest(new URL(`http://${host}${pathname}`))
+  const request = new NextRequest(new URL(`http://${host}${pathname}`), {
+    headers: { host },
+  })
   if (token) request.cookies.set('token', token)
   return request
 }

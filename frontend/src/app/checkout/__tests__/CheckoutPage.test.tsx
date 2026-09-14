@@ -56,10 +56,19 @@ vi.mock('@/lib/cart', async () => {
   }
 })
 
+let mockToken: string | undefined = 'valid-token'
+
+vi.mock('cookies-next', () => ({
+  getCookie: (name: string) => (name === 'token' ? mockToken : undefined),
+  setCookie: vi.fn(),
+  deleteCookie: vi.fn(),
+}))
+
 const renderCheckout = () => render(<ToastProvider><CartProvider><CheckoutPage /></CartProvider></ToastProvider>)
 
 describe('CheckoutPage', () => {
   beforeEach(() => {
+    mockToken = 'valid-token'
     mockedCart = physicalCart
     clearCartMock.mockClear()
     sessionStorage.clear()
@@ -189,5 +198,15 @@ describe('CheckoutPage', () => {
     expect(
       await screen.findByText(/This item is currently being purchased by another customer, please try again in a few seconds/i)
     ).toBeInTheDocument()
+  })
+
+  it('blocks checkout and displays login/signup options when user is not authenticated', async () => {
+    mockToken = undefined
+    renderCheckout()
+
+    expect(await screen.findByText(/You need to be logged in to check out/i)).toBeInTheDocument()
+    expect(screen.queryByTestId('item-summary')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /login/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /create account/i })).toBeInTheDocument()
   })
 })
