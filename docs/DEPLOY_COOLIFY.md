@@ -17,26 +17,32 @@ domains the same way it already does for everything else on the server.
 for arbitrary tenant custom domains (a seller points their own domain at the
 server and it just works, no admin action needed) — that relies on Caddy
 alone owning ports 80/443 so it can answer Let's Encrypt's ACME challenge
-for any hostname. Coolify's shared Traefik doesn't do that: it only manages
-TLS for domains explicitly registered per application, via its API or UI.
-
-To keep this close to zero-touch anyway, `server/app/services/coolify_service.py`
-calls that API automatically whenever a tenant sets/changes their
-`custom_domain` (wired into `update_tenant_service` in
+for any hostname. Coolify's shared Traefik doesn't do that dynamically out
+of the box, but it does expose exactly the extension point needed to
+replicate it without touching its API or UI: a **dynamic configuration**
+directory (Server → Proxy → Dynamic Configuration in the Coolify UI) that
+Traefik's file provider watches and reloads live, with no restart — the
+documented, supported way to add extra routes "without creating a full
+resource." `server/app/services/coolify_service.py` owns one file in that
+directory and rewrites it, in full, from this app's own database (the
+actual source of truth for `Tenant.custom_domain`) every time a tenant
+sets/changes their domain (wired into `update_tenant_service` in
 `server/app/services/tenant_service.py`) — see step 5 below to turn it on.
-**Read this before relying on it**: Coolify's docker-compose domain-update
-API has real, open bugs in some versions
+
+This sidesteps an earlier version of this integration that called Coolify's
+REST API instead, which has real, open bugs for exactly this
 ([coollabsio/coolify#4999](https://github.com/coollabsio/coolify/issues/4999),
-[#4326](https://github.com/coollabsio/coolify/issues/4326)). The
-integration is deliberately best-effort — a failure is logged and swallowed,
-never breaks the tenant admin's settings save, and it refuses to write
-anything if the domains it reads back from Coolify don't already include
-the platform's own `APP_DOMAIN` (a sign its parsing doesn't match your
-Coolify version's actual response shape, safer to abstain than guess). The
+[#4326](https://github.com/coollabsio/coolify/issues/4326)) — the file
+provider has none of that fragility, and since we own the whole file there's
+no "merge with unknown external state" step to get wrong either.
+
+**What's still an assumption, not a guarantee**: the exact host directory
+path, the ACME cert resolver's name, and the HTTPS entrypoint's name are all
+Coolify-install-specific — wrong values fail *silently* (the file loads
+fine, Traefik just never matches or certs the domain). Step 5 has you verify
+all three against your own server before trusting this in production. The
 manual fallback (add the domain by hand in Coolify's UI, per step 4) always
-still works regardless. **Verify the API call manually against your own
-Coolify instance (see step 5) before assuming the automation is actually
-working** — don't just trust that it's silently succeeding.
+still works regardless of whether this automation is even enabled.
 
 ## 1. Pick your domains (no DNS purchase needed yet)
 
@@ -85,30 +91,38 @@ its domain to `APP_DOMAIN` (e.g. `app.<ip-with-dashes>.sslip.io`). Coolify
 issues each a Let's Encrypt cert through its existing shared proxy — no
 change to how your other apps on this server are routed.
 
-## 5. (Optional) Enable automatic tenant-domain registration
+## 5. (Optional) Enable automatic tenant-domain routing
 
 Skip this step to keep manual domain adds (step 4's approach, done again by
-hand each time a tenant sets a custom domain). To automate it instead:
+hand each time a tenant sets a custom domain). To automate it instead,
+verify these three things against *your own server* first — none of them
+are safe to assume:
 
-1. Coolify → your avatar/team → **Keys & Tokens → API tokens** → create a
-   token. Give it only the permissions it needs to read/update
-   applications — not a root/admin-everything token, since this value ends
-   up in the backend's environment.
-2. Find the `frontend` service's application UUID: open it in Coolify and
-   copy the UUID from the page URL (`.../application/<uuid>`).
-3. Before trusting this in production, verify it actually works against
-   *your* Coolify version:
+1. **Coolify → Server → Proxy**. Confirm the proxy type is **Traefik** (this
+   integration is Traefik-specific; skip it entirely if you're on Coolify's
+   experimental Caddy proxy instead).
+2. On that same page, open **Dynamic Configuration** and note the exact
+   directory path shown (commonly `/data/coolify/proxy/dynamic/`, but
+   confirm it — don't assume). SSH in and check it's really there:
    ```bash
-   curl -s -H "Authorization: Bearer <token>" \
-     https://<your-coolify-host>/api/v1/applications/<uuid> | head -c 2000
+   ls -la /data/coolify/proxy/dynamic/
    ```
-   Confirm the response actually has a `docker_compose_domains` field shaped
-   like `[{"domain": "...", "container": "frontend"}]` — if it looks
-   different, the automation's parsing (in `coolify_service.py`) won't
-   recognize your existing domains and will safely no-op (see the tradeoff
-   note above) rather than risk corrupting them.
-4. Set `COOLIFY_API_URL` (e.g. `https://<your-coolify-host>/api/v1`),
-   `COOLIFY_API_TOKEN`, and `COOLIFY_FRONTEND_APP_UUID` in step 6's env vars.
+3. On that same page, open the **Static Configuration** Coolify generated
+   and find the ACME cert resolver's name (commonly, not always,
+   `letsencrypt`) and the HTTPS entrypoint's name (commonly, not always,
+   `https`) — both appear in that file. Get either wrong and nothing errors
+   anywhere; Traefik just quietly never certs the domain.
+
+Once confirmed, set `TRAEFIK_DYNAMIC_CONFIG_HOST_DIR` (the path from step 2),
+`TRAEFIK_CERT_RESOLVER`, and `TRAEFIK_HTTPS_ENTRYPOINT` (both from step 3) in
+step 6's env vars — see `.env.example` for their defaults, which match the
+common case but must still be checked, not trusted. Also set
+`TRAEFIK_DYNAMIC_CONFIG_PATH` — this one you can leave at its `.env.example`
+default (`/coolify-proxy-dynamic/multivendor-tenants.yaml`) unless you also
+changed the container-side mount path in `docker-compose.coolify.yaml`; it's
+the one that actually turns the feature on (blank = disabled), separate from
+`TRAEFIK_DYNAMIC_CONFIG_HOST_DIR` which only controls the host side of the
+volume mount.
 
 ## 6. Set environment variables (in Coolify's resource → Environment Variables)
 
@@ -124,7 +138,7 @@ hand each time a tenant sets a custom domain). To automate it instead:
 | `SHIPPING_CREDENTIALS_ENCRYPTION_KEY` | generated in step 2, or leave blank to keep the courier integration disabled |
 | `GEMINI_API_KEY`, `SENTRY_DSN` | leave blank for now — both are no-op/disabled when unset |
 | `STORAGE_TYPE` | `local` (fine to start; uploads persist in the `uploads` docker volume) |
-| `COOLIFY_API_URL`, `COOLIFY_API_TOKEN`, `COOLIFY_FRONTEND_APP_UUID` | only if you did step 5 — otherwise leave all three blank |
+| `TRAEFIK_DYNAMIC_CONFIG_HOST_DIR`, `TRAEFIK_DYNAMIC_CONFIG_PATH`, `TRAEFIK_CERT_RESOLVER`, `TRAEFIK_HTTPS_ENTRYPOINT` | only if you did step 5, and only with the values you verified there — otherwise leave all four blank |
 
 `ACME_EMAIL` is not needed here — that was only for Caddy. Coolify already
 has its own ACME email configured server-wide for its shared proxy.
@@ -167,12 +181,17 @@ To confirm the tenant-domain path: set a tenant's `custom_domain` (via
 IP (e.g. `myshop.<ip-with-dashes>.sslip.io`).
 
 - **If you did step 5**, check the backend logs for a `coolify_service`
-  error first (it logs and swallows failures rather than raising) — if
-  clean, check the `frontend` app's Domains list in Coolify actually grew
-  to include it. Don't assume success just because the request returned
-  200; confirm the domain really shows up there.
+  error first (it logs and swallows failures rather than raising). If
+  clean, confirm the file actually updated:
+  ```bash
+  cat /data/coolify/proxy/dynamic/multivendor-tenants.yaml   # or wherever step 5 pointed it
+  ```
+  and that it lists the domain you just set. Then hit
+  `https://myshop.<ip-with-dashes>.sslip.io` directly — don't assume success
+  from the settings-save response alone; confirm the storefront actually
+  loads over a valid HTTPS connection.
 - **Either way** (automated or not), as a fallback add the hostname to the
-  `frontend` service's Domains list in Coolify by hand if it isn't there
+  `frontend` service's Domains list in Coolify by hand if it isn't routing
   yet — it should get a cert and route to that tenant's storefront.
 
 ## 10. Backups
