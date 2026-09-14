@@ -85,7 +85,7 @@ async def upload_product_image(
     response_model=ImageUploadResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Upload a Digital Product File",
-    description="Uploads a PDF, ZIP, EPUB, or Word file for a digital product. Returns a URL to store on the product as digital_file_url. Customers receive that link only after payment.",
+    description="Uploads a PDF, ZIP, EPUB, Word, or image (PNG, JPG, WEBP) file for a digital product. Returns a URL to store on the product as digital_file_url. Customers receive that link only after payment.",
     responses={
         201: {"description": "File uploaded successfully."},
         400: {"description": "Unsupported type, empty file, or exceeds the 25MB limit."}

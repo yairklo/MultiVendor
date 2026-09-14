@@ -195,7 +195,7 @@ export const he: NestedDict = {
     digitalProduct: 'מוצר דיגיטלי',
     digitalHint: 'בלי מלאי ובלי משלוח. העלו את הקובץ שהלקוחות יורידו אחרי התשלום.',
     uploadFile: 'קובץ המוצר',
-    uploadFileHint: 'PDF, ZIP, EPUB או Word. הלקוח מקבל אותו אחרי התשלום.',
+    uploadFileHint: 'PNG, JPG, PDF, ZIP, EPUB או Word. הלקוח מקבל אותו אחרי התשלום.',
     downloadUrl: 'קישור חיצוני לקובץ',
     downloadUrlHint: 'רק אם הקובץ כבר מתארח במקום אחר.',
     downloadUrlInvalid: 'הזינו כתובת http(s) או נתיב שמתחיל ב־/',
@@ -430,7 +430,7 @@ export const he: NestedDict = {
   },
   upload: {
     dropHint: 'לחצו או גררו תמונה לכאן (JPG, PNG, WEBP, GIF · עד 5MB)',
-    dropFileHint: 'לחצו או גררו קובץ לכאן (PDF, ZIP, EPUB, DOCX · עד 25MB)',
+    dropFileHint: 'לחצו או גררו קובץ לכאן (PNG, JPG, PDF, ZIP, EPUB, DOCX · עד 25MB)',
     uploading: 'מעלה…',
     noImage: 'אין תמונה',
     fileAttached: 'הקובץ צורף',

@@ -106,6 +106,36 @@ describe('NewProductPage image upload', () => {
     }))
   })
 
+  it('submits product_type digital with an uploaded PNG file', async () => {
+    uploadFileMock.mockResolvedValueOnce({ url: '/uploads/1/files/poster.png' })
+    createProductMock.mockResolvedValueOnce({ id: 5 })
+    const user = userEvent.setup()
+
+    render(<NewProductPage />)
+
+    await user.type(screen.getByLabelText(/product name \(english\)/i), 'Digital Art')
+    await user.type(screen.getByLabelText(/product name \(hebrew\)/i), 'אמנות דיגיטלית')
+    await user.type(screen.getByLabelText(/slug/i), 'digital-art')
+    await user.clear(screen.getByLabelText(/base price/i))
+    await user.type(screen.getByLabelText(/base price/i), '25')
+    await user.click(screen.getByRole('checkbox', { name: /digital product/i }))
+
+    const fileInput = screen.getByLabelText(/product file/i)
+    expect(fileInput).toHaveAttribute('accept', expect.stringContaining('.png'))
+
+    const file = new File(['fake-png-bytes'], 'poster.png', { type: 'image/png' })
+    await user.upload(fileInput, file)
+    await waitFor(() => expect(uploadFileMock).toHaveBeenCalledWith(file))
+
+    await user.click(screen.getByRole('button', { name: /save product/i }))
+
+    expect(createProductMock).toHaveBeenCalledWith(expect.objectContaining({
+      product_type: 'digital',
+      digital_file_url: '/uploads/1/files/poster.png',
+      variants: [expect.objectContaining({ stock_quantity: 0 })],
+    }))
+  })
+
   it('uploads a selected file and includes the returned URL in the images array', async () => {
     uploadImageMock.mockResolvedValueOnce({ url: '/uploads/1/products/abc123.png' })
     createProductMock.mockResolvedValueOnce({ id: 3 })

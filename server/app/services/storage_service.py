@@ -97,9 +97,18 @@ def _digital_file_ext(raw: bytes, original_name: str) -> str:
         if given in ZIP_EXTS:
             return given
         return "zip"
+    if raw.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "png"
+    if raw.startswith(b"\xff\xd8\xff"):
+        given = Path(original_name or "").suffix.lower().lstrip(".")
+        return "jpeg" if given in ("jpeg", "jpe") else "jpg"
+    if raw.startswith(b"RIFF") and len(raw) >= 12 and raw[8:12] == b"WEBP":
+        return "webp"
+    if raw.startswith((b"GIF87a", b"GIF89a")):
+        return "gif"
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
-        detail="Unsupported file type. Upload a PDF, ZIP, EPUB, or Word document.",
+        detail="Unsupported file type. Upload a PDF, ZIP, EPUB, Word document, or image (PNG, JPG, WEBP, GIF).",
     )
 
 

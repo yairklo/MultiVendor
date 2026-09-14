@@ -94,7 +94,7 @@ export function FileUploadField({
           ref={inputRef}
           id={id}
           type="file"
-          accept=".pdf,.zip,.epub,.docx,application/pdf,application/zip,application/epub+zip,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          accept=".pdf,.zip,.epub,.docx,.png,.jpg,.jpeg,.webp,.gif,application/pdf,application/zip,application/epub+zip,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/png,image/jpeg,image/webp,image/gif"
           className="hidden"
           onChange={(e) => {
             const file = e.target.files?.[0]
