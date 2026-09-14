@@ -6,6 +6,7 @@ from app.services import storage_service
 from app.services.storage_service import save_digital_file
 
 MINIMAL_PDF = b"%PDF-1.1\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n"
+MINIMAL_PNG = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15c4\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82"
 
 
 def _upload(filename: str, content: bytes):
@@ -23,6 +24,16 @@ async def test_save_digital_file_accepts_pdf(tmp_path, monkeypatch):
     assert url.endswith(".pdf")
     assert "my-ebook" in url
     assert (tmp_path / "7" / "files" / url.split("/")[-1]).read_bytes() == MINIMAL_PDF
+
+
+@pytest.mark.asyncio
+async def test_save_digital_file_accepts_png(tmp_path, monkeypatch):
+    monkeypatch.setattr("app.services.storage_service.settings.UPLOAD_DIR", str(tmp_path))
+    url = await save_digital_file(_upload("art print.png", MINIMAL_PNG), tenant_id=7)
+    assert url.startswith("/uploads/7/files/")
+    assert url.endswith(".png")
+    assert "art-print" in url
+    assert (tmp_path / "7" / "files" / url.split("/")[-1]).read_bytes() == MINIMAL_PNG
 
 
 @pytest.mark.asyncio
@@ -47,6 +58,22 @@ async def test_upload_digital_pdf_endpoint(async_client: AsyncClient, seed_token
     assert url.startswith("/uploads/")
     assert url.endswith(".pdf")
     assert "ebook" in url
+
+
+@pytest.mark.asyncio
+async def test_upload_digital_png_endpoint(async_client: AsyncClient, seed_tokens, tmp_path, monkeypatch):
+    monkeypatch.setattr("app.services.storage_service.settings.UPLOAD_DIR", str(tmp_path))
+    headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+    response = await async_client.post(
+        "/api/v1/admin/store/tenant-a/uploads/file",
+        headers=headers,
+        files={"file": ("artwork.png", MINIMAL_PNG, "image/png")},
+    )
+    assert response.status_code == 201
+    url = response.json()["url"]
+    assert url.startswith("/uploads/")
+    assert url.endswith(".png")
+    assert "artwork" in url
 
 
 @pytest.mark.asyncio

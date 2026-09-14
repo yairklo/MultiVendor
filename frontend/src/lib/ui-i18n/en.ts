@@ -195,7 +195,7 @@ export const en: NestedDict = {
     digitalProduct: 'Digital product',
     digitalHint: 'No inventory and no shipping. Upload the file customers will download after payment.',
     uploadFile: 'Product file',
-    uploadFileHint: 'PDF, ZIP, EPUB, or Word. Customers receive it after they pay.',
+    uploadFileHint: 'PNG, JPG, PDF, ZIP, EPUB, or Word. Customers receive it after they pay.',
     downloadUrl: 'External file link',
     downloadUrlHint: 'Only if the file is already hosted elsewhere.',
     downloadUrlInvalid: 'Enter an http(s) URL or a path starting with /',
@@ -430,7 +430,7 @@ export const en: NestedDict = {
   },
   upload: {
     dropHint: 'Click or drag an image here (JPG, PNG, WEBP, GIF · max 5MB)',
-    dropFileHint: 'Click or drag a file here (PDF, ZIP, EPUB, DOCX · max 25MB)',
+    dropFileHint: 'Click or drag a file here (PNG, JPG, PDF, ZIP, EPUB, DOCX · max 25MB)',
     uploading: 'Uploading…',
     noImage: 'No image',
     fileAttached: 'File attached',
