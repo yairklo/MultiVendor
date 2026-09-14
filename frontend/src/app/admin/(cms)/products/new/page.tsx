@@ -43,7 +43,7 @@ const formSchema = z.object({
   stock_quantity: z.coerce.number().min(0, 'Quantity cannot be negative'),
   is_active: z.boolean(),
   is_digital: z.boolean(),
-  digital_file_url: z.string().max(512).refine(isValidDigitalFileUrl, { message: 'Enter an http(s) URL or a path starting with /' }),
+  digital_file_url: z.string().max(2048).refine(isValidDigitalFileUrl, { message: 'Enter an http(s) URL or a path starting with /' }),
 })
 
 export default function NewProductPage() {
