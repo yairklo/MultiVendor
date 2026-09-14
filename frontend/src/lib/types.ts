@@ -94,6 +94,13 @@ export interface Product {
   created_at: string
 }
 
+export interface MarketplaceCategory {
+  id: number
+  slug: string
+  name: I18nText
+  product_count: number
+}
+
 // A product as it appears on the cross-store marketplace listing -- like
 // Product, but carries its origin store since browsing spans stores (see
 // server/app/schemas/marketplace_schemas.py::MarketplaceProductResponse).
@@ -103,6 +110,8 @@ export interface MarketplaceProduct {
   tenant_slug: string
   tenant_name: string
   category_id?: number | null
+  category_slug?: string | null
+  category_name?: I18nText | null
   name: I18nText
   slug: string
   description?: I18nText | null

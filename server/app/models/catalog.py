@@ -35,6 +35,7 @@ class Product(TenantScoped, Base):
     variants = relationship("ProductVariant", back_populates="product", cascade="all, delete-orphan")
     images = relationship("ProductImage", back_populates="product", cascade="all, delete-orphan")
     reviews = relationship("ProductReview", back_populates="product", cascade="all, delete-orphan")
+    category = relationship("Category", foreign_keys=[category_id])
 
 class ProductVariant(TenantScoped, Base):
     __tablename__ = "product_variants"

@@ -95,11 +95,22 @@ export const getProducts = cache(
   }
 )
 
-export const getMarketplaceProducts = cache(async (page = 1, pageSize = 12, q?: string) => {
+export const getMarketplaceProducts = cache(async (page = 1, pageSize = 12, q?: string, category?: string) => {
   const qs = new URLSearchParams({ page: String(page), page_size: String(pageSize) })
   if (q) qs.set('q', q)
+  if (category) qs.set('category', category)
   const data = await serverApiClient(`/api/v1/marketplace/products?${qs.toString()}`)
   return { data: data.data || [], meta: data.meta }
+})
+
+export const getMarketplaceCategories = cache(async () => {
+  try {
+    const data = await serverApiClient('/api/v1/marketplace/categories')
+    return Array.isArray(data) ? data : (data.data || [])
+  } catch (e) {
+    console.error('Failed to load marketplace categories:', e)
+    return []
+  }
 })
 
 export const getCategories = cache(async (tenantSlug: string) => {
