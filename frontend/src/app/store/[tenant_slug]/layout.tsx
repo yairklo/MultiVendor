@@ -1,5 +1,6 @@
 import React from 'react'
 import { cookies } from 'next/headers'
+import { notFound } from 'next/navigation'
 import { StorefrontThemeProvider } from '@/context/StorefrontThemeContext'
 import { StorefrontHeader } from '@/components/storefront/StorefrontHeader'
 import { StorefrontFooter } from '@/components/storefront/StorefrontFooter'
@@ -28,21 +29,7 @@ export default async function StorefrontLayout({
   params: Promise<{ tenant_slug: string }>
 }) {
   const { tenant_slug: tenantSlug } = await params
-  if (!isUsableTenantSlug(tenantSlug)) {
-    // Was `notFound()` (throws, caught by the nearest not-found boundary) --
-    // on this deploy that throw-based mechanism surfaces as a bare 404 for
-    // *every* request under this layout, valid slugs included, not just
-    // this rejection case. A framework-level issue still being tracked, not
-    // something introduced here. Rendering a plain in-place message instead
-    // avoids the broken throw path entirely; this branch only ever runs for
-    // the JS-stringified-undefined sentinels this guard exists to catch
-    // (see isUsableTenantSlug's docstring), not real traffic.
-    return (
-      <div className="flex min-h-screen items-center justify-center p-8 text-center">
-        <p>Store not found.</p>
-      </div>
-    )
-  }
+  if (!isUsableTenantSlug(tenantSlug)) notFound()
   const storeName = displayName(tenantSlug)
   const cookieStore = await cookies()
   const isLoggedIn = !!cookieStore.get('token')?.value
