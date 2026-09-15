@@ -16,7 +16,7 @@ from app.services.product_completeness import (
     validate_nav_labels,
 )
 from app.services.coolify_service import regenerate_traefik_dynamic_config
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import json
 
 async def update_tenant_service(tenant_slug: str, req: TenantUpdateSchema, db: AsyncSession) -> TenantResponse:
@@ -189,17 +189,32 @@ async def get_current_subscription_service(tenant_slug: str, db: AsyncSession):
         "max_storage_mb": tenant.plan.max_storage_mb
     }
 
-async def get_tenant_analytics_service(tenant_slug: str, start_date: str, end_date: str, db: AsyncSession):
-    tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
-    tenant_id = tenant_result.scalar_one_or_none()
-    if not tenant_id:
-        raise HTTPException(status_code=404, detail="Tenant not found")
-        
+def _parse_date_range(start_date: str, end_date: str) -> tuple[datetime, datetime]:
+    """
+    The dashboard (and the AI analytics tool) send plain calendar dates like
+    "2026-09-15" with no time component. Parsed literally, end_date lands at
+    00:00:00 -- which would exclude every order placed later that same day
+    from a range that's supposed to include "today". A date-only end_date is
+    bumped to the last microsecond of that day instead; a caller that passes
+    a real timestamp (has a "T" in it) is left untouched.
+    """
     try:
         sd = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
         ed = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid date format, use ISO8601")
+    if "T" not in end_date:
+        ed = ed + timedelta(days=1) - timedelta(microseconds=1)
+    return sd, ed
+
+
+async def get_tenant_analytics_service(tenant_slug: str, start_date: str, end_date: str, db: AsyncSession):
+    tenant_result = await db.execute(select(Tenant.id).where(Tenant.slug == tenant_slug))
+    tenant_id = tenant_result.scalar_one_or_none()
+    if not tenant_id:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    sd, ed = _parse_date_range(start_date, end_date)
 
     # query total sales and order count
     query = (
@@ -261,11 +276,7 @@ async def get_top_selling_products_service(
     if not tenant_id:
         raise HTTPException(status_code=404, detail="Tenant not found")
 
-    try:
-        sd = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
-        ed = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid date format, use ISO8601")
+    sd, ed = _parse_date_range(start_date, end_date)
 
     query = (
         select(
@@ -299,11 +310,7 @@ async def get_sales_by_category_service(
     if not tenant_id:
         raise HTTPException(status_code=404, detail="Tenant not found")
 
-    try:
-        sd = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
-        ed = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid date format, use ISO8601")
+    sd, ed = _parse_date_range(start_date, end_date)
 
     # OrderItem -> ProductVariant -> Product -> Category, all LEFT joins:
     # variant_id is nullable (SET NULL if the variant is later deleted) and a
