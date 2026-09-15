@@ -527,6 +527,7 @@ export const he: NestedDict = {
     address: 'רחוב ומספר בית',
     city: 'עיר',
     phone: 'טלפון',
+    fieldRequired: 'שדה חובה',
     shippingFieldsRequired: 'יש למלא שם מלא, עיר, כתובת וטלפון כדי להמשיך.',
     digitalNoShipping: 'ההזמנה דיגיטלית — אין צורך בכתובת או בשיטת משלוח.',
     shippingMethods: 'שיטות משלוח',

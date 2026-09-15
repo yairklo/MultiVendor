@@ -527,6 +527,7 @@ export const en: NestedDict = {
     address: 'Street & House Number',
     city: 'City',
     phone: 'Phone',
+    fieldRequired: 'This field is required',
     shippingFieldsRequired: 'Full name, city, address, and phone are required to continue.',
     digitalNoShipping: 'This order is digital — no shipping address or delivery method is needed.',
     shippingMethods: 'Shipping Methods',

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useCart } from '@/context/CartContext'
+import { useToastSafe } from '@/context/ToastContext'
 import { useStorefrontTheme } from '@/context/StorefrontThemeContext'
 import { totalStock, isDigitalProduct } from '@/lib/stock'
 import { StarRating } from '@/components/ui/star-rating'
@@ -38,7 +39,8 @@ export function ProductCard({
    * callers only need to pass this explicitly to override it. */
   lang?: string
 }) {
-  const { addItem } = useCart()
+  const { addItem, openDrawer } = useCart()
+  const { showToast } = useToastSafe()
   const { lang: contextLang } = useStorefrontTheme()
   const { formatCurrency } = useCurrency()
   const [quantity, setQuantity] = useState(1)
@@ -59,9 +61,10 @@ export function ProductCard({
     setAdding(true)
     try {
       await addItem(tenantSlug, variantId, quantity)
+      openDrawer()
       setQuantity(1)
-    } catch {
-      // CartContext surfaces its own errors; nothing further to do here.
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to add item to cart', 'error')
     } finally {
       setAdding(false)
     }

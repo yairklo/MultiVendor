@@ -6,7 +6,7 @@ import { getCookie } from 'cookies-next'
 import { apiClient, ApiError } from '@/lib/api/apiClient'
 import { useCart } from '@/context/CartContext'
 import { useMarketplaceCartSafe } from '@/context/MarketplaceCartContext'
-import { useToast } from '@/context/ToastContext'
+import { useToastSafe } from '@/context/ToastContext'
 import { totalStock, isDigitalProduct } from '@/lib/stock'
 import { StarRating } from '@/components/ui/star-rating'
 import { Star } from 'lucide-react'
@@ -98,7 +98,7 @@ export function ProductDetailView({
   const [submittingReview, setSubmittingReview] = useState(false)
   const singleStoreCart = useCart()
   const marketplaceCart = useMarketplaceCartSafe()
-  const { showToast } = useToast()
+  const { showToast } = useToastSafe()
   const { theme, lang } = useStorefrontTheme()
   const { formatCurrency } = useCurrency()
   const t = STRINGS[lang as keyof typeof STRINGS] || STRINGS.en
@@ -160,6 +160,7 @@ export function ProductDetailView({
       }
     } catch (e) {
       console.error('Failed to add item to cart:', e)
+      showToast(errorMessage(e) || (lang === 'he' ? 'שגיאה בהוספה לעגלה' : 'Failed to add item to cart'), 'error')
     } finally {
       setAdding(false)
     }

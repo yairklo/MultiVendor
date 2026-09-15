@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { ProductDetailView } from '../[tenant_slug]/products/[slug]/ProductDetailView'
 import { CartProvider } from '@/context/CartContext'
+import { MarketplaceCartProvider } from '@/context/MarketplaceCartContext'
 import { ToastProvider } from '@/context/ToastContext'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../../mocks/server'
@@ -107,7 +108,7 @@ describe('ProductDetailView', () => {
     let marketplaceItemPosted: unknown = null
 
     server.use(
-      http.post('http://localhost:8000/api/v1/marketplace/cart/items', async ({ request }) => {
+      http.post('http://localhost:8000/api/v1/marketplace/cart/:cart_id/items', async ({ request }) => {
         marketplaceItemPosted = await request.json()
         return HttpResponse.json({ cart_id: 'mp-cart', items: [], total: 0 }, { status: 201 })
       }),
@@ -115,8 +116,6 @@ describe('ProductDetailView', () => {
         return HttpResponse.json({ id: 1, cart_id: 'mp-cart', items: [], subtotal: 0, vendor_count: 0 })
       })
     )
-
-    const { MarketplaceCartProvider } = await import('@/context/MarketplaceCartContext')
 
     render(
       <ToastProvider>
@@ -155,4 +154,5 @@ describe('ProductDetailView', () => {
     })
   })
 })
+
 

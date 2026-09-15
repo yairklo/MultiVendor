@@ -1,4 +1,4 @@
-import { apiClient } from '@/lib/api/apiClient'
+import { apiClient, ApiError } from '@/lib/api/apiClient'
 import { isUsableTenantSlug } from '@/lib/tenantSlug'
 
 const CART_STORAGE_KEY = 'mv_cart'
@@ -77,11 +77,24 @@ export function clearCart() {
 // JS (and therefore XSS) never has access to the value at all.
 
 export async function addItemToCart(tenantSlug: string, variantId: number, quantity = 1) {
-  const cart = getOrCreateCart(tenantSlug)
-  await apiClient(`/api/v1/store/${tenantSlug}/cart/${cart.cartId}/items`, {
-    method: 'POST',
-    body: JSON.stringify({ variant_id: variantId, quantity }),
-  })
+  let cart = getOrCreateCart(tenantSlug)
+  try {
+    await apiClient(`/api/v1/store/${tenantSlug}/cart/${cart.cartId}/items`, {
+      method: 'POST',
+      body: JSON.stringify({ variant_id: variantId, quantity }),
+    })
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) {
+      clearCart()
+      cart = getOrCreateCart(tenantSlug)
+      await apiClient(`/api/v1/store/${tenantSlug}/cart/${cart.cartId}/items`, {
+        method: 'POST',
+        body: JSON.stringify({ variant_id: variantId, quantity }),
+      })
+    } else {
+      throw e
+    }
+  }
   return cart
 }
 

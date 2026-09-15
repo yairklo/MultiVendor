@@ -73,6 +73,7 @@ export default function MarketplaceCheckoutPage() {
   const [address, setAddress] = useState('')
   const [city, setCity] = useState('')
   const [phone, setPhone] = useState('')
+  const [submittedOnce, setSubmittedOnce] = useState(false)
 
   const activeCart = getActiveMarketplaceCart()
   const subtotal = cart ? Number(cart.subtotal) : 0
@@ -83,7 +84,16 @@ export default function MarketplaceCheckoutPage() {
   const handleCheckout = async () => {
     if (!activeCart || !cart) return
     if (requiresShippingAddress && (!fullName.trim() || !city.trim() || !address.trim() || !phone.trim())) {
+      setSubmittedOnce(true)
       setError(t('checkout.shippingFieldsRequired'))
+      const firstInvalidId = !fullName.trim()
+        ? 'mpFullName'
+        : !phone.trim()
+          ? 'mpPhone'
+          : !city.trim()
+            ? 'mpCity'
+            : 'mpAddress'
+      document.getElementById(firstInvalidId)?.focus()
       return
     }
     try {
@@ -326,14 +336,26 @@ export default function MarketplaceCheckoutPage() {
               <h2 className="text-xl font-semibold mb-4 text-foreground">{t('checkout.shippingDetails')}</h2>
               <div className="space-y-3">
                 <div>
-                  <label htmlFor="mpFullName" className="block text-sm font-medium mb-1 text-foreground">{t('checkout.fullName')}</label>
+                  <div className="flex items-center gap-1 mb-1">
+                    <label htmlFor="mpFullName" className="block text-sm font-medium text-foreground">
+                      {t('checkout.fullName')}
+                    </label>
+                    <span className="text-destructive font-bold">*</span>
+                  </div>
                   <input
                     id="mpFullName"
                     type="text"
-                    className="w-full border border-input rounded-lg px-3 py-2 focus:ring-2 focus:ring-ring outline-none text-foreground transition-shadow"
+                    className={`w-full border rounded-lg px-3 py-2 outline-none text-foreground transition-shadow ${
+                      submittedOnce && !fullName.trim()
+                        ? 'border-destructive ring-1 ring-destructive focus:ring-destructive'
+                        : 'border-input focus:ring-2 focus:ring-ring'
+                    }`}
                     value={fullName}
                     onChange={e => setFullName(e.target.value)}
                   />
+                  {submittedOnce && !fullName.trim() && (
+                    <p className="text-xs text-destructive mt-1 font-medium">{t('checkout.fieldRequired')}</p>
+                  )}
                 </div>
                 <div>
                   <label htmlFor="mpEmail" className="block text-sm font-medium mb-1 text-foreground">{t('checkout.email')}</label>
@@ -346,34 +368,70 @@ export default function MarketplaceCheckoutPage() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="mpPhone" className="block text-sm font-medium mb-1 text-foreground">{t('checkout.phone')}</label>
+                  <div className="flex items-center gap-1 mb-1">
+                    <label htmlFor="mpPhone" className="block text-sm font-medium text-foreground">
+                      {t('checkout.phone')}
+                    </label>
+                    <span className="text-destructive font-bold">*</span>
+                  </div>
                   <input
                     id="mpPhone"
                     type="tel"
-                    className="w-full border border-input rounded-lg px-3 py-2 focus:ring-2 focus:ring-ring outline-none text-foreground transition-shadow"
+                    className={`w-full border rounded-lg px-3 py-2 outline-none text-foreground transition-shadow ${
+                      submittedOnce && !phone.trim()
+                        ? 'border-destructive ring-1 ring-destructive focus:ring-destructive'
+                        : 'border-input focus:ring-2 focus:ring-ring'
+                    }`}
                     value={phone}
                     onChange={e => setPhone(e.target.value)}
                   />
+                  {submittedOnce && !phone.trim() && (
+                    <p className="text-xs text-destructive mt-1 font-medium">{t('checkout.fieldRequired')}</p>
+                  )}
                 </div>
                 <div>
-                  <label htmlFor="mpCity" className="block text-sm font-medium mb-1 text-foreground">{t('checkout.city')}</label>
+                  <div className="flex items-center gap-1 mb-1">
+                    <label htmlFor="mpCity" className="block text-sm font-medium text-foreground">
+                      {t('checkout.city')}
+                    </label>
+                    <span className="text-destructive font-bold">*</span>
+                  </div>
                   <input
                     id="mpCity"
                     type="text"
-                    className="w-full border border-input rounded-lg px-3 py-2 focus:ring-2 focus:ring-ring outline-none text-foreground transition-shadow"
+                    className={`w-full border rounded-lg px-3 py-2 outline-none text-foreground transition-shadow ${
+                      submittedOnce && !city.trim()
+                        ? 'border-destructive ring-1 ring-destructive focus:ring-destructive'
+                        : 'border-input focus:ring-2 focus:ring-ring'
+                    }`}
                     value={city}
                     onChange={e => setCity(e.target.value)}
                   />
+                  {submittedOnce && !city.trim() && (
+                    <p className="text-xs text-destructive mt-1 font-medium">{t('checkout.fieldRequired')}</p>
+                  )}
                 </div>
                 <div>
-                  <label htmlFor="mpAddress" className="block text-sm font-medium mb-1 text-foreground">{t('checkout.address')}</label>
+                  <div className="flex items-center gap-1 mb-1">
+                    <label htmlFor="mpAddress" className="block text-sm font-medium text-foreground">
+                      {t('checkout.address')}
+                    </label>
+                    <span className="text-destructive font-bold">*</span>
+                  </div>
                   <input
                     id="mpAddress"
                     type="text"
-                    className="w-full border border-input rounded-lg px-3 py-2 focus:ring-2 focus:ring-ring outline-none text-foreground transition-shadow"
+                    className={`w-full border rounded-lg px-3 py-2 outline-none text-foreground transition-shadow ${
+                      submittedOnce && !address.trim()
+                        ? 'border-destructive ring-1 ring-destructive focus:ring-destructive'
+                        : 'border-input focus:ring-2 focus:ring-ring'
+                    }`}
                     value={address}
                     onChange={e => setAddress(e.target.value)}
                   />
+                  {submittedOnce && !address.trim() && (
+                    <p className="text-xs text-destructive mt-1 font-medium">{t('checkout.fieldRequired')}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -399,7 +457,7 @@ export default function MarketplaceCheckoutPage() {
             </div>
             <button
               onClick={handleCheckout}
-              disabled={submitting || (requiresShippingAddress && (!fullName.trim() || !city.trim() || !address.trim() || !phone.trim()))}
+              disabled={submitting}
               className="w-full bg-primary text-primary-foreground py-3 rounded-xl font-bold text-lg shadow-lg hover:bg-primary/90 hover:shadow-xl active:scale-[0.98] transition-all duration-150 disabled:opacity-70"
             >
               {submitting ? t('checkout.placing') : t('checkout.placeOrder')}
