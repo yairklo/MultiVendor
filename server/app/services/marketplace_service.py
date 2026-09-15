@@ -69,7 +69,10 @@ async def add_to_marketplace_cart_service(
     variant_result = await db.execute(
         select(ProductVariant)
         .join(Product)
-        .options(selectinload(ProductVariant.product))
+        .options(
+            selectinload(ProductVariant.product).selectinload(Product.variants),
+            selectinload(ProductVariant.product).selectinload(Product.images),
+        )
         .where(
             ProductVariant.id == req.variant_id,
             Product.is_active == True,
