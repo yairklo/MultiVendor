@@ -5,7 +5,8 @@ import Link from 'next/link'
 import { getCookie } from 'cookies-next'
 import { apiClient, ApiError } from '@/lib/api/apiClient'
 import { useCart } from '@/context/CartContext'
-import { useToast } from '@/context/ToastContext'
+import { useMarketplaceCartSafe } from '@/context/MarketplaceCartContext'
+import { useToastSafe } from '@/context/ToastContext'
 import { totalStock, isDigitalProduct } from '@/lib/stock'
 import { StarRating } from '@/components/ui/star-rating'
 import { Star } from 'lucide-react'
@@ -20,6 +21,8 @@ import type { Product, ProductReview } from '@/lib/types'
 const STRINGS = {
   en: {
     backToStore: '← Back to store',
+    backToMarketplace: '← Back to marketplace',
+    soldBy: 'Sold by',
     noImage: 'No image',
     outOfStock: 'Out of stock',
     inStock: (n: number) => `${n} in stock`,
@@ -45,6 +48,8 @@ const STRINGS = {
   },
   he: {
     backToStore: '→ חזרה לחנות',
+    backToMarketplace: '→ חזרה למרקטפלייס',
+    soldBy: 'נמכר ע״י',
     noImage: 'אין תמונה',
     outOfStock: 'אזל מהמלאי',
     inStock: (n: number) => `${n} במלאי`,
@@ -75,11 +80,15 @@ export function ProductDetailView({
   slug,
   product,
   initialReviews,
+  mode = 'store',
+  storeName,
 }: {
   tenantSlug: string
   slug: string
   product: Product
   initialReviews: ProductReview[]
+  mode?: 'store' | 'marketplace'
+  storeName?: string
 }) {
   const [quantity, setQuantity] = useState(1)
   const [adding, setAdding] = useState(false)
@@ -87,8 +96,9 @@ export function ProductDetailView({
   const [reviewRating, setReviewRating] = useState(5)
   const [reviewComment, setReviewComment] = useState('')
   const [submittingReview, setSubmittingReview] = useState(false)
-  const { addItem, openDrawer } = useCart()
-  const { showToast } = useToast()
+  const singleStoreCart = useCart()
+  const marketplaceCart = useMarketplaceCartSafe()
+  const { showToast } = useToastSafe()
   const { theme, lang } = useStorefrontTheme()
   const { formatCurrency } = useCurrency()
   const t = STRINGS[lang as keyof typeof STRINGS] || STRINGS.en
@@ -139,10 +149,18 @@ export function ProductDetailView({
     if (!variantId) return
     setAdding(true)
     try {
-      await addItem(tenantSlug, variantId, quantity)
-      openDrawer()
+      if (mode === 'marketplace') {
+        if (marketplaceCart) {
+          await marketplaceCart.addItem(variantId, quantity)
+          marketplaceCart.openDrawer()
+        }
+      } else {
+        await singleStoreCart.addItem(tenantSlug, variantId, quantity)
+        singleStoreCart.openDrawer()
+      }
     } catch (e) {
       console.error('Failed to add item to cart:', e)
+      showToast(errorMessage(e) || (lang === 'he' ? 'שגיאה בהוספה לעגלה' : 'Failed to add item to cart'), 'error')
     } finally {
       setAdding(false)
     }
@@ -152,12 +170,29 @@ export function ProductDetailView({
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 md:px-8 md:py-12 text-foreground">
-      <Link
-        href={`/store/${tenantSlug}`}
-        className="inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-foreground mb-8"
-      >
-        {t.backToStore}
-      </Link>
+      {mode === 'marketplace' ? (
+        <div className="flex items-center justify-between gap-4 mb-8">
+          <Link
+            href="/marketplace"
+            className="inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-foreground"
+          >
+            {t.backToMarketplace}
+          </Link>
+          <Link
+            href={`/store/${tenantSlug}`}
+            className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-foreground hover:underline"
+          >
+            {t.soldBy}: <span className="font-semibold text-foreground">{storeName || tenantSlug}</span>
+          </Link>
+        </div>
+      ) : (
+        <Link
+          href={`/store/${tenantSlug}`}
+          className="inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-foreground mb-8"
+        >
+          {t.backToStore}
+        </Link>
+      )}
 
       <div className="grid grid-cols-1 gap-10 md:grid-cols-2 md:gap-14 lg:gap-16 items-start">
         {/* Product Images Column */}

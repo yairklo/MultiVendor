@@ -60,6 +60,7 @@ export default function CheckoutPage() {
   const [applyingCoupon, setApplyingCoupon] = useState(false)
   const [shippingMethodId, setShippingMethodId] = useState<number>(1)
   const [needsLogin, setNeedsLogin] = useState(false)
+  const [submittedOnce, setSubmittedOnce] = useState(false)
   const router = useRouter()
 
   const activeCart = getActiveCart()
@@ -121,7 +122,16 @@ export default function CheckoutPage() {
   const handleCheckout = async () => {
     if (!activeCart || !cart) return
     if (requiresShippingAddress && (!fullName.trim() || !city.trim() || !address.trim() || !phone.trim())) {
+      setSubmittedOnce(true)
       setError(t('checkout.shippingFieldsRequired'))
+      const firstInvalidId = !fullName.trim()
+        ? 'fullName'
+        : !phone.trim()
+          ? 'checkoutPhone'
+          : !city.trim()
+            ? 'checkoutCity'
+            : 'address'
+      document.getElementById(firstInvalidId)?.focus()
       return
     }
     if (isLoggedIn === false) {
@@ -399,14 +409,26 @@ export default function CheckoutPage() {
               <h2 className="text-xl font-semibold mb-4 text-foreground">{t('checkout.shippingDetails')}</h2>
               <div className="space-y-3">
                 <div>
-                  <label htmlFor="fullName" className="block text-sm font-medium mb-1 text-foreground">{t('checkout.fullName')}</label>
+                  <div className="flex items-center gap-1 mb-1">
+                    <label htmlFor="fullName" className="block text-sm font-medium text-foreground">
+                      {t('checkout.fullName')}
+                    </label>
+                    <span className="text-destructive font-bold">*</span>
+                  </div>
                   <input
                     id="fullName"
                     type="text"
-                    className="w-full border border-input rounded-lg px-3 py-2 focus:ring-2 focus:ring-ring outline-none text-foreground transition-shadow"
+                    className={`w-full border rounded-lg px-3 py-2 outline-none text-foreground transition-shadow ${
+                      submittedOnce && !fullName.trim()
+                        ? 'border-destructive ring-1 ring-destructive focus:ring-destructive'
+                        : 'border-input focus:ring-2 focus:ring-ring'
+                    }`}
                     value={fullName}
                     onChange={e => setFullName(e.target.value)}
                   />
+                  {submittedOnce && !fullName.trim() && (
+                    <p className="text-xs text-destructive mt-1 font-medium">{t('checkout.fieldRequired')}</p>
+                  )}
                 </div>
                 <div>
                   <label htmlFor="checkoutEmail" className="block text-sm font-medium mb-1 text-foreground">{t('checkout.email')}</label>
@@ -419,34 +441,70 @@ export default function CheckoutPage() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="checkoutPhone" className="block text-sm font-medium mb-1 text-foreground">{t('checkout.phone')}</label>
+                  <div className="flex items-center gap-1 mb-1">
+                    <label htmlFor="checkoutPhone" className="block text-sm font-medium text-foreground">
+                      {t('checkout.phone')}
+                    </label>
+                    <span className="text-destructive font-bold">*</span>
+                  </div>
                   <input
                     id="checkoutPhone"
                     type="tel"
-                    className="w-full border border-input rounded-lg px-3 py-2 focus:ring-2 focus:ring-ring outline-none text-foreground transition-shadow"
+                    className={`w-full border rounded-lg px-3 py-2 outline-none text-foreground transition-shadow ${
+                      submittedOnce && !phone.trim()
+                        ? 'border-destructive ring-1 ring-destructive focus:ring-destructive'
+                        : 'border-input focus:ring-2 focus:ring-ring'
+                    }`}
                     value={phone}
                     onChange={e => setPhone(e.target.value)}
                   />
+                  {submittedOnce && !phone.trim() && (
+                    <p className="text-xs text-destructive mt-1 font-medium">{t('checkout.fieldRequired')}</p>
+                  )}
                 </div>
                 <div>
-                  <label htmlFor="checkoutCity" className="block text-sm font-medium mb-1 text-foreground">{t('checkout.city')}</label>
+                  <div className="flex items-center gap-1 mb-1">
+                    <label htmlFor="checkoutCity" className="block text-sm font-medium text-foreground">
+                      {t('checkout.city')}
+                    </label>
+                    <span className="text-destructive font-bold">*</span>
+                  </div>
                   <input
                     id="checkoutCity"
                     type="text"
-                    className="w-full border border-input rounded-lg px-3 py-2 focus:ring-2 focus:ring-ring outline-none text-foreground transition-shadow"
+                    className={`w-full border rounded-lg px-3 py-2 outline-none text-foreground transition-shadow ${
+                      submittedOnce && !city.trim()
+                        ? 'border-destructive ring-1 ring-destructive focus:ring-destructive'
+                        : 'border-input focus:ring-2 focus:ring-ring'
+                    }`}
                     value={city}
                     onChange={e => setCity(e.target.value)}
                   />
+                  {submittedOnce && !city.trim() && (
+                    <p className="text-xs text-destructive mt-1 font-medium">{t('checkout.fieldRequired')}</p>
+                  )}
                 </div>
                 <div>
-                  <label htmlFor="address" className="block text-sm font-medium mb-1 text-foreground">{t('checkout.address')}</label>
+                  <div className="flex items-center gap-1 mb-1">
+                    <label htmlFor="address" className="block text-sm font-medium text-foreground">
+                      {t('checkout.address')}
+                    </label>
+                    <span className="text-destructive font-bold">*</span>
+                  </div>
                   <input
                     id="address"
                     type="text"
-                    className="w-full border border-input rounded-lg px-3 py-2 focus:ring-2 focus:ring-ring outline-none text-foreground transition-shadow"
+                    className={`w-full border rounded-lg px-3 py-2 outline-none text-foreground transition-shadow ${
+                      submittedOnce && !address.trim()
+                        ? 'border-destructive ring-1 ring-destructive focus:ring-destructive'
+                        : 'border-input focus:ring-2 focus:ring-ring'
+                    }`}
                     value={address}
                     onChange={e => setAddress(e.target.value)}
                   />
+                  {submittedOnce && !address.trim() && (
+                    <p className="text-xs text-destructive mt-1 font-medium">{t('checkout.fieldRequired')}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -534,7 +592,7 @@ export default function CheckoutPage() {
             </div>
             <button
               onClick={handleCheckout}
-              disabled={submitting || (requiresShippingAddress && (!fullName.trim() || !city.trim() || !address.trim() || !phone.trim()))}
+              disabled={submitting}
               className="w-full bg-primary text-primary-foreground py-3 rounded-xl font-bold text-lg shadow-lg hover:bg-primary/90 hover:shadow-xl active:scale-[0.98] transition-all duration-150 disabled:opacity-70"
             >
               {submitting ? t('checkout.placing') : t('checkout.placeOrder')}

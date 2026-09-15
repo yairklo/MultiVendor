@@ -149,3 +149,7 @@ export function useMarketplaceCart(): MarketplaceCartContextValue {
   if (!ctx) throw new Error('useMarketplaceCart must be used within a MarketplaceCartProvider')
   return ctx
 }
+
+export function useMarketplaceCartSafe(): MarketplaceCartContextValue | null {
+  return useContext(MarketplaceCartContext)
+}

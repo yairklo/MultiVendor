@@ -1,4 +1,4 @@
-import { apiClient } from '@/lib/api/apiClient'
+import { apiClient, ApiError } from '@/lib/api/apiClient'
 
 const CART_STORAGE_KEY = 'mv_marketplace_cart'
 
@@ -67,11 +67,24 @@ export function clearMarketplaceCart() {
 }
 
 export async function addItemToMarketplaceCart(variantId: number, quantity = 1) {
-  const cart = getOrCreateMarketplaceCart()
-  await apiClient(`/api/v1/marketplace/cart/${cart.cartId}/items`, {
-    method: 'POST',
-    body: JSON.stringify({ variant_id: variantId, quantity }),
-  })
+  let cart = getOrCreateMarketplaceCart()
+  try {
+    await apiClient(`/api/v1/marketplace/cart/${cart.cartId}/items`, {
+      method: 'POST',
+      body: JSON.stringify({ variant_id: variantId, quantity }),
+    })
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) {
+      clearMarketplaceCart()
+      cart = getOrCreateMarketplaceCart()
+      await apiClient(`/api/v1/marketplace/cart/${cart.cartId}/items`, {
+        method: 'POST',
+        body: JSON.stringify({ variant_id: variantId, quantity }),
+      })
+    } else {
+      throw e
+    }
+  }
   return cart
 }
 

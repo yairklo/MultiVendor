@@ -70,3 +70,13 @@ export function useToast(): ToastContextValue {
   if (!ctx) throw new Error('useToast must be used within a ToastProvider')
   return ctx
 }
+
+export function useToastSafe(): ToastContextValue {
+  const ctx = useContext(ToastContext)
+  if (!ctx) {
+    return {
+      showToast: () => {},
+    }
+  }
+  return ctx
+}
