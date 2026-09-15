@@ -113,7 +113,7 @@ async def add_to_cart_service(
             raise HTTPException(status_code=404, detail="Cart not found")
 
     if not cart:
-        cart = Cart(id=str(cart_id), tenant_id=tenant_id, user_id=user_id, items=[])
+        cart = Cart(id=str(cart_id), tenant_id=tenant_id, user_id=user_id)
         db.add(cart)
         await db.flush()
         if user_id is None and cookie_action is not None:
