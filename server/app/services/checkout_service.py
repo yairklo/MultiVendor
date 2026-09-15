@@ -101,7 +101,9 @@ async def add_to_cart_service(
 ):
     tenant_id = await _resolve_tenant_id(tenant_slug, db)
 
-    cart_result = await db.execute(select(Cart).where(Cart.id == str(cart_id)))
+    cart_result = await db.execute(
+        select(Cart).where(Cart.id == str(cart_id)).options(selectinload(Cart.items))
+    )
     cart = cart_result.scalar_one_or_none()
 
     if not cart:
@@ -122,7 +124,10 @@ async def add_to_cart_service(
     variant_result = await db.execute(
         select(ProductVariant)
         .join(Product)
-        .options(selectinload(ProductVariant.product))
+        .options(
+            selectinload(ProductVariant.product).selectinload(Product.variants),
+            selectinload(ProductVariant.product).selectinload(Product.images),
+        )
         .where(
             ProductVariant.id == req.variant_id, 
             ProductVariant.tenant_id == tenant_id,
@@ -136,13 +141,16 @@ async def add_to_cart_service(
 
     ensure_stock(variant, req.quantity)
 
-    item_result = await db.execute(select(CartItem).where(CartItem.cart_id == str(cart_id), CartItem.variant_id == req.variant_id))
+    item_result = await db.execute(
+        select(CartItem).where(CartItem.cart_id == str(cart_id), CartItem.variant_id == req.variant_id)
+    )
     item = item_result.scalar_one_or_none()
     
     if item:
         item.quantity += req.quantity
     else:
         item = CartItem(
+            cart=cart,
             tenant_id=tenant_id,
             cart_id=str(cart_id),
             variant_id=req.variant_id,
