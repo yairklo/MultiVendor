@@ -38,9 +38,9 @@ export function MarketplaceProductCard({
   const t = STRINGS[lang as keyof typeof STRINGS] || STRINGS.en
   const name = resolveI18nText(product.name, lang)
   const image = product.primary_image_url || product.images?.[0]
-  // /storefront/product (query-param), not /store/{slug}/products/{slug} --
-  // see frontend/src/app/storefront/product/page.tsx's module comment.
-  const href = `/storefront/product?tenant=${product.tenant_slug}&product=${product.slug}`
+  // Link directly to the marketplace product page, staying within the marketplace
+  // layout, cart drawer, and cross-vendor cart experience.
+  const href = `/marketplace/products/${product.tenant_slug}/${product.slug}`
 
   const variant = product.variants?.[0]
   const stockKnown = Number.isFinite(variant?.stock_quantity)

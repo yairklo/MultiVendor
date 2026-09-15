@@ -101,4 +101,58 @@ describe('ProductDetailView', () => {
 
     await waitFor(() => expect(postedItems).toEqual([{ variant_id: 101, quantity: 2 }]))
   })
+
+  it('renders marketplace mode with back to marketplace link and marketplace cart integration', async () => {
+    const user = userEvent.setup()
+    let marketplaceItemPosted: unknown = null
+
+    server.use(
+      http.post('http://localhost:8000/api/v1/marketplace/cart/items', async ({ request }) => {
+        marketplaceItemPosted = await request.json()
+        return HttpResponse.json({ cart_id: 'mp-cart', items: [], total: 0 }, { status: 201 })
+      }),
+      http.get('http://localhost:8000/api/v1/marketplace/cart/:cart_id', () => {
+        return HttpResponse.json({ id: 1, cart_id: 'mp-cart', items: [], subtotal: 0, vendor_count: 0 })
+      })
+    )
+
+    const { MarketplaceCartProvider } = await import('@/context/MarketplaceCartContext')
+
+    render(
+      <ToastProvider>
+        <CartProvider>
+          <MarketplaceCartProvider>
+            <ProductDetailView
+              tenantSlug="test-store"
+              slug="artisan-mug"
+              product={mockProduct as any}
+              initialReviews={mockReviews}
+              mode="marketplace"
+              storeName="Artisan Ceramics"
+            />
+          </MarketplaceCartProvider>
+        </CartProvider>
+      </ToastProvider>
+    )
+
+    // Back button points to /marketplace
+    const backLink = screen.getByRole('link', { name: /back to marketplace/i })
+    expect(backLink).toBeInTheDocument()
+    expect(backLink).toHaveAttribute('href', '/marketplace')
+
+    // Attribution link points to the store
+    const storeLink = screen.getByRole('link', { name: /sold by/i })
+    expect(storeLink).toBeInTheDocument()
+    expect(storeLink).toHaveAttribute('href', '/store/test-store')
+    expect(screen.getByText('Artisan Ceramics')).toBeInTheDocument()
+
+    // Add to cart in marketplace mode adds to marketplace cart
+    const addBtn = screen.getByRole('button', { name: 'Add to Cart' })
+    await user.click(addBtn)
+
+    await waitFor(() => {
+      expect(marketplaceItemPosted).toEqual({ variant_id: 101, quantity: 1 })
+    })
+  })
 })
+
