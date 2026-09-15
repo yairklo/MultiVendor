@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, status, Path, Request, Response
+import logging
+from fastapi import APIRouter, Depends, status, Path, Request, Response, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 from uuid import UUID
@@ -16,6 +17,8 @@ from app.services.checkout_service import (
     update_cart_item_service, checkout_service, validate_coupon_service, CartCookieAction
 )
 from app.core.limiter import limiter
+
+logger = logging.getLogger(__name__)
 
 cart_router = APIRouter(
     prefix="/api/v1/store/{tenant_slug}",
@@ -71,12 +74,21 @@ async def add_to_cart(
 ):
     user_id = user.id if user else None
     cookie_action = CartCookieAction()
-    result = await add_to_cart_service(
-        tenant_slug, cart_id, req, user_id, db,
-        cart_token=request.cookies.get(CART_TOKEN_COOKIE), cookie_action=cookie_action,
-    )
-    _apply_cart_cookie(response, cookie_action)
-    return result
+    try:
+        result = await add_to_cart_service(
+            tenant_slug, cart_id, req, user_id, db,
+            cart_token=request.cookies.get(CART_TOKEN_COOKIE), cookie_action=cookie_action,
+        )
+        _apply_cart_cookie(response, cookie_action)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Failed to add item to cart for tenant %s, cart %s: %s", tenant_slug, cart_id, e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to add item to cart: {type(e).__name__}: {str(e)}"
+        )
 
 @cart_router.get(
     "/cart/{cart_id}",
