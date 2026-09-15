@@ -14,8 +14,8 @@ def normalize_asset_url(url: Optional[str], *, field_name: str = "url", allow_em
         if allow_empty:
             return None
         raise ValueError(f"{field_name} must not be empty")
-    if len(stripped) > 512:
-        raise ValueError(f"{field_name} must be at most 512 characters")
+    if len(stripped) > 2048:
+        raise ValueError(f"{field_name} must be at most 2048 characters")
     lowered = stripped.lower()
     if lowered.startswith(("javascript:", "data:", "vbscript:")):
         raise ValueError(f"Invalid {field_name}")
@@ -64,7 +64,7 @@ class ProductCreateRequest(BaseModel):
     is_active: bool = True
     show_in_marketplace: bool = False
     product_type: Literal['physical', 'digital', 'service'] = 'physical'
-    digital_file_url: Optional[str] = Field(None, max_length=512)
+    digital_file_url: Optional[str] = Field(None, max_length=2048)
     download_limit: Optional[int] = None
     is_bundle: bool = False
     bundle_items: Optional[List[ProductBundleItemSchema]] = None
@@ -107,7 +107,7 @@ class ProductUpdateRequest(BaseModel):
     is_active: Optional[bool] = None
     show_in_marketplace: Optional[bool] = None
     product_type: Optional[Literal['physical', 'digital', 'service']] = None
-    digital_file_url: Optional[str] = Field(None, max_length=512)
+    digital_file_url: Optional[str] = Field(None, max_length=2048)
     download_limit: Optional[int] = None
     is_bundle: Optional[bool] = None
     bundle_items: Optional[List[ProductBundleItemSchema]] = None

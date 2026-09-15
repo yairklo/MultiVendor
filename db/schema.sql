@@ -173,7 +173,7 @@ CREATE TABLE products (
     -- tenants.show_all_products_in_marketplace.
     show_in_marketplace BOOLEAN NOT NULL DEFAULT FALSE,
     product_type ENUM('physical', 'digital', 'service') DEFAULT 'physical',
-    digital_file_url VARCHAR(512) NULL,
+    digital_file_url VARCHAR(2048) NULL,
     download_limit INT NULL,
     is_bundle BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -343,7 +343,7 @@ CREATE TABLE orders (
     -- Populated by fulfill_order_service after a successful
     -- israel_shipping_sdk create_shipment call; all NULL until fulfilled.
     tracking_number VARCHAR(255) NULL,
-    shipping_label_url VARCHAR(512) NULL,
+    shipping_label_url VARCHAR(2048) NULL,
     shipping_provider ENUM('hfd', 'lionwheel') NULL,
     shipped_at TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

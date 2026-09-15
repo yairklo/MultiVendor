@@ -101,7 +101,7 @@ class Order(TenantScoped, Base):
     # ProviderCode values ('hfd' / 'lionwheel'), not TenantShippingConfig.id,
     # so it stays meaningful even if the tenant later deletes that config row.
     tracking_number = Column(String(255), nullable=True)
-    shipping_label_url = Column(String(512), nullable=True)
+    shipping_label_url = Column(String(2048), nullable=True)
     shipping_provider = Column(Enum('hfd', 'lionwheel'), nullable=True)
     shipped_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=func.now())

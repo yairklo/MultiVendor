@@ -229,8 +229,11 @@ async def test_list_public_categories(async_client: AsyncClient, db_session):
     response = await async_client.get("/api/v1/store/tenant-a/categories")
     assert response.status_code == 200
     categories = response.json()
-    assert len(categories) == 1
-    assert categories[0]["slug"] == "electronics"
+    slugs = {c["slug"] for c in categories}
+    assert "electronics" in slugs
+    assert "coffee" in slugs
+    assert "other-tenant-cat" not in slugs
+    assert "tea" not in slugs
 
 @pytest.mark.asyncio
 async def test_search_query_actually_filters_products(async_client: AsyncClient, db_session):
