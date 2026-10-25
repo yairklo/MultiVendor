@@ -20,6 +20,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { ImageUploadField } from '@/components/upload/ImageUploadField'
 import { FileUploadField } from '@/components/upload/FileUploadField'
 import { resolveImageUrl } from '@/lib/media'
@@ -30,6 +31,7 @@ import { buildProductI18nFields } from '@/lib/product-i18n'
 import { isValidDigitalFileUrl } from '@/lib/digitalFileUrl'
 import { errorMessage } from '@/lib/errors'
 import type { Category } from '@/lib/types'
+import { ArrowLeft } from 'lucide-react'
 
 const formSchema = z.object({
   name_en: z.string().min(2, { message: 'English name must be at least 2 characters.' }),
@@ -146,9 +148,9 @@ export default function NewProductPage() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <div className="flex items-center mb-6 space-x-4">
+      <div className="flex items-center mb-6 gap-4">
         <Link href="/admin/products" className={buttonVariants({ variant: 'ghost' })}>
-          &larr; {t('common.back')}
+          <ArrowLeft className="size-4 shrink-0 rtl:rotate-180" aria-hidden="true" /> {t('common.back')}
         </Link>
         <h1 className="text-3xl font-bold text-gray-900">{t('products.addNew')}</h1>
       </div>
@@ -179,7 +181,7 @@ export default function NewProductPage() {
                   <FormItem>
                     <FormLabel>{t('products.nameIn', { language: languageDisplayName('en', locale) })}</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. Vintage T-Shirt" {...field} />
+                      <Input dir="ltr" placeholder="e.g. Vintage T-Shirt" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -192,7 +194,7 @@ export default function NewProductPage() {
                   <FormItem>
                     <FormLabel>{t('products.nameIn', { language: languageDisplayName('he', locale) })}</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. חולצת וינטג'" {...field} />
+                      <Input placeholder="לדוגמה: חולצת וינטג׳" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -220,7 +222,7 @@ export default function NewProductPage() {
                 <FormItem>
                   <FormLabel>{t('products.slug')}</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g. vintage-tshirt" {...field} />
+                    <Input dir="ltr" placeholder="e.g. vintage-tshirt" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -235,7 +237,7 @@ export default function NewProductPage() {
                   <FormItem>
                     <FormLabel>{t('products.descriptionIn', { language: languageDisplayName('en', locale) })}</FormLabel>
                     <FormControl>
-                      <Input placeholder="Description..." {...field} />
+                      <Textarea rows={4} dir="ltr" placeholder="Description..." {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -248,7 +250,7 @@ export default function NewProductPage() {
                   <FormItem>
                     <FormLabel>{t('products.descriptionIn', { language: languageDisplayName('he', locale) })}</FormLabel>
                     <FormControl>
-                      <Input placeholder="תיאור..." {...field} />
+                      <Textarea rows={4} placeholder="תיאור..." {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -277,7 +279,7 @@ export default function NewProductPage() {
                 <FormItem>
                   <FormLabel>{t('products.imageUrl')}</FormLabel>
                   <FormControl>
-                    <Input placeholder="https://example.com/image.jpg" {...field} />
+                    <Input dir="ltr" placeholder="https://example.com/image.jpg" {...field} />
                   </FormControl>
                   {field.value && (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -304,9 +306,12 @@ export default function NewProductPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>{t('products.basePrice')}</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.01" {...field} />
-                    </FormControl>
+                    <div className="relative">
+                      <FormControl>
+                        <Input type="number" inputMode="decimal" step="0.01" className="pe-8 tabular-nums" {...field} />
+                      </FormControl>
+                      <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 end-3 flex items-center text-sm text-muted-foreground">₪</span>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -358,7 +363,7 @@ export default function NewProductPage() {
               control={form.control}
               name="is_digital"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                <FormItem className="flex flex-row items-start gap-3 space-y-0 rounded-md border p-4">
                   <FormControl>
                     <input
                       id="is_digital"
@@ -400,7 +405,7 @@ export default function NewProductPage() {
               control={form.control}
               name="is_active"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                <FormItem className="flex flex-row items-start gap-3 space-y-0 rounded-md border p-4">
                   <FormControl>
                     <input
                       type="checkbox"

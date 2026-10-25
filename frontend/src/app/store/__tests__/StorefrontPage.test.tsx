@@ -67,9 +67,10 @@ describe('CatalogListing', () => {
       </ToastProvider>
     )
 
-  it('renders the language switcher', async () => {
+  it('does not render its own language switcher (the storefront header owns it)', async () => {
     renderCatalog()
-    expect(await screen.findByTestId('language-switcher')).toBeInTheDocument()
+    await screen.findByTestId('product-grid')
+    expect(screen.queryByTestId('language-switcher')).not.toBeInTheDocument()
   })
 
   it('fetches and displays product grid based on tenant slug', async () => {
@@ -92,19 +93,6 @@ describe('CatalogListing', () => {
     // unit test doesn't mount — assert the real side effect instead: the mocked
     // cart POST endpoint actually recorded the item.
     await waitFor(() => expect(mockCartItems).toHaveLength(1))
-  })
-
-  it('toggles dir="rtl" and localized strings when switching to Hebrew', async () => {
-    const user = userEvent.setup()
-    const { container } = renderCatalog()
-
-    await screen.findByTestId('product-grid')
-    expect(container.querySelector('[dir]')).toHaveAttribute('dir', 'ltr')
-
-    await user.selectOptions(screen.getByTestId('language-switcher'), 'he')
-
-    expect(container.querySelector('[dir]')).toHaveAttribute('dir', 'rtl')
-    expect(await screen.findAllByRole('button', { name: 'הוסף לעגלה' })).toHaveLength(2)
   })
 
   describe('with an AI-managed home layout', () => {

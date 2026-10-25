@@ -87,7 +87,7 @@ export function MarketplaceProductCard({
           )}
         </Link>
         <div className="flex flex-col gap-4 pb-2">
-          <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
+          <p className="text-xs font-medium text-muted-foreground">
             {product.tenant_name}
           </p>
           <Link
@@ -127,7 +127,7 @@ export function MarketplaceProductCard({
           <div className="aspect-[4/5] w-full bg-muted" />
         )}
       </Link>
-      <p className="mb-1 text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
+      <p className="mb-1 text-xs font-medium text-muted-foreground">
         {product.tenant_name}
       </p>
       <Link

@@ -76,7 +76,7 @@ function createDefaultSection(type: SectionType): Section {
 function AddSectionControl({ onAdd }: { onAdd: (type: SectionType) => void }) {
   const [open, setOpen] = useState(false)
   return (
-    <div className="relative pl-7">
+    <div className="relative ps-7">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -116,7 +116,7 @@ function SortableSectionCard({
   }
   return (
     <div ref={setNodeRef} style={style} className="relative group">
-      <div className="absolute -right-3 -top-3 z-20 flex items-center gap-1 rounded-md bg-card/90 p-1 shadow-sm backdrop-blur border border-border">
+      <div className="absolute -end-3 -top-3 z-20 flex items-center gap-1 rounded-md bg-card/90 p-1 shadow-sm backdrop-blur border border-border">
         <button
           type="button"
           className="cursor-grab p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:cursor-grabbing rounded"
@@ -228,7 +228,7 @@ function DraggableSectionList({
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <SortableContext items={sections.map((s) => s.id)} strategy={verticalListSortingStrategy}>
-        <div className="flex flex-col gap-4 pl-7">
+        <div className="flex flex-col gap-4 ps-7">
           {sections.map((section, index) => (
             <SortableSectionCard
               key={section.id}

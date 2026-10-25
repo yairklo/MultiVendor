@@ -29,23 +29,28 @@ export function MarketplaceListing({
   initialMeta,
   initialCategories,
   initialCategory = '',
+  initialError = false,
 }: {
   /** Server-fetched page-1/no-search data, seeded in so first paint doesn't show a loading skeleton. */
   initialProducts?: MarketplaceProduct[]
   initialMeta?: PaginationMeta | null
   initialCategories?: MarketplaceCategory[]
   initialCategory?: string
+  /** Server-side products fetch failed: show the inline recoverable error instead of an empty list. */
+  initialError?: boolean
 }) {
   const { formatCurrency } = useCurrency()
   const { t, locale } = useUiLocale()
   const [products, setProducts] = useState<MarketplaceProduct[]>(initialProducts ?? [])
-  const [productsLoading, setProductsLoading] = useState(!initialProducts)
+  const [productsLoading, setProductsLoading] = useState(!initialProducts && !initialError)
   const [categories, setCategories] = useState<MarketplaceCategory[]>(initialCategories ?? [])
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory)
   const [meta, setMeta] = useState<PaginationMeta | null>(initialMeta ?? null)
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [productsError, setProductsError] = useState(initialError)
+  const [reloadKey, setReloadKey] = useState(0)
   const prefersReducedMotion = useReducedMotion()
 
   useEffect(() => {
@@ -94,13 +99,14 @@ export function MarketplaceListing({
     window.history.replaceState(null, '', url.pathname + url.search)
   }, [selectedCategory, debouncedSearch, page])
 
-  const skipInitialFetch = useRef(!!initialProducts)
+  const skipInitialFetch = useRef(!!initialProducts && !initialError)
   useEffect(() => {
     if (skipInitialFetch.current) {
       skipInitialFetch.current = false
       return
     }
     setProductsLoading(true)
+    setProductsError(false)
     const params = new URLSearchParams({ page: String(page), page_size: String(PAGE_SIZE) })
     if (debouncedSearch) params.set('q', debouncedSearch)
     if (selectedCategory) params.set('category', selectedCategory)
@@ -113,9 +119,10 @@ export function MarketplaceListing({
         console.error('Failed to load marketplace products:', e)
         setProducts([])
         setMeta(null)
+        setProductsError(true)
       })
       .finally(() => setProductsLoading(false))
-  }, [debouncedSearch, selectedCategory, page])
+  }, [debouncedSearch, selectedCategory, page, reloadKey])
 
   const showFeatured = !debouncedSearch && !selectedCategory && page === 1 && !productsLoading && products.length > 0
   const featured = showFeatured ? products[0] : null
@@ -125,9 +132,6 @@ export function MarketplaceListing({
     <div dir={isRtlLang(locale) ? 'rtl' : 'ltr'} className="min-h-full">
       <div className="mx-auto max-w-6xl px-4 pb-16 pt-10 md:px-8 md:pt-16">
         <header className="mb-12 border-b border-border pb-10 md:mb-16 md:pb-14">
-          <p className="mb-4 text-[11px] font-medium uppercase tracking-[0.28em] text-muted-foreground">
-            {t('marketplace.issue')}
-          </p>
           <h1 className="max-w-3xl font-heading text-5xl font-medium leading-[1.05] text-foreground md:text-7xl">
             {t('marketplace.title')}
           </h1>
@@ -142,7 +146,7 @@ export function MarketplaceListing({
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t('marketplace.searchPlaceholder')}
               aria-label={t('marketplace.searchAria')}
-              className="w-full border-0 border-b border-foreground/30 bg-transparent py-2 text-base outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-foreground"
+              className="w-full border-0 border-b border-foreground/30 bg-transparent py-2 text-base outline-none transition-colors placeholder:text-muted-foreground focus:border-foreground focus-visible:ring-2 focus-visible:ring-ring"
             />
           </label>
 
@@ -157,11 +161,11 @@ export function MarketplaceListing({
                 <button
                   type="button"
                   onClick={() => handleCategorySelect('')}
-                  className={`rounded-full px-4 py-1.5 text-xs font-medium transition-all duration-200 ${
-                    !selectedCategory
-                      ? 'bg-foreground text-background shadow-sm'
-                      : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'
-                  }`}
+                  className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring duration-200 ${
+ !selectedCategory
+ ? 'bg-foreground text-background shadow-sm'
+ : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'
+ }`}
                 >
                   {t('marketplace.allCategories')}
                 </button>
@@ -173,18 +177,18 @@ export function MarketplaceListing({
                       key={c.slug || c.id}
                       type="button"
                       onClick={() => handleCategorySelect(c.slug)}
-                      className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-medium transition-all duration-200 ${
-                        isSelected
-                          ? 'bg-foreground text-background shadow-sm'
-                          : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'
-                      }`}
+                      className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring duration-200 ${
+ isSelected
+ ? 'bg-foreground text-background shadow-sm'
+ : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'
+ }`}
                     >
                       <span>{label}</span>
                       {typeof c.product_count === 'number' && c.product_count > 0 && (
                         <span
-                          className={`text-[10px] ${
-                            isSelected ? 'text-background/80' : 'text-muted-foreground/80'
-                          }`}
+                          className={`text-xs ${
+ isSelected ? 'text-background/80' : 'text-muted-foreground/80'
+ }`}
                         >
                           {c.product_count}
                         </span>
@@ -222,7 +226,19 @@ export function MarketplaceListing({
                   <MarketplaceProductCard product={p} lang={locale} formatCurrency={formatCurrency} />
                 </motion.div>
               ))}
-          {!productsLoading && products.length === 0 && (
+          {!productsLoading && productsError && (
+            <div role="alert" className="col-span-full py-24 text-center">
+              <p className="font-heading text-2xl text-foreground">{t('marketplace.loadError')}</p>
+              <button
+                type="button"
+                onClick={() => setReloadKey((k) => k + 1)}
+                className="mt-6 rounded-full bg-foreground px-5 py-2 text-sm font-medium text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {t('marketplace.retry')}
+              </button>
+            </div>
+          )}
+          {!productsLoading && !productsError && products.length === 0 && (
             <div className="col-span-full py-24 text-center">
               <p className="font-heading text-3xl text-foreground">{t('marketplace.noProducts')}</p>
             </div>

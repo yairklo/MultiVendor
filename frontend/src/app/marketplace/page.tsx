@@ -21,15 +21,22 @@ export default async function MarketplacePage({ searchParams }: PageProps) {
   const category = params?.category || ''
   const q = params?.q || ''
 
-  const [products, categories] = await Promise.all([
+  const [productsResult, categoriesResult] = await Promise.allSettled([
     getMarketplaceProducts(currentPage, PAGE_SIZE, q || undefined, category || undefined),
     getMarketplaceCategories(),
   ])
+
+  const productsFailed = productsResult.status === 'rejected'
+  if (productsFailed) console.error('Failed to load marketplace products:', productsResult.reason)
+  const products = productsResult.status === 'fulfilled' ? productsResult.value : { data: [], meta: null }
+  // Categories failing just hides the filters.
+  const categories = categoriesResult.status === 'fulfilled' ? categoriesResult.value : []
 
   return (
     <MarketplaceListing
       initialProducts={products.data}
       initialMeta={products.meta}
+      initialError={productsFailed}
       initialCategories={categories}
       initialCategory={category}
     />

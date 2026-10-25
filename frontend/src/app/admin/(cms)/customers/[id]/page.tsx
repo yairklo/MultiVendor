@@ -4,6 +4,7 @@ import { ApiError } from '@/lib/api/apiClient'
 import { adminApiClient, getServerTenantSlug } from '@/lib/api/serverApiClient'
 import { CustomerDetailClient } from './CustomerDetailClient'
 import type { Customer, Order } from '@/lib/types'
+import { ArrowLeft } from 'lucide-react'
 
 export default async function CustomerDetailPage({
   params,
@@ -26,7 +27,7 @@ export default async function CustomerDetailPage({
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center mb-6 gap-4">
           <Link href="/admin/customers" className={buttonVariants({ variant: 'ghost' })}>
-            &larr; Back
+            <ArrowLeft className="size-4 shrink-0 rtl:rotate-180" aria-hidden="true" /> Back
           </Link>
           <h1 className="text-3xl font-bold text-foreground">Customer</h1>
         </div>

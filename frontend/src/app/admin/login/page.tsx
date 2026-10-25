@@ -6,18 +6,21 @@ import { apiClient, ApiError } from '@/lib/api/apiClient'
 import { useUiLocale } from '@/context/UiLocaleContext'
 import { UiLanguageSwitcher } from '@/components/ui/UiLanguageSwitcher'
 import { errorMessage } from '@/lib/errors'
+import { PasswordInput } from '@/components/auth/PasswordInput'
 
 export default function AdminLoginPage() {
   const { t } = useUiLocale()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [tenantSlug, setTenantSlug] = useState('')
+  const [slugError, setSlugError] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setSlugError('')
     setLoading(true)
 
     try {
@@ -50,7 +53,7 @@ export default function AdminLoginPage() {
         } else if (data.store_role === 'tenant_admin') {
           window.location.assign('/admin/dashboard')
         } else {
-          setError(t('auth.needStoreSlug'))
+          setSlugError(t('auth.needStoreSlug'))
         }
       } else {
         setError(t('auth.loginFailed'))
@@ -76,7 +79,7 @@ export default function AdminLoginPage() {
             {t('auth.adminSub')}
           </p>
         </div>
-        <div className="text-[11px] uppercase tracking-[0.16em] text-sidebar-foreground/45">
+        <div className="text-xs text-sidebar-foreground/75">
           &copy; {new Date().getFullYear()} {t('marketplace.brand')}
         </div>
       </div>
@@ -93,58 +96,68 @@ export default function AdminLoginPage() {
             {t('auth.adminSubtitle')}
           </p>
 
-            {error && (
+            <div aria-live="polite">
+              {error && (
               <div className="mb-4 border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
                 {error}
               </div>
             )}
+</div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <label htmlFor="email" className="mb-2 block text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{t('auth.email')}</label>
+                <label htmlFor="email" className="mb-2 block text-xs font-medium text-muted-foreground">{t('auth.email')}</label>
                 <input
                   id="email"
                   type="email"
                   required
-                  className="w-full border-0 border-b border-foreground/30 bg-transparent py-2 outline-none transition-colors focus:border-foreground"
+                  className="w-full border-0 border-b border-foreground/30 bg-transparent py-2 outline-none transition-colors focus:border-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   placeholder="admin@example.com"
-                />
+                
+                autoComplete="email"
+                dir="ltr"/>
               </div>
               <div>
                 <div className="mb-2 flex items-center justify-between">
-                  <label htmlFor="password" className="block text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{t('auth.password')}</label>
+                  <label htmlFor="password" className="block text-xs font-medium text-muted-foreground">{t('auth.password')}</label>
                   <a href="/forgot-password" className="text-xs font-medium text-foreground/70 hover:underline">
                     {t('auth.forgotPasswordLink')}
                   </a>
                 </div>
-                <input
+                <PasswordInput
                   id="password"
-                  type="password"
                   required
-                  className="w-full border-0 border-b border-foreground/30 bg-transparent py-2 outline-none transition-colors focus:border-foreground"
+                  className="w-full border-0 border-b border-foreground/30 bg-transparent py-2 outline-none transition-colors focus:border-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder="••••••••"
-                />
+                
+                autoComplete="current-password"/>
               </div>
               <div>
-                <label htmlFor="tenantSlug" className="mb-2 block text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{t('auth.storeSlug')}</label>
+                <label htmlFor="tenantSlug" className="mb-2 block text-xs font-medium text-muted-foreground">{t('auth.storeSlug')}</label>
                 <input
                   id="tenantSlug"
                   type="text"
-                  className="w-full border-0 border-b border-foreground/30 bg-transparent py-2 outline-none transition-colors focus:border-foreground"
+                  className="w-full border-0 border-b border-foreground/30 bg-transparent py-2 outline-none transition-colors focus:border-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
                   value={tenantSlug}
                   onChange={e => setTenantSlug(e.target.value)}
                   placeholder={t('auth.storeSlugPlaceholder')}
+                  dir="ltr"
+                  autoComplete="off"
+                  aria-describedby="tenantSlugHelp tenantSlugError"
+                  aria-invalid={slugError ? true : undefined}
                 />
+                <p id="tenantSlugHelp" className="mt-2 text-xs text-muted-foreground">{t('auth.storeSlugHelp')}</p>
+                <p id="tenantSlugError" aria-live="polite" className="mt-1 text-sm text-destructive">{slugError}</p>
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="mt-4 w-full bg-foreground py-3 text-sm font-medium tracking-wide text-background transition-opacity hover:opacity-90 active:scale-[0.98] disabled:opacity-70"
+                className="mt-4 w-full bg-foreground py-3 text-sm font-medium text-background transition-opacity hover:opacity-90 active:scale-[0.98] disabled:opacity-70"
               >
                 {loading ? t('auth.authenticating') : t('auth.signIn')}
               </button>

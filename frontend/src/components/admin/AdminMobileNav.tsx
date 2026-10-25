@@ -8,7 +8,7 @@ export function AdminMobileNav({
   navContent,
   logoutButtonCompact,
   logoutButtonDrawer,
-  title = 'Tenant CMS',
+  title,
 }: {
   navContent: React.ReactNode
   logoutButtonCompact: React.ReactNode

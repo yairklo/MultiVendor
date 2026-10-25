@@ -21,7 +21,7 @@ export function MarketplaceFooter() {
           </p>
         </div>
         <div>
-          <h4 className="mb-3 text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">{t('marketplace.footerShop')}</h4>
+          <h4 className="mb-3 text-xs font-medium text-muted-foreground">{t('marketplace.footerShop')}</h4>
           <ul className="space-y-2 text-sm">
             <li>
               <Link href="/marketplace" className="text-foreground/80 transition-colors hover:text-foreground">
@@ -36,7 +36,7 @@ export function MarketplaceFooter() {
           </ul>
         </div>
         <div>
-          <h4 className="mb-3 text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">{t('marketplace.footerSupport')}</h4>
+          <h4 className="mb-3 text-xs font-medium text-muted-foreground">{t('marketplace.footerSupport')}</h4>
           <ul className="space-y-2 text-sm">
             <li>
               <Link href="/account/orders" className="text-foreground/80 transition-colors hover:text-foreground">
@@ -51,7 +51,7 @@ export function MarketplaceFooter() {
           </ul>
         </div>
       </div>
-      <div className="border-t border-border px-4 py-4 text-center text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+      <div className="border-t border-border px-4 py-4 text-center text-xs text-muted-foreground">
         &copy; {year} {t('marketplace.brand')} · {t('marketplace.rights')}
       </div>
     </footer>

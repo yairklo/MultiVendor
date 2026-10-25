@@ -6,6 +6,7 @@ import { apiClient, ApiError } from '@/lib/api/apiClient'
 import { useUiLocale } from '@/context/UiLocaleContext'
 import { UiLanguageSwitcher } from '@/components/ui/UiLanguageSwitcher'
 import { errorMessage } from '@/lib/errors'
+import { PasswordInput } from '@/components/auth/PasswordInput'
 
 export default function ResetPasswordPage() {
   return (
@@ -78,42 +79,44 @@ function ResetPasswordForm() {
               </div>
             )}
 
-            {error && (
+            <div aria-live="polite">
+              {error && (
               <div className="mb-4 border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
                 {error}
               </div>
             )}
+</div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <label className="mb-2 block text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{t('auth.newPassword')}</label>
-                <input
-                  type="password"
+                <label className="mb-2 block text-xs font-medium text-muted-foreground">{t('auth.newPassword')}</label>
+                <PasswordInput
                   required
                   minLength={8}
-                  className="w-full border-0 border-b border-foreground/30 bg-transparent py-2 outline-none transition-colors focus:border-foreground"
+                  className="w-full border-0 border-b border-foreground/30 bg-transparent py-2 outline-none transition-colors focus:border-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder="••••••••"
-                />
+                
+                autoComplete="new-password"/>
               </div>
               <div>
-                <label className="mb-2 block text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{t('auth.confirmPassword')}</label>
-                <input
-                  type="password"
+                <label className="mb-2 block text-xs font-medium text-muted-foreground">{t('auth.confirmPassword')}</label>
+                <PasswordInput
                   required
                   minLength={8}
-                  className="w-full border-0 border-b border-foreground/30 bg-transparent py-2 outline-none transition-colors focus:border-foreground"
+                  className="w-full border-0 border-b border-foreground/30 bg-transparent py-2 outline-none transition-colors focus:border-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
                   value={confirmPassword}
                   onChange={e => setConfirmPassword(e.target.value)}
                   placeholder="••••••••"
-                />
+                
+                autoComplete="new-password"/>
               </div>
 
               <button
                 type="submit"
                 disabled={loading || !token}
-                className="mt-4 w-full bg-foreground py-3 text-sm font-medium tracking-wide text-background transition-opacity hover:opacity-90 active:scale-[0.98] disabled:opacity-70"
+                className="mt-4 w-full bg-foreground py-3 text-sm font-medium text-background transition-opacity hover:opacity-90 active:scale-[0.98] disabled:opacity-70"
               >
                 {loading ? t('auth.resettingPassword') : t('auth.resetPasswordButton')}
               </button>

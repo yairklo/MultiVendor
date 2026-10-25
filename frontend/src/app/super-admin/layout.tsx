@@ -55,7 +55,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
         </div>
         <NavLinks />
         <div className="border-t border-sidebar-border p-4">
-          <AdminLogoutButton className="flex w-full items-center space-x-3 rounded-lg px-3 py-2 text-destructive transition-colors duration-150 hover:bg-destructive/10">
+          <AdminLogoutButton className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-destructive transition-colors duration-150 hover:bg-destructive/10">
             <LogOut className="h-5 w-5" strokeWidth={2} />
             <span>Log out</span>
           </AdminLogoutButton>
@@ -70,7 +70,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
             <AdminLogoutButton className="text-sm font-medium text-destructive">Log out</AdminLogoutButton>
           }
           logoutButtonDrawer={
-            <AdminLogoutButton className="flex w-full items-center space-x-3 rounded-lg px-3 py-2 text-destructive transition-colors duration-150 hover:bg-destructive/10">
+            <AdminLogoutButton className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-destructive transition-colors duration-150 hover:bg-destructive/10">
               <LogOut className="h-5 w-5" strokeWidth={2} />
               <span>Log out</span>
             </AdminLogoutButton>

@@ -158,7 +158,7 @@ export function ExcelImportDialog({
             <p>{t('import.updated')}: <strong>{summary.updated_count}</strong></p>
             <p>{t('import.failed')}: <strong>{summary.failed_count}</strong></p>
             {summary.failed.length > 0 && (
-              <ul className="max-h-40 list-disc space-y-1 overflow-auto pl-5 text-red-600">
+              <ul className="max-h-40 list-disc space-y-1 overflow-auto ps-5 text-red-600">
                 {summary.failed.map((f) => (
                   <li key={f.row_number}>{t('import.rowError', { row: f.row_number })}{f.sku ? ` (${f.sku})` : ''}: {f.error}</li>
                 ))}

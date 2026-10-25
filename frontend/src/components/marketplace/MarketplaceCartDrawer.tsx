@@ -39,7 +39,7 @@ export function MarketplaceCartDrawer() {
       <div className="absolute inset-0 bg-black/40 animate-in fade-in-0 duration-200" onClick={closeDrawer} />
       <div
         data-testid="marketplace-cart-drawer"
-        className="relative flex h-full w-full max-w-md flex-col bg-card shadow-xl animate-in slide-in-from-right duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]"
+        className="relative flex h-full w-full max-w-md flex-col bg-card shadow-xl animate-in ltr:slide-in-from-right rtl:slide-in-from-left duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]"
       >
         <div className="flex items-center justify-between border-b border-border p-4">
           <h2 className="text-xl font-bold text-foreground">{t('marketplace.cartTitle')}</h2>
@@ -75,14 +75,14 @@ export function MarketplaceCartDrawer() {
                       <div
                         role="img"
                         aria-label={item.product_name}
-                        className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center text-[10px] text-muted-foreground flex-shrink-0"
+                        className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center text-xs text-muted-foreground flex-shrink-0"
                       >
                         {t('common.noImage')}
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-foreground truncate">{item.product_name}</div>
-                      <div className="text-muted-foreground">{formatCurrency(Number(item.unit_price))}</div>
+                      <div className="text-muted-foreground tabular-nums">{formatCurrency(Number(item.unit_price))}</div>
                       <div className="flex items-center gap-2 mt-2">
                         <button
                           aria-label={t('cart.decrease')}
@@ -105,13 +105,13 @@ export function MarketplaceCartDrawer() {
                           aria-label={t('cart.remove')}
                           onClick={() => removeItem(item.id)}
                           disabled={pendingItemIds.has(item.id)}
-                          className="ml-auto text-sm font-medium text-destructive transition-colors hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+                          className="ms-auto text-sm font-medium text-destructive transition-colors hover:underline disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {t('cart.removeLabel')}
                         </button>
                       </div>
                     </div>
-                    <div className="font-semibold text-foreground">{formatCurrency(Number(item.total_price))}</div>
+                    <div className="font-semibold text-foreground tabular-nums">{formatCurrency(Number(item.total_price))}</div>
                   </div>
                 ))}
               </div>

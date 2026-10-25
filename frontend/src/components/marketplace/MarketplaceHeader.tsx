@@ -32,7 +32,7 @@ export function MarketplaceHeader() {
   const isActive = (href: string) => (href === '/marketplace' ? pathname === href : pathname?.startsWith(href))
 
   const navLinkClass = (href: string) =>
-    `text-[13px] tracking-[0.14em] uppercase transition-colors ${
+    `text-[13px]   transition-colors ${
       isActive(href) ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
     }`
 

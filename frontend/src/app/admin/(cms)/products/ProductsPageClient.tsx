@@ -152,7 +152,7 @@ export function ProductsPageClient({
     <div>
       <div className="flex justify-between items-center mb-8">
         <h1 className="font-heading text-3xl font-bold text-foreground">{t('products.title')}</h1>
-        <div className="flex space-x-3">
+        <div className="flex gap-3">
           {selectedIds.length > 0 && (
             <Button variant="destructive" onClick={handleBulkDelete}>
               {t('products.deleteSelected', { count: selectedIds.length })}
@@ -253,7 +253,7 @@ export function ProductsPageClient({
                         className="w-10 h-10 object-cover rounded"
                       />
                     ) : (
-                      <div className="w-10 h-10 bg-muted rounded flex items-center justify-center text-muted-foreground text-[10px] text-center leading-tight">
+                      <div className="w-10 h-10 bg-muted rounded flex items-center justify-center text-muted-foreground text-xs text-center leading-tight">
                         {t('common.noImage')}
                       </div>
                     )}

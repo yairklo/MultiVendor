@@ -92,7 +92,7 @@ export type AuditLogItem = {
 }
 
 export function formatPlatformMoney(amount: number) {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'ILS' }).format(amount || 0)
+  return new Intl.NumberFormat('he-IL', { style: 'currency', currency: 'ILS' }).format(amount || 0)
 }
 
 export function formatDate(value: string | null | undefined) {

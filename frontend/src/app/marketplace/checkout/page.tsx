@@ -210,8 +210,8 @@ export default function MarketplaceCheckoutPage() {
                 <div className="font-semibold text-foreground">{vendorNames[so.tenant_id] || t('checkout.vendor', { id: so.tenant_id })}</div>
                 <div className="text-sm text-muted-foreground">{t('checkout.orderNumber', { number: so.order_number })}</div>
               </div>
-              <div className="text-right">
-                <div className="font-semibold text-foreground">{formatCurrency(Number(so.total_amount))}</div>
+              <div className="text-end">
+                <div className="font-semibold text-foreground tabular-nums">{formatCurrency(Number(so.total_amount))}</div>
                 <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${orderStatusClass[so.status]}`}>
                   {orderStatusLabel[so.status] ? t(`orderStatus.${so.status}`) : so.status}
                 </span>
@@ -251,7 +251,7 @@ export default function MarketplaceCheckoutPage() {
           <div>
             <h2 className="text-xl font-semibold text-foreground">{t('checkout.awaitingPayment', { number: masterOrder.master_order_number })}</h2>
             <p className="text-muted-foreground mt-1">
-              {t('checkout.total')} <span className="font-bold text-foreground">{formatCurrency(Number(masterOrder.total_amount))}</span>
+              {t('checkout.total')} <span className="font-bold text-foreground tabular-nums">{formatCurrency(Number(masterOrder.total_amount))}</span>
             </p>
             {!stripePayment && (
               <p className="text-sm text-amber-700 mt-2">
@@ -266,7 +266,7 @@ export default function MarketplaceCheckoutPage() {
                   <div className="text-sm font-medium text-foreground">{vendorNames[so.tenant_id] || t('checkout.vendor', { id: so.tenant_id })}</div>
                   <div className="text-xs text-muted-foreground">{t('checkout.orderNumber', { number: so.order_number })}</div>
                 </div>
-                <div className="text-sm font-semibold text-foreground/80">{formatCurrency(Number(so.total_amount))}</div>
+                <div className="text-sm font-semibold text-foreground/80 tabular-nums">{formatCurrency(Number(so.total_amount))}</div>
               </div>
             ))}
           </div>
@@ -321,9 +321,9 @@ export default function MarketplaceCheckoutPage() {
               <div key={item.id} className="flex justify-between items-center py-2 border-b border-border last:border-0 text-foreground/80">
                 <span>
                   {item.product_name} &times; {item.quantity}
-                  <span className="ml-2 text-xs text-muted-foreground">({item.tenant_name})</span>
+                  <span className="ms-2 text-xs text-muted-foreground">({item.tenant_name})</span>
                 </span>
-                <span className="font-medium text-foreground">{formatCurrency(Number(item.total_price))}</span>
+                <span className="font-medium text-foreground tabular-nums">{formatCurrency(Number(item.total_price))}</span>
               </div>
             ))}
             <p className="mt-3 text-xs text-muted-foreground">

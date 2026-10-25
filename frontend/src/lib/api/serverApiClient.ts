@@ -79,6 +79,16 @@ export const getTenantHomeLayout = cache(async (tenantSlug: string) => {
   }
 })
 
+/** Public store config incl. the real store `name`. `null` = unknown slug (404); throws on other failures. */
+export const getStoreConfig = cache(async (tenantSlug: string): Promise<{ name?: string | null } | null> => {
+  try {
+    return await serverApiClient(`/api/v1/store/${tenantSlug}/config`)
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) return null
+    throw e
+  }
+})
+
 export const getTenantPage = cache(async (tenantSlug: string, pageKey: string) => {
   return serverApiClient(`/api/v1/store/${tenantSlug}/pages/${pageKey}`)
 })

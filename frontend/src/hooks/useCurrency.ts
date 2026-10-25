@@ -1,11 +1,11 @@
 import { useStorefrontTheme } from '@/context/StorefrontThemeContext'
 
 export function useCurrency() {
-  const { currency, defaultLanguage } = useStorefrontTheme()
+  const { currency } = useStorefrontTheme()
 
   const formatCurrency = (amount: number) => {
     try {
-      const locale = defaultLanguage === 'he' ? 'he-IL' : 'en-US'
+      const locale = 'he-IL'
       return new Intl.NumberFormat(locale, {
         style: 'currency',
         currency: currency,

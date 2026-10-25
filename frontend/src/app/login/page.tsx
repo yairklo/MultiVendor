@@ -8,6 +8,7 @@ import { getActiveCart } from '@/lib/cart'
 import { useUiLocale } from '@/context/UiLocaleContext'
 import { UiLanguageSwitcher } from '@/components/ui/UiLanguageSwitcher'
 import { errorMessage } from '@/lib/errors'
+import { PasswordInput } from '@/components/auth/PasswordInput'
 
 // Only a same-origin relative path is ever honored -- "//evil.com" and
 // "https://evil.com" both start with something other than a single "/" and
@@ -86,7 +87,7 @@ function CustomerLoginForm() {
             {t('auth.customerSub')}
           </p>
         </div>
-        <div className="text-[11px] uppercase tracking-[0.16em] text-sidebar-foreground/45">
+        <div className="text-xs text-sidebar-foreground/75">
           &copy; {new Date().getFullYear()} {t('marketplace.brand')}
         </div>
       </div>
@@ -99,47 +100,51 @@ function CustomerLoginForm() {
           <h1 className="mb-2 font-heading text-4xl font-medium text-foreground">{t('auth.customerTitle')}</h1>
           <p className="mb-10 text-sm text-muted-foreground">{t('auth.customerSubtitle')}</p>
 
-          {error && (
+          <div aria-live="polite">
+            {error && (
             <div className="mb-4 border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
               {error}
             </div>
           )}
+</div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label htmlFor="loginEmail" className="mb-2 block text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{t('auth.email')}</label>
+              <label htmlFor="loginEmail" className="mb-2 block text-xs font-medium text-muted-foreground">{t('auth.email')}</label>
               <input
                 id="loginEmail"
                 type="email"
                 required
-                className="w-full border-0 border-b border-foreground/30 bg-transparent py-2 outline-none transition-colors focus:border-foreground"
+                className="w-full border-0 border-b border-foreground/30 bg-transparent py-2 outline-none transition-colors focus:border-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 placeholder="customer@example.com"
-              />
+              
+                autoComplete="email"
+                dir="ltr"/>
             </div>
             <div>
               <div className="mb-2 flex items-center justify-between">
-                <label htmlFor="loginPassword" className="block text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{t('auth.password')}</label>
+                <label htmlFor="loginPassword" className="block text-xs font-medium text-muted-foreground">{t('auth.password')}</label>
                 <a href="/forgot-password" className="text-xs font-medium text-primary hover:underline">
                   {t('auth.forgotPasswordLink')}
                 </a>
               </div>
-              <input
+              <PasswordInput
                 id="loginPassword"
-                type="password"
                 required
-                className="w-full border-0 border-b border-foreground/30 bg-transparent py-2 outline-none transition-colors focus:border-foreground"
+                className="w-full border-0 border-b border-foreground/30 bg-transparent py-2 outline-none transition-colors focus:border-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 placeholder="••••••••"
-              />
+              
+                autoComplete="current-password"/>
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="mt-4 w-full bg-foreground py-3 text-sm font-medium tracking-wide text-background transition-opacity hover:opacity-90 active:scale-[0.98] disabled:opacity-70"
+              className="mt-4 w-full bg-foreground py-3 text-sm font-medium text-background transition-opacity hover:opacity-90 active:scale-[0.98] disabled:opacity-70"
             >
               {loading ? t('auth.authenticating') : t('auth.signIn')}
             </button>

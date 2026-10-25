@@ -318,7 +318,7 @@ export default function CheckoutPage() {
           <div>
             <h2 className="text-xl font-semibold text-foreground">{t('checkout.awaitingPayment', { number: payingOrder.order_number })}</h2>
             <p className="text-muted-foreground mt-1">
-              {t('checkout.total')} <span className="font-bold text-foreground">{formatCurrency(Number(payingOrder.total_amount))}</span>
+              {t('checkout.total')} <span className="font-bold text-foreground tabular-nums">{formatCurrency(Number(payingOrder.total_amount))}</span>
             </p>
             {!stripePayment && (
               <p className="text-sm text-amber-700 mt-2">
@@ -399,7 +399,7 @@ export default function CheckoutPage() {
             {cart.items.map(item => (
               <div key={item.id} className="flex justify-between items-center py-2 border-b border-border last:border-0 text-foreground/80">
                 <span>{item.product_name} &times; {item.quantity}</span>
-                <span className="font-medium text-foreground">{formatCurrency(Number(item.total_price))}</span>
+                <span className="font-medium text-foreground tabular-nums">{formatCurrency(Number(item.total_price))}</span>
               </div>
             ))}
           </div>
@@ -515,7 +515,7 @@ export default function CheckoutPage() {
             <h2 className="text-xl font-semibold mb-4 text-foreground">{t('checkout.shippingMethods')}</h2>
             <div className="space-y-3 text-foreground">
               {shippingOptions.map(option => (
-                <label key={option.id} className="flex items-center space-x-3 p-3 border border-border rounded-lg hover:bg-accent cursor-pointer transition-colors duration-150">
+                <label key={option.id} className="flex items-center gap-3 p-3 border border-border rounded-lg hover:bg-accent cursor-pointer transition-colors duration-150">
                   <input
                     type="radio"
                     name="shipping"
@@ -525,7 +525,7 @@ export default function CheckoutPage() {
                     className="text-primary accent-primary"
                   />
                   <span className="font-medium flex-1">{option.name}</span>
-                  <span className="text-muted-foreground">{formatCurrency(option.price)}</span>
+                  <span className="text-muted-foreground tabular-nums">{formatCurrency(option.price)}</span>
                 </label>
               ))}
             </div>

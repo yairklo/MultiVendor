@@ -1,8 +1,9 @@
 ﻿import type { Metadata } from 'next'
 import Link from 'next/link'
-import { ApiError, getProduct, getProductReviews } from '@/lib/api/serverApiClient'
+import { ApiError, getProduct, getProductReviews, getStoreConfig } from '@/lib/api/serverApiClient'
 import { ProductDetailView } from '@/app/store/[tenant_slug]/products/[slug]/ProductDetailView'
 import type { Product } from '@/lib/types'
+import { ArrowLeft } from 'lucide-react'
 
 type Params = { tenant_slug: string; slug: string }
 
@@ -61,7 +62,7 @@ export default async function MarketplaceProductDetailPage({
   if (!product) {
     return (
       <div className="p-6 max-w-3xl mx-auto">
-        <Link href="/marketplace" className="text-blue-600 hover:underline">&larr; Back to marketplace</Link>
+        <Link href="/marketplace" className="inline-flex items-center gap-1.5 text-primary hover:underline"><ArrowLeft className="size-4 shrink-0 rtl:rotate-180" aria-hidden="true" /> Back to marketplace</Link>
         <div className="mt-6 p-4 bg-red-50 text-red-700 rounded-lg border border-red-100">
           {error || 'Product not found'}
         </div>
@@ -69,6 +70,7 @@ export default async function MarketplaceProductDetailPage({
     )
   }
 
+  const storeName = await getStoreConfig(tenantSlug).then((c) => c?.name || displayName(tenantSlug)).catch(() => displayName(tenantSlug))
   const reviews = await getProductReviews(tenantSlug, slug)
 
   return (
@@ -78,7 +80,7 @@ export default async function MarketplaceProductDetailPage({
       product={product}
       initialReviews={reviews}
       mode="marketplace"
-      storeName={displayName(tenantSlug)}
+      storeName={storeName}
     />
   )
 }
