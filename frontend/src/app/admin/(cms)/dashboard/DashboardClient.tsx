@@ -164,10 +164,11 @@ export function DashboardClient({
             <CardDescription>{t('dashboard.revenueOverviewDesc')}</CardDescription>
           </CardHeader>
           <CardContent className="px-2">
-            <div className="h-[350px] w-full mt-4">
+            {/* SVG text anchoring flips under an RTL ancestor and pulls right-side Y ticks into the plot; the axes are mirrored explicitly (reversed X, right Y) instead. */}
+            <div className="h-[350px] w-full mt-4" style={{ direction: 'ltr' }}>
               {chartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                  <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="var(--chart-1)" stopOpacity={0.3}/>
@@ -184,12 +185,15 @@ export function DashboardClient({
                       dy={10}
                     />
                     <YAxis
+                      orientation={isRtl ? 'right' : 'left'}
+                      width={80}
                       axisLine={false}
                       tickLine={false}
                       tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
                       tickFormatter={(value) => formatCurrency(value)}
                     />
                     <Tooltip
+                      wrapperStyle={{ direction: isRtl ? 'rtl' : 'ltr' }}
                       contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', background: 'var(--popover)', color: 'var(--popover-foreground)' }}
                       formatter={(value) => [formatCurrency(Number(value) || 0), t('dashboard.revenue')]}
                     />
