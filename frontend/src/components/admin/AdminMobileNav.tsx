@@ -3,12 +3,13 @@
 import React, { useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { Menu, X } from 'lucide-react'
+import { useUiLocale } from '@/context/UiLocaleContext'
 
 export function AdminMobileNav({
   navContent,
   logoutButtonCompact,
   logoutButtonDrawer,
-  title = 'Tenant CMS',
+  title,
 }: {
   navContent: React.ReactNode
   logoutButtonCompact: React.ReactNode
@@ -16,6 +17,7 @@ export function AdminMobileNav({
   title?: string
 }) {
   const pathname = usePathname()
+  const { t } = useUiLocale()
   const [open, setOpen] = useState(false)
   // Close the drawer on navigation -- adjusted during render (React's
   // recommended pattern for "reset state when a prop changes") rather than
@@ -30,7 +32,7 @@ export function AdminMobileNav({
   return (
     <>
       <header className="flex h-16 items-center justify-between border-b border-border bg-card px-4 md:hidden">
-        <button aria-label="Open menu" onClick={() => setOpen(true)} className="text-foreground transition-colors duration-150 hover:text-primary">
+        <button aria-label={t('nav.openMenu')} onClick={() => setOpen(true)} className="text-foreground transition-colors duration-150 hover:text-primary">
           <Menu className="w-6 h-6" />
         </button>
         <h1 className="font-heading text-lg font-bold text-foreground">{title}</h1>
@@ -47,7 +49,7 @@ export function AdminMobileNav({
             <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4">
               <h1 className="font-heading text-lg font-bold text-sidebar-foreground">{title}</h1>
               <button
-                aria-label="Close menu"
+                aria-label={t('nav.closeMenu')}
                 onClick={() => setOpen(false)}
                 className="text-sidebar-foreground/70 transition-colors duration-150 hover:text-sidebar-foreground"
               >

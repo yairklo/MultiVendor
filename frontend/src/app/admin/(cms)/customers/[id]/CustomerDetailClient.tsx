@@ -17,6 +17,7 @@ import { useCurrency } from '@/hooks/useCurrency'
 import { useUiLocale } from '@/context/UiLocaleContext'
 import { formatUiDate, formatUiDateTime } from '@/lib/utils'
 import type { Customer, Order } from '@/lib/types'
+import { ArrowLeft } from 'lucide-react'
 
 export function CustomerDetailClient({ customer, orders }: { customer: Customer; orders: Order[] }) {
   const { formatCurrency } = useCurrency()
@@ -26,7 +27,7 @@ export function CustomerDetailClient({ customer, orders }: { customer: Customer;
     <div className="max-w-4xl mx-auto">
       <div className="flex items-center gap-4 mb-8">
         <Link href="/admin/customers" className={buttonVariants({ variant: 'ghost' })}>
-          &larr; {t('customers.backToCustomers')}
+          <ArrowLeft className="size-4 shrink-0 rtl:rotate-180" aria-hidden="true" /> {t('customers.backToCustomers')}
         </Link>
       </div>
 
@@ -37,19 +38,19 @@ export function CustomerDetailClient({ customer, orders }: { customer: Customer;
 
       <div className="grid grid-cols-2 gap-4 mb-8 md:grid-cols-4">
         <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">{t('customers.joined')}</p>
+          <p className="text-sm font-medium text-muted-foreground">{t('customers.joined')}</p>
           <p className="mt-1 font-heading text-lg text-foreground">{formatUiDate(customer.created_at, locale)}</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">{t('customers.orders')}</p>
+          <p className="text-sm font-medium text-muted-foreground">{t('customers.orders')}</p>
           <p className="mt-1 font-heading text-lg text-foreground tabular-nums">{customer.orders_count}</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">{t('customers.totalSpent')}</p>
+          <p className="text-sm font-medium text-muted-foreground">{t('customers.totalSpent')}</p>
           <p className="mt-1 font-heading text-lg text-foreground tabular-nums">{formatCurrency(Number(customer.total_spent))}</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">{t('customers.lastOrder')}</p>
+          <p className="text-sm font-medium text-muted-foreground">{t('customers.lastOrder')}</p>
           <p className="mt-1 font-heading text-lg text-foreground">{formatUiDate(customer.last_order_at, locale)}</p>
         </div>
       </div>

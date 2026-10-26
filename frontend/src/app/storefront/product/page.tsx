@@ -9,6 +9,7 @@ import { StorefrontFooter } from '@/components/storefront/StorefrontFooter'
 import { StorefrontBrandBackdrop } from '@/components/storefront/StorefrontBrandBackdrop'
 import { isUsableTenantSlug } from '@/lib/tenantSlug'
 import type { Product } from '@/lib/types'
+import { ArrowLeft } from 'lucide-react'
 
 // Query-param twin of /store/[tenant_slug]/products/[slug] -- same reasoning
 // and same removal plan as ../page.tsx (the plain storefront stopgap): that
@@ -90,7 +91,7 @@ export default async function StorefrontProductQueryPage({
           <main className="flex-1">
             {!product ? (
               <div className="p-6 max-w-3xl mx-auto">
-                <Link href={`/storefront?slug=${tenantSlug}`} className="text-blue-600 hover:underline">&larr; Back to store</Link>
+                <Link href={`/storefront?slug=${tenantSlug}`} className="inline-flex items-center gap-1.5 text-primary hover:underline"><ArrowLeft className="size-4 shrink-0 rtl:rotate-180" aria-hidden="true" /> Back to store</Link>
                 <div className="mt-6 p-4 bg-red-50 text-red-700 rounded-lg border border-red-100">
                   {error || 'Product not found'}
                 </div>

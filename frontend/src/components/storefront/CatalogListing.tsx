@@ -13,7 +13,6 @@ import { useToast } from '@/context/ToastContext'
 import { resolvePageKeyHref } from '@/lib/storefront-nav'
 import { DispatchedAction, StorePageSchema } from '@/lib/ai/types'
 import { useStorefrontTheme } from '@/context/StorefrontThemeContext'
-import { StorefrontLanguageSwitcher } from './StorefrontLanguageSwitcher'
 import { isRtlLang } from '@/lib/languages'
 import { resolveImageUrl } from '@/lib/media'
 import { isUsableTenantSlug } from '@/lib/tenantSlug'
@@ -73,7 +72,7 @@ export function CatalogListing({
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [categoryId, setCategoryId] = useState('')
-  const { lang, setLang, bannerUrl, supportedLanguages } = useStorefrontTheme()
+  const { lang, bannerUrl } = useStorefrontTheme()
   const t = catalogCopy[lang] || catalogCopy.he
   const prefersReducedMotion = useReducedMotion()
 
@@ -186,14 +185,14 @@ export function CatalogListing({
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-1 min-w-[240px] flex-wrap items-center gap-3">
           <div className="relative max-w-sm flex-1">
-            <Search className="absolute start-3 top-1/2 w-4 h-4 -translate-y-1/2 text-gray-400" />
+            <Search className="absolute start-3 top-1/2 w-4 h-4 -translate-y-1/2 text-muted-foreground" />
             <input
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t.searchPlaceholder}
               aria-label="Search products"
-              className="w-full rounded-lg border border-gray-200 bg-white py-2 ps-9 pe-3 outline-none focus:ring-2 focus:ring-blue-600"
+              className="w-full rounded-lg border border-gray-200 bg-white py-2 ps-9 pe-3 outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
             />
           </div>
           {categories.length > 0 && (
@@ -212,12 +211,6 @@ export function CatalogListing({
             </select>
           )}
         </div>
-        <StorefrontLanguageSwitcher
-          className="font-medium text-gray-600 transition-colors hover:text-blue-600"
-          lang={lang}
-          setLang={setLang}
-          supportedLanguages={supportedLanguages}
-        />
       </div>
 
       {showAiPage ? (

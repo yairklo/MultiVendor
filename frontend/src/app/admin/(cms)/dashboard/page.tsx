@@ -27,12 +27,20 @@ export default async function Dashboard({
   const startParam = startDate.toISOString().slice(0, 10)
   const endParam = endDate.toISOString().slice(0, 10)
 
-  const [metrics, topProductsRes, categorySalesRes, ordersRes, productsRes, reviewsRes] = await Promise.all([
+  const prevEnd = new Date(startDate)
+  const prevStart = new Date(startDate)
+  prevStart.setDate(prevStart.getDate() - rangeDays)
+  const prevStartParam = prevStart.toISOString().slice(0, 10)
+  const prevEndParam = prevEnd.toISOString().slice(0, 10)
+
+  const [metrics, previousMetrics, topProductsRes, categorySalesRes, ordersRes, productsRes, reviewsRes] = await Promise.all([
     adminApiClient(`/api/v1/admin/store/${slug}/analytics?start_date=${startParam}&end_date=${endParam}`),
+    // Previous equal-length period, used for the real trend lines. A failure just hides the trend.
+    adminApiClient(`/api/v1/admin/store/${slug}/analytics?start_date=${prevStartParam}&end_date=${prevEndParam}`).catch(() => null),
     adminApiClient(`/api/v1/admin/store/${slug}/analytics/top-products?start_date=${startParam}&end_date=${endParam}&limit=5`),
     adminApiClient(`/api/v1/admin/store/${slug}/analytics/sales-by-category?start_date=${startParam}&end_date=${endParam}`),
     adminApiClient(`/api/v1/admin/store/${slug}/orders`),
-    adminApiClient(`/api/v1/store/${slug}/products`),
+    adminApiClient(`/api/v1/store/${slug}/products?page_size=100`),
     adminApiClient(`/api/v1/admin/store/${slug}/reviews`),
   ])
 
@@ -47,11 +55,16 @@ export default async function Dashboard({
     .sort((a, b) => a._stock - b._stock)
     .slice(0, 5)
 
+  const activeProductsCount: number | null =
+    typeof productsRes?.meta?.total === 'number' ? productsRes.meta.total : Array.isArray(productsRes?.data) ? productsRes.data.length : null
+
   const recentReviews = Array.isArray(reviewsRes) ? reviewsRes.slice(0, 5) : []
 
   return (
     <DashboardClient
       metrics={metrics}
+      previousMetrics={previousMetrics}
+      activeProductsCount={activeProductsCount}
       topProducts={topProducts}
       categorySales={categorySales}
       recentOrders={recentOrders}

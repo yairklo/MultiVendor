@@ -1,8 +1,9 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi } from 'vitest'
 import { StorefrontHeader } from '../StorefrontHeader'
 import { CartProvider, useCart } from '@/context/CartContext'
+import { StorefrontThemeProvider } from '@/context/StorefrontThemeContext'
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/store/test-tenant',
@@ -51,5 +52,25 @@ describe('StorefrontHeader', () => {
     renderHeader(true)
     expect(screen.getByTestId('account-link')).toHaveTextContent('My Orders')
     expect(screen.getByTestId('account-link')).toHaveAttribute('href', '/account/orders')
+  })
+
+  it('switches the whole page to RTL Hebrew from the header language switcher', async () => {
+    const user = userEvent.setup()
+    render(
+      <StorefrontThemeProvider tenantSlug="test-tenant">
+        <CartProvider>
+          <StorefrontHeader tenantSlug="test-tenant" storeName="Test Tenant" isLoggedIn={false} />
+        </CartProvider>
+      </StorefrontThemeProvider>
+    )
+
+    expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument()
+    await waitFor(() => expect(document.documentElement.dir).toBe('ltr'))
+
+    await user.selectOptions(screen.getByTestId('header-language-switcher'), 'he')
+
+    await waitFor(() => expect(document.documentElement.dir).toBe('rtl'))
+    expect(document.documentElement.lang).toBe('he')
+    expect(screen.queryByRole('link', { name: 'Home' })).not.toBeInTheDocument()
   })
 })

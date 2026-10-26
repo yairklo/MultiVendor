@@ -6,6 +6,7 @@ import { StorefrontHeader } from '@/components/storefront/StorefrontHeader'
 import { StorefrontFooter } from '@/components/storefront/StorefrontFooter'
 import { StorefrontBrandBackdrop } from '@/components/storefront/StorefrontBrandBackdrop'
 import { isUsableTenantSlug } from '@/lib/tenantSlug'
+import { getStoreConfig } from '@/lib/api/serverApiClient'
 
 function displayName(slug: string): string {
   return slug
@@ -30,7 +31,15 @@ export default async function StorefrontLayout({
 }) {
   const { tenant_slug: tenantSlug } = await params
   if (!isUsableTenantSlug(tenantSlug)) notFound()
-  const storeName = displayName(tenantSlug)
+  let storeName = displayName(tenantSlug)
+  try {
+    const config = await getStoreConfig(tenantSlug)
+    if (!config) notFound()
+    if (config.name) storeName = config.name
+  } catch (e) {
+    // Re-throw Next's notFound() signal; any other failure (API down) falls back to the slug-derived name.
+    if (e && typeof e === 'object' && 'digest' in e) throw e
+  }
   const cookieStore = await cookies()
   const isLoggedIn = !!cookieStore.get('token')?.value
 

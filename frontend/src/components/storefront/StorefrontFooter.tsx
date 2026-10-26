@@ -36,10 +36,10 @@ export function StorefrontFooter({ tenantSlug, storeName }: { tenantSlug: string
             ) : null}
             {storeName}
           </h3>
-          <p className="text-sm opacity-80">{tagline}</p>
+          <p className="text-sm">{tagline}</p>
         </div>
         <div>
-          <h4 className="mb-2 text-sm font-semibold uppercase tracking-wide opacity-70">{shopHeading}</h4>
+          <h4 className="mb-2 text-sm font-semibold">{shopHeading}</h4>
           <ul className="space-y-1 text-sm">
             {items.map((item) => (
               <li key={item.id}>
@@ -51,14 +51,14 @@ export function StorefrontFooter({ tenantSlug, storeName }: { tenantSlug: string
           </ul>
         </div>
         <div>
-          <h4 className="mb-2 text-sm font-semibold uppercase tracking-wide opacity-70">{supportHeading}</h4>
+          <h4 className="mb-2 text-sm font-semibold">{supportHeading}</h4>
           <ul className="space-y-1 text-sm">
             <li><Link href="/account/orders" className="transition-opacity hover:opacity-80 hover:underline">{myOrders}</Link></li>
             <li><Link href={`/store/${tenantSlug}/pages/contact`} className="transition-opacity hover:opacity-80 hover:underline">{getInTouch}</Link></li>
           </ul>
         </div>
       </div>
-      <div className="border-t border-current/10 px-4 py-4 text-center text-xs opacity-60">
+      <div className="border-t border-current/10 px-4 py-4 text-center text-xs">
         &copy; {year} {storeName}. {rights}
       </div>
     </footer>

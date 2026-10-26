@@ -7,6 +7,7 @@ import { apiClient } from '@/lib/api/apiClient'
 import { useUiLocale } from '@/context/UiLocaleContext'
 import { UiLanguageSwitcher } from '@/components/ui/UiLanguageSwitcher'
 import { errorMessage } from '@/lib/errors'
+import { PasswordInput } from '@/components/auth/PasswordInput'
 
 type SignupMode = 'customer' | 'seller'
 
@@ -124,7 +125,7 @@ function SignupForm() {
               : t('auth.signupCustomerSub')}
           </p>
         </div>
-        <div className="text-[11px] uppercase tracking-[0.16em] text-sidebar-foreground/45">
+        <div className="text-xs text-sidebar-foreground/75">
           &copy; {new Date().getFullYear()} {t('marketplace.brand')}
         </div>
       </div>
@@ -146,10 +147,10 @@ function SignupForm() {
                 type="button"
                 onClick={() => setMode('customer')}
                 className={`rounded-md py-2 text-sm font-medium transition-all ${
-                  mode === 'customer'
-                    ? 'bg-card text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
+ mode === 'customer'
+ ? 'bg-card text-foreground shadow-sm'
+ : 'text-muted-foreground hover:text-foreground'
+ }`}
               >
                 {t('auth.customer')}
               </button>
@@ -157,20 +158,22 @@ function SignupForm() {
                 type="button"
                 onClick={() => setMode('seller')}
                 className={`rounded-md py-2 text-sm font-medium transition-all ${
-                  mode === 'seller'
-                    ? 'bg-card text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
+ mode === 'seller'
+ ? 'bg-card text-foreground shadow-sm'
+ : 'text-muted-foreground hover:text-foreground'
+ }`}
               >
                 {t('auth.seller')}
               </button>
             </div>
 
-            {error && (
+            <div aria-live="polite">
+              {error && (
               <div className="mb-4 p-4 bg-destructive/10 text-destructive rounded-lg text-sm">
                 {error}
               </div>
             )}
+</div>
 
             {mode === 'customer' ? (
               <form onSubmit={handleSubmit} className="space-y-6">
@@ -196,20 +199,22 @@ function SignupForm() {
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     placeholder="you@example.com"
-                  />
+                  
+                autoComplete="email"
+                dir="ltr"/>
                 </div>
                 <div>
                   <label htmlFor="password" className="block text-sm font-medium mb-2">{t('auth.password')}</label>
-                  <input
+                  <PasswordInput
                     id="password"
-                    type="password"
                     required
                     minLength={8}
                     className="w-full px-4 py-3 rounded-lg border border-input bg-background focus:ring-2 focus:ring-ring outline-none transition-all"
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                     placeholder={t('auth.passwordHint')}
-                  />
+                  
+                autoComplete="new-password"/>
                 </div>
 
                 <button
@@ -277,20 +282,22 @@ function SignupForm() {
                     value={adminEmail}
                     onChange={e => setAdminEmail(e.target.value)}
                     placeholder="you@example.com"
-                  />
+                  
+                autoComplete="email"
+                dir="ltr"/>
                 </div>
                 <div>
                   <label htmlFor="adminPassword" className="block text-sm font-medium mb-2">{t('auth.password')}</label>
-                  <input
+                  <PasswordInput
                     id="adminPassword"
-                    type="password"
                     required
                     minLength={8}
                     className="w-full px-4 py-3 rounded-lg border border-input bg-background focus:ring-2 focus:ring-ring outline-none transition-all"
                     value={adminPassword}
                     onChange={e => setAdminPassword(e.target.value)}
                     placeholder={t('auth.passwordHint')}
-                  />
+                  
+                autoComplete="new-password"/>
                 </div>
 
                 <button

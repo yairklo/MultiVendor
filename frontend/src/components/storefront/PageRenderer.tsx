@@ -66,7 +66,7 @@ export function renderSections(sections: Section[], opts: RenderSectionsOptions)
         className="relative motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300 motion-safe:ease-[cubic-bezier(0.16,1,0.3,1)] motion-safe:fill-mode-both"
       >
         {opts.showTypeLabels && (
-          <div className="absolute -top-2 left-4 z-10 rounded-full bg-gray-900/80 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white">
+          <div className="absolute -top-2 start-4 z-10 rounded-full bg-gray-900/80 px-2 py-0.5 text-xs font-medium text-white">
             {section.type}
           </div>
         )}

@@ -16,7 +16,7 @@ from app.services.product_completeness import (
     validate_nav_labels,
 )
 from app.services.coolify_service import regenerate_traefik_dynamic_config
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 import json
 
 async def update_tenant_service(tenant_slug: str, req: TenantUpdateSchema, db: AsyncSession) -> TenantResponse:
@@ -226,19 +226,29 @@ async def get_tenant_analytics_service(tenant_slug: str, start_date: str, end_da
         .where(
             Order.tenant_id == tenant_id,
             Order.created_at >= sd,
-            Order.created_at <= ed
+            Order.created_at <= ed,
+            # Same paid-status set as the KPI totals below, so chart and totals agree.
+            Order.status.in_(PAID_ORDER_STATUSES),
         )
         .group_by(cast(Order.created_at, Date))
+        .order_by(cast(Order.created_at, Date))
     )
     result = await db.execute(query)
-    rows = result.all()
-    
+    by_day = {row.date: row for row in result.all() if row.date}
+
+    # Ascending series. Ranges up to a year are zero-filled so the chart axis is continuous;
+    # longer (e.g. open-ended API) ranges return only the days that have paid orders.
+    if (ed.date() - sd.date()).days <= 366:
+        days = [sd.date() + timedelta(days=i) for i in range((ed.date() - sd.date()).days + 1)]
+    else:
+        days = sorted(by_day)
     data = []
-    for row in rows:
+    for day in days:
+        row = by_day.get(day)
         data.append({
-            "date": row.date.isoformat() if row.date else None,
-            "total_sales": float(row.total_sales) if row.total_sales else 0.0,
-            "order_count": row.order_count
+            "date": day.isoformat(),
+            "total_sales": float(row.total_sales) if row and row.total_sales else 0.0,
+            "order_count": row.order_count if row else 0,
         })
 
     # Top-level KPIs the dashboard cards actually read. Only orders that were

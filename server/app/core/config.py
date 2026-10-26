@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     # "https://app.example.com,https://admin.example.com"). Defaults to the
     # local dev frontend ports so `docker compose up` and bare `npm run dev`
     # keep working with no .env changes; production must override this.
-    CORS_ALLOWED_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3005,http://127.0.0.1:3005,http://localhost:3001"
+    CORS_ALLOWED_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3005,http://127.0.0.1:3005,http://localhost:3001,http://localhost:3100"
     # Alternative to the fixed list above for a subdomain-per-tenant deploy
     # (see docs/DEPLOY_COOLIFY.md) -- an unbounded, unknown-in-advance set of
     # origins (one per store subdomain) can't be enumerated in

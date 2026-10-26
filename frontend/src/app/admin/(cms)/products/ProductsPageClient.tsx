@@ -152,7 +152,7 @@ export function ProductsPageClient({
     <div>
       <div className="flex justify-between items-center mb-8">
         <h1 className="font-heading text-3xl font-bold text-foreground">{t('products.title')}</h1>
-        <div className="flex space-x-3">
+        <div className="flex gap-3">
           {selectedIds.length > 0 && (
             <Button variant="destructive" onClick={handleBulkDelete}>
               {t('products.deleteSelected', { count: selectedIds.length })}
@@ -180,6 +180,7 @@ export function ProductsPageClient({
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <Input
           placeholder={t('products.searchPlaceholder')}
+          aria-label={t('products.searchPlaceholder')}
           value={search}
           onChange={e => setSearch(e.target.value)}
           className="max-w-xs"
@@ -188,7 +189,7 @@ export function ProductsPageClient({
           value={categoryId}
           onValueChange={(value) => setCategoryId(value)}
         >
-          <SelectTrigger className="w-full sm:max-w-xs">
+          <SelectTrigger className="w-full sm:max-w-xs" aria-label={t('products.allCategories')}>
             <SelectValue placeholder={t('products.allCategories')} />
           </SelectTrigger>
           <SelectContent>
@@ -211,6 +212,7 @@ export function ProductsPageClient({
                   type="checkbox"
                   checked={products.length > 0 && selectedIds.length === products.length}
                   onChange={handleSelectAll}
+                  aria-label={t('products.selectAll')}
                   className="rounded border-input"
                 />
               </TableHead>
@@ -241,6 +243,7 @@ export function ProductsPageClient({
                       type="checkbox"
                       checked={selectedIds.includes(product.id)}
                       onChange={(e) => handleSelectOne(product.id, e.target.checked)}
+                      aria-label={t('products.selectRow', { name: resolveI18nText(product.name, locale) || t('products.unnamed') })}
                       className="rounded border-input"
                     />
                   </TableCell>
@@ -253,7 +256,7 @@ export function ProductsPageClient({
                         className="w-10 h-10 object-cover rounded"
                       />
                     ) : (
-                      <div className="w-10 h-10 bg-muted rounded flex items-center justify-center text-muted-foreground text-[10px] text-center leading-tight">
+                      <div className="w-10 h-10 bg-muted rounded flex items-center justify-center text-muted-foreground text-xs text-center leading-tight">
                         {t('common.noImage')}
                       </div>
                     )}

@@ -39,4 +39,43 @@ describe('Admin Dashboard', () => {
     expect(screen.getByText('$125.5')).toBeInTheDocument()
     expect(screen.getByText('400')).toBeInTheDocument()
   })
+
+  it.each([
+    [7, 'vs previous 7 days'],
+    [30, 'vs previous 30 days'],
+    [90, 'vs previous 90 days'],
+    [365, 'vs previous year'],
+  ] as const)('labels the trend for a %i day range as "%s" and shows the real percentage', (rangeDays, label) => {
+    render(
+      <DashboardClient
+        metrics={{ data: [], total_revenue: 150, aov: 50, orders_count: 3 }}
+        previousMetrics={{ data: [], total_revenue: 100, aov: 50, orders_count: 2 }}
+        topProducts={[]}
+        categorySales={[]}
+        recentOrders={[]}
+        lowStockProducts={[]}
+        recentReviews={[]}
+        rangeDays={rangeDays}
+      />
+    )
+    expect(screen.getAllByText(new RegExp(label))).toHaveLength(2)
+    expect(screen.getAllByText('+50%')).toHaveLength(2)
+    expect(screen.queryByText(/last month/)).not.toBeInTheDocument()
+  })
+
+  it('hides the trend when there is no previous period', () => {
+    render(
+      <DashboardClient
+        metrics={{ data: [], total_revenue: 150, aov: 50, orders_count: 3 }}
+        previousMetrics={null}
+        topProducts={[]}
+        categorySales={[]}
+        recentOrders={[]}
+        lowStockProducts={[]}
+        recentReviews={[]}
+        rangeDays={30}
+      />
+    )
+    expect(screen.queryByText(/vs previous/)).not.toBeInTheDocument()
+  })
 })

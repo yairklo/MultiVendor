@@ -11,7 +11,7 @@ export function HeroBanner({
   const { lang } = useStorefrontTheme()
   const size = typeof section.settings.size === 'string' ? section.settings.size : 'medium'
   const height = SIZE_HEIGHTS[size] ?? SIZE_HEIGHTS.medium
-  const alignment = section.settings.alignment === 'left' ? 'items-start text-left' : section.settings.alignment === 'right' ? 'items-end text-right' : 'items-center text-center'
+  const alignment = (section.settings.alignment === 'left' || section.settings.alignment === 'start') ? 'items-start text-start' : (section.settings.alignment === 'right' || section.settings.alignment === 'end') ? 'items-end text-end' : 'items-center text-center'
   const imageUrl = section.media?.type === 'image' ? section.media.url : undefined
   const fontSize = typeof section.settings.font_size === 'string' && section.settings.font_size ? section.settings.font_size : undefined
   const headline = resolveI18nText(section.settings.headline, lang) || 'Hero Banner'

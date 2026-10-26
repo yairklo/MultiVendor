@@ -140,6 +140,12 @@ class TenantSettingsSchema(BaseModel):
         }
     }, from_attributes=True)
 
+
+class StoreConfigResponse(TenantSettingsSchema):
+    """Public storefront config: the settings plus the store's display name."""
+    name: Optional[str] = None
+
+
 class TenantResponse(BaseModel):
     id: int
     slug: str

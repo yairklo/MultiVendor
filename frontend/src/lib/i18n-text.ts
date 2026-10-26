@@ -9,3 +9,11 @@ export function resolveI18nText(value: unknown, lang: string = 'he'): string {
   const obj = value as Record<string, string>
   return obj[lang] || obj.he || obj.en || Object.values(obj)[0] || ''
 }
+
+/** Cart line name for the current language; falls back to the API's single-language `product_name`. */
+export function cartItemName(
+  item: { product_name: string; product_name_i18n?: Record<string, string> | null },
+  lang: string = 'he'
+): string {
+  return item.product_name_i18n ? resolveI18nText(item.product_name_i18n, lang) || item.product_name : item.product_name
+}

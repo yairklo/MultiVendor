@@ -124,7 +124,7 @@ export function OrdersList({ initialOrders, initialError }: { initialOrders: Ord
                 </div>
 
                 <div className="flex justify-between items-center border-t border-border pt-3">
-                  <span className="font-bold">{t('account.total', { amount: formatCurrency(Number(order.total_amount)) })}</span>
+                  <span className="font-bold tabular-nums">{t('account.total', { amount: formatCurrency(Number(order.total_amount)) })}</span>
                   <div className="flex gap-2">
                     {canCancel && (
                       <button

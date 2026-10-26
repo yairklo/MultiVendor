@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { ApiError, getProduct, getProductReviews } from '@/lib/api/serverApiClient'
 import { ProductDetailView } from './ProductDetailView'
 import type { Product } from '@/lib/types'
+import { ArrowLeft } from 'lucide-react'
 
 type Params = { tenant_slug: string; slug: string }
 
@@ -54,7 +55,7 @@ export default async function ProductDetailPage({
   if (!product) {
     return (
       <div className="p-6 max-w-3xl mx-auto">
-        <Link href={`/store/${tenantSlug}`} className="text-blue-600 hover:underline">&larr; Back to store</Link>
+        <Link href={`/store/${tenantSlug}`} className="inline-flex items-center gap-1.5 text-primary hover:underline"><ArrowLeft className="size-4 shrink-0 rtl:rotate-180" aria-hidden="true" /> Back to store</Link>
         <div className="mt-6 p-4 bg-red-50 text-red-700 rounded-lg border border-red-100">
           {error || 'Product not found'}
         </div>

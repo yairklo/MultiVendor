@@ -39,6 +39,7 @@ const STRINGS = {
     submitReview: 'Submit Review',
     signIn: 'Sign in',
     signInToReview: 'to write a review.',
+    signInToReviewFirst: 'to write the first review.',
     noReviewsYet: 'No reviews yet.',
     verifiedPurchase: 'Verified Purchase',
     reviewWord: (n: number) => (n === 1 ? 'review' : 'reviews'),
@@ -64,9 +65,10 @@ const STRINGS = {
     sharePlaceholder: 'שתפו את דעתכם על המוצר...',
     submitting: 'שולח…',
     submitReview: 'שליחת ביקורת',
-    signIn: 'התחברות',
+    signIn: 'התחברו',
     signInToReview: 'כדי לכתוב ביקורת.',
-    noReviewsYet: 'אין עדיין ביקורות.',
+    signInToReviewFirst: 'כדי לכתוב ביקורת ראשונה.',
+    noReviewsYet: 'עדיין אין ביקורות.',
     verifiedPurchase: 'רכישה מאומתת',
     reviewWord: (n: number) => (n === 1 ? 'ביקורת' : 'ביקורות'),
     thanksForReview: 'תודה על הביקורת!',
@@ -174,13 +176,13 @@ export function ProductDetailView({
         <div className="flex items-center justify-between gap-4 mb-8">
           <Link
             href="/marketplace"
-            className="inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-foreground"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
             {t.backToMarketplace}
           </Link>
           <Link
             href={`/store/${tenantSlug}`}
-            className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-foreground hover:underline"
+            className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground hover:underline"
           >
             {t.soldBy}: <span className="font-semibold text-foreground">{storeName || tenantSlug}</span>
           </Link>
@@ -188,7 +190,7 @@ export function ProductDetailView({
       ) : (
         <Link
           href={`/store/${tenantSlug}`}
-          className="inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-foreground mb-8"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground mb-8"
         >
           {t.backToStore}
         </Link>
@@ -221,10 +223,10 @@ export function ProductDetailView({
                   type="button"
                   onClick={() => setSelectedImageIdx(idx)}
                   className={`relative aspect-[4/5] w-20 flex-shrink-0 overflow-hidden rounded-md border-2 transition-all ${
-                    idx === selectedImageIdx
-                      ? 'border-foreground opacity-100 shadow-sm'
-                      : 'border-transparent opacity-60 hover:opacity-100'
-                  }`}
+ idx === selectedImageIdx
+ ? 'border-foreground opacity-100 shadow-sm'
+ : 'border-transparent opacity-60 hover:opacity-100'
+ }`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={resolveImageUrl(img)} alt="" className="h-full w-full object-cover" />
@@ -311,7 +313,7 @@ export function ProductDetailView({
             <button
               onClick={handleAddToCart}
               disabled={outOfStock || adding}
-              className={`h-12 flex-1 px-8 text-sm font-semibold transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed rounded-lg ${theme.primaryButtonClass}`}
+              className={`h-12 flex-1 px-8 text-sm font-semibold transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed rounded-lg ${mode === 'marketplace' ? 'bg-primary text-primary-foreground hover:bg-primary/90' : theme.primaryButtonClass}`}
             >
               {outOfStock ? t.outOfStock : adding ? t.adding : t.addToCart}
             </button>
@@ -329,7 +331,7 @@ export function ProductDetailView({
           {getCookie('token') ? (
             <form onSubmit={handleSubmitReview} className="mb-10 rounded-xl border border-border bg-card/60 p-6 space-y-4">
               <div>
-                <span className="block text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2">
+                <span className="block text-xs font-medium text-muted-foreground mb-2">
                   {t.rateStars(reviewRating)}
                 </span>
                 <div className="flex items-center gap-1.5">
@@ -368,15 +370,16 @@ export function ProductDetailView({
             </form>
           ) : (
             <div className="mb-8 rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+              {reviews.length === 0 && <>{t.noReviewsYet}{' '}</>}
               <Link href="/login" className="font-medium text-foreground underline underline-offset-4 hover:opacity-80">
                 {t.signIn}
               </Link>{' '}
-              {t.signInToReview}
+              {reviews.length === 0 ? t.signInToReviewFirst : t.signInToReview}
             </div>
           )}
 
           {reviews.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4">{t.noReviewsYet}</p>
+            getCookie('token') ? <p className="text-sm text-muted-foreground py-4">{t.noReviewsYet}</p> : null
           ) : (
             <div className="space-y-6">
               {reviews.map((r) => (
@@ -385,7 +388,7 @@ export function ProductDetailView({
                     <StarRating rating={r.rating} size={14} />
                     <span className="font-medium text-sm text-foreground">{r.customer_name}</span>
                     {r.is_verified_buyer && (
-                      <span className="text-[11px] font-medium px-2 py-0.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
+                      <span className="text-xs font-medium px-2 py-0.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
                         {t.verifiedPurchase}
                       </span>
                     )}

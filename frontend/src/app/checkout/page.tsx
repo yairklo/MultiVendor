@@ -15,6 +15,7 @@ import { DigitalDownloads } from '@/components/orders/DigitalDownloads'
 import { useUiLocale } from '@/context/UiLocaleContext'
 import { errorMessage } from '@/lib/errors'
 import type { Order, Coupon } from '@/lib/types'
+import { cartItemName } from '@/lib/i18n-text'
 
 // SSR/hydration-safe cookie read to enforce login before checkout
 function subscribeNoop(): () => void {
@@ -34,7 +35,7 @@ function getLoggedInServerSnapshot(): boolean | null {
 const CHECKOUT_DRAFT_KEY = 'checkout_shipping_draft'
 
 export default function CheckoutPage() {
-  const { t } = useUiLocale()
+  const { t, locale } = useUiLocale()
   const shippingOptions = [
     { id: 1, name: t('checkout.standardShipping'), price: 5 },
     { id: 2, name: t('checkout.expressShipping'), price: 15 }
@@ -318,7 +319,7 @@ export default function CheckoutPage() {
           <div>
             <h2 className="text-xl font-semibold text-foreground">{t('checkout.awaitingPayment', { number: payingOrder.order_number })}</h2>
             <p className="text-muted-foreground mt-1">
-              {t('checkout.total')} <span className="font-bold text-foreground">{formatCurrency(Number(payingOrder.total_amount))}</span>
+              {t('checkout.total')} <span className="font-bold text-foreground tabular-nums">{formatCurrency(Number(payingOrder.total_amount))}</span>
             </p>
             {!stripePayment && (
               <p className="text-sm text-amber-700 mt-2">
@@ -398,8 +399,8 @@ export default function CheckoutPage() {
             <h2 className="text-xl font-semibold mb-4 text-foreground">{t('checkout.itemSummary')}</h2>
             {cart.items.map(item => (
               <div key={item.id} className="flex justify-between items-center py-2 border-b border-border last:border-0 text-foreground/80">
-                <span>{item.product_name} &times; {item.quantity}</span>
-                <span className="font-medium text-foreground">{formatCurrency(Number(item.total_price))}</span>
+                <span>{cartItemName(item, locale)} &times; {item.quantity}</span>
+                <span className="font-medium text-foreground tabular-nums">{formatCurrency(Number(item.total_price))}</span>
               </div>
             ))}
           </div>
@@ -435,6 +436,8 @@ export default function CheckoutPage() {
                   <input
                     id="checkoutEmail"
                     type="email"
+                    dir="ltr"
+                    autoComplete="email"
                     className="w-full border border-input rounded-lg px-3 py-2 focus:ring-2 focus:ring-ring outline-none text-foreground transition-shadow"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
@@ -515,7 +518,7 @@ export default function CheckoutPage() {
             <h2 className="text-xl font-semibold mb-4 text-foreground">{t('checkout.shippingMethods')}</h2>
             <div className="space-y-3 text-foreground">
               {shippingOptions.map(option => (
-                <label key={option.id} className="flex items-center space-x-3 p-3 border border-border rounded-lg hover:bg-accent cursor-pointer transition-colors duration-150">
+                <label key={option.id} className="flex items-center gap-3 p-3 border border-border rounded-lg hover:bg-accent cursor-pointer transition-colors duration-150">
                   <input
                     type="radio"
                     name="shipping"
@@ -525,7 +528,7 @@ export default function CheckoutPage() {
                     className="text-primary accent-primary"
                   />
                   <span className="font-medium flex-1">{option.name}</span>
-                  <span className="text-muted-foreground">{formatCurrency(option.price)}</span>
+                  <span className="text-muted-foreground tabular-nums">{formatCurrency(option.price)}</span>
                 </label>
               ))}
             </div>

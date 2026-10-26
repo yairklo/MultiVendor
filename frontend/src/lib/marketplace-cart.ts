@@ -13,6 +13,8 @@ export interface MarketplaceCartItem {
   tenant_name: string
   variant_id: number
   product_name: string
+  /** Per-language names (additive API field); resolve with cartItemName(). */
+  product_name_i18n?: Record<string, string> | null
   sku: string
   unit_price: number
   quantity: number

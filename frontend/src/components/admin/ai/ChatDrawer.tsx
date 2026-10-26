@@ -107,7 +107,7 @@ export function ChatDrawer({
             {m.toolCalls && m.toolCalls.length > 0 && (
               <details className="mt-1 text-xs text-muted-foreground">
                 <summary className="cursor-pointer">{t('aiLayout.toolCalls', { count: m.toolCalls.length })}</summary>
-                <ul className="mt-1 space-y-0.5 pl-3">
+                <ul className="mt-1 space-y-0.5 ps-3">
                   {m.toolCalls.map((tc, j) => (
                     <li key={j}>
                       <code className="rounded bg-muted px-1 py-0.5">{tc.name}</code> {tc.is_error ? '❌' : '✅'}
@@ -195,7 +195,7 @@ export function ChatDrawer({
         <button
           type="submit"
           disabled={isBusy || (!draft.trim() && !attachedFile)}
-          className="self-end rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+          className="self-end rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground"
         >
           {t('common.send')}
         </button>

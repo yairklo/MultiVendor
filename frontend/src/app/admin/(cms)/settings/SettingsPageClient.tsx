@@ -317,7 +317,7 @@ export function SettingsPageClient({
                     checked={item.enabled}
                     onChange={(e) => updateNavItem(index, { enabled: e.target.checked })}
                   />
-                  <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  <span className="text-xs font-medium text-muted-foreground">
                     {t(`settings.navKind${item.kind.charAt(0).toUpperCase()}${item.kind.slice(1)}`)}
                   </span>
                 </label>

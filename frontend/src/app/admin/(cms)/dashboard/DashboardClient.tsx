@@ -14,6 +14,7 @@ import { Package, Star, ArrowRight } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { useCurrency } from '@/hooks/useCurrency'
 import { useUiLocale } from '@/context/UiLocaleContext'
+import { isRtlLang } from '@/lib/languages'
 import { formatUiChartDay, formatUiDate } from '@/lib/utils'
 import { resolveI18nText } from '@/lib/i18n-text'
 import type { Order, Product, ProductReview, I18nText } from '@/lib/types'
@@ -62,6 +63,8 @@ const kpiCardVariants = {
 
 export function DashboardClient({
   metrics,
+  previousMetrics,
+  activeProductsCount,
   topProducts,
   categorySales,
   recentOrders,
@@ -70,6 +73,8 @@ export function DashboardClient({
   rangeDays,
 }: {
   metrics: DashboardMetrics | null
+  previousMetrics?: DashboardMetrics | null
+  activeProductsCount?: number | null
   topProducts: TopProduct[]
   categorySales: CategorySales[]
   recentOrders: Order[]
@@ -85,6 +90,15 @@ export function DashboardClient({
 
   const rangeLabel = (days: number) =>
     days === 7 ? t('dashboard.range7') : days === 30 ? t('dashboard.range30') : days === 90 ? t('dashboard.range90') : t('dashboard.range365')
+  // Percent change vs. the previous equal-length period; null (hidden) when there is no baseline.
+  const trend = (current?: number, previous?: number) =>
+    current == null || !previous ? null : ((current - previous) / previous) * 100
+  const formatTrend = (pct: number | null) =>
+    pct == null ? null : `${pct > 0 ? '+' : ''}${new Intl.NumberFormat('he-IL', { maximumFractionDigits: 1 }).format(pct)}%`
+  const revenueTrend = formatTrend(trend(metrics?.total_revenue, previousMetrics?.total_revenue))
+  const ordersTrend = formatTrend(trend(metrics?.orders_count, previousMetrics?.orders_count))
+  // Mirror the time axis in RTL so the newest date is on the left (reading direction runs right-to-left).
+  const isRtl = isRtlLang(locale)
   const chartData = metrics?.data?.map((d) => ({
     date: formatUiChartDay(d.date, locale),
     Revenue: d.total_sales,
@@ -102,7 +116,7 @@ export function DashboardClient({
           aria-label={t('dashboard.selectRange')}
           value={rangeDays}
           onChange={(e) => router.push(`${pathname}?days=${e.target.value}`)}
-          className="rounded-none border border-border bg-transparent px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring/50"
+          className="rounded-none border border-border bg-transparent px-3 py-1 text-xs font-medium text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring/50"
         >
           {RANGE_OPTIONS.map((days) => (
             <option key={days} value={days}>{rangeLabel(days)}</option>
@@ -118,26 +132,26 @@ export function DashboardClient({
         animate={prefersReducedMotion ? undefined : 'show'}
       >
         <motion.div variants={prefersReducedMotion ? undefined : kpiCardVariants} className="px-0 py-6 md:px-6 md:py-8 first:ps-0">
-          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">{t('dashboard.totalRevenue')}</p>
+          <p className="text-sm font-medium text-muted-foreground">{t('dashboard.totalRevenue')}</p>
           <p className="mt-3 font-heading text-3xl tabular-nums text-foreground md:text-4xl">{formatCurrency(metrics?.total_revenue || 0)}</p>
-          <p className="mt-2 text-xs text-muted-foreground">+20.1% {t('dashboard.fromLastMonth')}</p>
+          {revenueTrend && <p className="mt-2 text-xs text-muted-foreground tabular-nums"><span dir="ltr">{revenueTrend}</span> {t(`dashboard.vsPrev${rangeDays}`)}</p>}
         </motion.div>
 
         <motion.div variants={prefersReducedMotion ? undefined : kpiCardVariants} className="px-0 py-6 md:px-6 md:py-8">
-          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">{t('dashboard.totalOrders')}</p>
-          <p className="mt-3 font-heading text-3xl tabular-nums text-foreground md:text-4xl">{(metrics?.orders_count || 0).toLocaleString()}</p>
-          <p className="mt-2 text-xs text-muted-foreground">+12.5% {t('dashboard.fromLastMonth')}</p>
+          <p className="text-sm font-medium text-muted-foreground">{t('dashboard.totalOrders')}</p>
+          <p className="mt-3 font-heading text-3xl tabular-nums text-foreground md:text-4xl">{(metrics?.orders_count || 0).toLocaleString('he-IL')}</p>
+          {ordersTrend && <p className="mt-2 text-xs text-muted-foreground tabular-nums"><span dir="ltr">{ordersTrend}</span> {t(`dashboard.vsPrev${rangeDays}`)}</p>}
         </motion.div>
 
         <motion.div variants={prefersReducedMotion ? undefined : kpiCardVariants} className="px-0 py-6 md:px-6 md:py-8">
-          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">{t('dashboard.aov')}</p>
+          <p className="text-sm font-medium text-muted-foreground">{t('dashboard.aov')}</p>
           <p className="mt-3 font-heading text-3xl tabular-nums text-foreground md:text-4xl">{formatCurrency(metrics?.aov || 0)}</p>
           <p className="mt-2 text-xs text-muted-foreground">{t('dashboard.basedOnPaid')}</p>
         </motion.div>
 
         <motion.div variants={prefersReducedMotion ? undefined : kpiCardVariants} className="px-0 py-6 md:px-6 md:py-8 last:pe-0">
-          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">{t('dashboard.activeProducts')}</p>
-          <p className="mt-3 font-heading text-3xl tabular-nums text-foreground md:text-4xl">{topProducts.length * 12 || 45}</p>
+          <p className="text-sm font-medium text-muted-foreground">{t('dashboard.activeProducts')}</p>
+          <p className="mt-3 font-heading text-3xl tabular-nums text-foreground md:text-4xl">{activeProductsCount != null ? activeProductsCount.toLocaleString('he-IL') : '—'}</p>
           <p className="mt-2 text-xs text-muted-foreground">{t('dashboard.itemsLowStock', { count: lowStockProducts.length })}</p>
         </motion.div>
       </motion.div>
@@ -150,10 +164,11 @@ export function DashboardClient({
             <CardDescription>{t('dashboard.revenueOverviewDesc')}</CardDescription>
           </CardHeader>
           <CardContent className="px-2">
-            <div className="h-[350px] w-full mt-4">
+            {/* SVG text anchoring flips under an RTL ancestor and pulls right-side Y ticks into the plot; the axes are mirrored explicitly (reversed X, right Y) instead. */}
+            <div className="h-[350px] w-full mt-4" style={{ direction: 'ltr' }}>
               {chartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                  <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="var(--chart-1)" stopOpacity={0.3}/>
@@ -162,6 +177,7 @@ export function DashboardClient({
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
                     <XAxis
+                      reversed={isRtl}
                       dataKey="date"
                       axisLine={false}
                       tickLine={false}
@@ -169,12 +185,15 @@ export function DashboardClient({
                       dy={10}
                     />
                     <YAxis
+                      orientation={isRtl ? 'right' : 'left'}
+                      width={80}
                       axisLine={false}
                       tickLine={false}
                       tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
                       tickFormatter={(value) => formatCurrency(value)}
                     />
                     <Tooltip
+                      wrapperStyle={{ direction: isRtl ? 'rtl' : 'ltr' }}
                       contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', background: 'var(--popover)', color: 'var(--popover-foreground)' }}
                       formatter={(value) => [formatCurrency(Number(value) || 0), t('dashboard.revenue')]}
                     />
@@ -205,11 +224,11 @@ export function DashboardClient({
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted border border-border">
                       <Package className="h-5 w-5 text-muted-foreground" />
                     </div>
-                    <div className="ml-4 space-y-1 overflow-hidden">
-                      <p className="text-sm font-medium leading-none truncate pr-4" title={p.product_name}>{p.product_name}</p>
+                    <div className="ms-4 space-y-1 overflow-hidden">
+                      <p className="text-sm font-medium leading-none truncate pe-4" title={p.product_name}>{p.product_name}</p>
                       <p className="text-sm text-muted-foreground">{t('dashboard.skuLine', { sku: p.sku || 'N/A', count: p.quantity_sold })}</p>
                     </div>
-                    <div className="ml-auto font-medium text-emerald-600">
+                    <div className="ms-auto font-medium text-emerald-700">
                       {formatCurrency(p.revenue)}
                     </div>
                   </div>
@@ -263,7 +282,7 @@ export function DashboardClient({
               <CardDescription>{t('dashboard.recentOrdersDesc')}</CardDescription>
             </div>
             <Link href="/admin/orders" className="text-sm text-primary hover:text-primary/80 flex items-center group transition-colors">
-              {t('dashboard.viewAll')} <ArrowRight className="h-3 w-3 ml-1 group-hover:translate-x-1 transition-transform" />
+              {t('dashboard.viewAll')} <ArrowRight className="h-3 w-3 ms-1 rtl:rotate-180 group-hover:translate-x-1 rtl:group-hover:-translate-x-1 transition-transform" />
             </Link>
           </CardHeader>
           <CardContent>
@@ -278,12 +297,12 @@ export function DashboardClient({
                         {(order.customer_name || 'G')[0].toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="ml-4 space-y-1">
+                    <div className="ms-4 space-y-1">
                       <p className="text-sm font-medium leading-none">{order.customer_name || t('orders.guest')}</p>
                       <p className="text-xs text-muted-foreground">{t('dashboard.orderHash', { id: order.id })} &middot; {formatUiDate(order.created_at, locale)}</p>
                     </div>
-                    <div className="ml-auto flex items-center space-x-3">
-                      <span className="text-sm font-medium">{formatCurrency(Number(order.total_amount))}</span>
+                    <div className="ms-auto flex items-center gap-3">
+                      <span className="text-sm font-medium tabular-nums">{formatCurrency(Number(order.total_amount))}</span>
                       <Badge variant="outline" className={`${orderStatusClass[order.status] || ''} capitalize whitespace-nowrap rounded-md font-medium px-2 py-0.5`}>
                         {orderStatusLabel[order.status] ? t(`orderStatus.${order.status}`) : order.status}
                       </Badge>
@@ -316,8 +335,8 @@ export function DashboardClient({
                       return (
                         <div key={p.id} className="flex items-center justify-between border-b border-border pb-3 last:border-0 last:pb-0">
                           <div className="flex items-center">
-                            <div className={`h-2 w-2 rounded-full mr-3 ${p._stock === 0 ? 'bg-red-500' : 'bg-orange-500'}`} />
-                            <span className="text-sm font-medium text-foreground line-clamp-1 pr-4">
+                            <div className={`h-2 w-2 rounded-full me-3 ${p._stock === 0 ? 'bg-red-500' : 'bg-orange-500'}`} />
+                            <span className="text-sm font-medium text-foreground line-clamp-1 pe-4">
                               {typeof p.name === 'object' ? (p.name?.[locale] || p.name?.en || p.name?.he || t('products.unnamed')) : p.name}
                             </span>
                           </div>
@@ -336,9 +355,9 @@ export function DashboardClient({
                 ) : (
                   <div className="space-y-4">
                     {recentReviews.map((r) => (
-                      <div key={r.id} className="flex items-start space-x-3 border-b border-border pb-3 last:border-0 last:pb-0">
+                      <div key={r.id} className="flex items-start gap-3 border-b border-border pb-3 last:border-0 last:pb-0">
                         <div className="flex bg-yellow-50 text-yellow-600 px-1.5 py-1 rounded-md text-xs font-bold items-center shrink-0">
-                          {r.rating} <Star className="h-3 w-3 ml-0.5 fill-yellow-500 text-yellow-500" />
+                          {r.rating} <Star className="h-3 w-3 ms-0.5 fill-yellow-500 text-yellow-500" />
                         </div>
                         <div>
                           {r.product_name && (

@@ -5,6 +5,7 @@ import { adminApiClient, getServerTenantSlug } from '@/lib/api/serverApiClient'
 import { pickExtraLangValues } from '@/lib/languages'
 import { EditProductClient } from './EditProductClient'
 import type { Product } from '@/lib/types'
+import { ArrowLeft } from 'lucide-react'
 
 export default async function EditProductPage({
   params,
@@ -25,9 +26,9 @@ export default async function EditProductPage({
   if (!product) {
     return (
       <div className="max-w-2xl mx-auto">
-        <div className="flex items-center mb-6 space-x-4">
+        <div className="flex items-center mb-6 gap-4">
           <Link href="/admin/products" className={buttonVariants({ variant: 'ghost' })}>
-            &larr; Back
+            <ArrowLeft className="size-4 shrink-0 rtl:rotate-180" aria-hidden="true" /> Back
           </Link>
           <h1 className="text-3xl font-bold text-gray-900">Edit Product</h1>
         </div>

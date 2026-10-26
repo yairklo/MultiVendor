@@ -19,7 +19,7 @@ export function TableSection({ section, themeStyle }: { section: Section; themeS
         <span className="text-sm text-gray-400">No table data configured.</span>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-gray-100">
-          <table className="w-full text-left text-sm">
+          <table className="w-full text-start text-sm">
             <thead className="bg-gray-50">
               <tr>
                 {headers.map((h, i) => (

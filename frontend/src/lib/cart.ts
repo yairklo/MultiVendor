@@ -12,6 +12,8 @@ export interface CartItem {
   id: number
   variant_id: number
   product_name: string
+  /** Per-language names (additive API field); resolve with cartItemName(). */
+  product_name_i18n?: Record<string, string> | null
   product_type: 'physical' | 'digital' | 'service'
   sku: string
   attributes: Record<string, unknown>

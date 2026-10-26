@@ -17,6 +17,7 @@ import { useCurrency } from '@/hooks/useCurrency'
 import { useUiLocale } from '@/context/UiLocaleContext'
 import { formatUiDateTime } from '@/lib/utils'
 import type { Order } from '@/lib/types'
+import { ArrowLeft } from 'lucide-react'
 
 export function OrderDetailClient({ order }: { order: Order }) {
   const { formatCurrency } = useCurrency()
@@ -26,7 +27,7 @@ export function OrderDetailClient({ order }: { order: Order }) {
     <div className="max-w-3xl mx-auto">
       <div className="flex items-center gap-4 mb-8">
         <Link href="/admin/orders" className={buttonVariants({ variant: 'ghost' })}>
-          &larr; {t('orders.backToOrders')}
+          <ArrowLeft className="size-4 shrink-0 rtl:rotate-180" aria-hidden="true" /> {t('orders.backToOrders')}
         </Link>
       </div>
 

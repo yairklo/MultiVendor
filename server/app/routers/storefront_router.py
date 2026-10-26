@@ -1,10 +1,14 @@
-from fastapi import APIRouter, Depends, Query, Path
-from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
+
+from fastapi import APIRouter, Depends, Query, Path
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.db.session import get_db
 from app.deps import get_current_tenant, get_tenant_customer
+from app.models.tenant import Tenant
 from app.models.user import User
-from app.schemas.tenant_schemas import TenantSettingsSchema
+from app.schemas.tenant_schemas import StoreConfigResponse
 from app.schemas.catalog_schemas import (
     PaginatedProductResponse, ProductResponse, ProductReviewResponse, ProductReviewCreateRequest,
     CategoryResponse
@@ -24,7 +28,7 @@ storefront_router = APIRouter(
 
 @storefront_router.get(
     "/{tenant_slug}/config", 
-    response_model=TenantSettingsSchema,
+    response_model=StoreConfigResponse,
     summary="Get Public Storefront Configuration",
     description="Retrieves the public settings for a store (e.g., branding colors, logo URL, currency, tax rates). Used by the frontend to dynamically style the shop.",
     responses={
@@ -36,7 +40,10 @@ async def get_store_config(
     tenant_slug: str = Path(..., title="Tenant Slug"),
     db: AsyncSession = Depends(get_db)
 ):
-    return await get_store_config_service(tenant_slug, db)
+    settings = await get_store_config_service(tenant_slug, db)
+    name = (await db.execute(select(Tenant.name).where(Tenant.slug == tenant_slug))).scalar_one_or_none()
+    settings_data = settings if isinstance(settings, dict) else settings.model_dump()
+    return StoreConfigResponse(**settings_data, name=name)
 
 @storefront_router.get(
     "/{tenant_slug}/categories",

@@ -25,7 +25,7 @@ export const DEFAULT_STOREFRONT_THEME: StorefrontThemeClasses = {
   headerClass: 'bg-white border-b border-gray-100',
   headerText: 'text-gray-900',
   footerClass: 'bg-white border-t border-gray-100',
-  footerText: 'text-gray-500',
+  footerText: 'text-gray-600',
   navLinkClass: 'text-gray-600 hover:text-blue-600',
   navLinkActiveClass: 'text-blue-600 font-semibold',
   primaryButtonClass: 'bg-blue-600 text-white hover:bg-blue-700 rounded-lg',
