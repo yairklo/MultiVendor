@@ -363,6 +363,8 @@ export default function MarketplaceCheckoutPage() {
                   <input
                     id="mpEmail"
                     type="email"
+                    dir="ltr"
+                    autoComplete="email"
                     className="w-full border border-input rounded-lg px-3 py-2 focus:ring-2 focus:ring-ring outline-none text-foreground transition-shadow"
                     value={email}
                     onChange={e => setEmail(e.target.value)}

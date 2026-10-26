@@ -35,6 +35,8 @@ export const he: NestedDict = {
   },
   nav: {
     cmsTitle: 'ניהול החנות',
+    openMenu: 'פתח תפריט',
+    closeMenu: 'סגור תפריט',
     dashboard: 'לוח בקרה',
     products: 'מוצרים',
     categories: 'קטגוריות',

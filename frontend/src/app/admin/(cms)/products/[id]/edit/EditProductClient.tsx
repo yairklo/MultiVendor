@@ -193,8 +193,9 @@ export function EditProductClient({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {extraLangs.map((lang) => (
                   <div key={`name-${lang}`}>
-                    <label className="text-sm font-medium">{t('products.nameIn', { language: languageDisplayName(lang, locale) })}</label>
+                    <label htmlFor={`name-${lang}`} className="text-sm font-medium">{t('products.nameIn', { language: languageDisplayName(lang, locale) })}</label>
                     <Input
+                      id={`name-${lang}`}
                       className="mt-2"
                       value={extraNames[lang] || ''}
                       onChange={(e) => setExtraNames((prev) => ({ ...prev, [lang]: e.target.value }))}
@@ -205,8 +206,8 @@ export function EditProductClient({
             )}
 
             <div>
-              <label className="text-sm font-medium mb-2 block text-gray-500">{t('products.slug')}</label>
-              <Input dir="ltr" value={slug} disabled readOnly />
+              <label htmlFor="product-slug" className="text-sm font-medium mb-2 block text-gray-500">{t('products.slug')}</label>
+              <Input id="product-slug" dir="ltr" value={slug} disabled readOnly />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -241,8 +242,9 @@ export function EditProductClient({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {extraLangs.map((lang) => (
                   <div key={`desc-${lang}`}>
-                    <label className="text-sm font-medium">{t('products.descriptionIn', { language: languageDisplayName(lang, locale) })}</label>
+                    <label htmlFor={`desc-${lang}`} className="text-sm font-medium">{t('products.descriptionIn', { language: languageDisplayName(lang, locale) })}</label>
                     <Input
+                      id={`desc-${lang}`}
                       className="mt-2"
                       value={extraDescs[lang] || ''}
                       onChange={(e) => setExtraDescs((prev) => ({ ...prev, [lang]: e.target.value }))}

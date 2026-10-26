@@ -35,6 +35,8 @@ export const en: NestedDict = {
   },
   nav: {
     cmsTitle: 'Tenant CMS',
+    openMenu: 'Open menu',
+    closeMenu: 'Close menu',
     dashboard: 'Dashboard',
     products: 'Products',
     categories: 'Categories',

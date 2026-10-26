@@ -120,12 +120,7 @@ export default function AdminLoginPage() {
                 dir="ltr"/>
               </div>
               <div>
-                <div className="mb-2 flex items-center justify-between">
-                  <label htmlFor="password" className="block text-xs font-medium text-muted-foreground">{t('auth.password')}</label>
-                  <a href="/forgot-password" className="text-xs font-medium text-muted-foreground hover:underline">
-                    {t('auth.forgotPasswordLink')}
-                  </a>
-                </div>
+                <label htmlFor="password" className="mb-2 block text-xs font-medium text-muted-foreground">{t('auth.password')}</label>
                 <PasswordInput
                   id="password"
                   required
@@ -135,6 +130,10 @@ export default function AdminLoginPage() {
                   placeholder="••••••••"
                 
                 autoComplete="current-password"/>
+                {/* After the field in DOM order: Tab goes email -> password -> forgot link. */}
+                <a href="/forgot-password" className="mt-2 inline-block text-xs font-medium text-muted-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                  {t('auth.forgotPasswordLink')}
+                </a>
               </div>
               <div>
                 <label htmlFor="tenantSlug" className="mb-2 block text-xs font-medium text-muted-foreground">{t('auth.storeSlug')}</label>

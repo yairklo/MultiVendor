@@ -14,6 +14,7 @@ import { Package, Star, ArrowRight } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { useCurrency } from '@/hooks/useCurrency'
 import { useUiLocale } from '@/context/UiLocaleContext'
+import { isRtlLang } from '@/lib/languages'
 import { formatUiChartDay, formatUiDate } from '@/lib/utils'
 import { resolveI18nText } from '@/lib/i18n-text'
 import type { Order, Product, ProductReview, I18nText } from '@/lib/types'
@@ -96,6 +97,8 @@ export function DashboardClient({
     pct == null ? null : `${pct > 0 ? '+' : ''}${new Intl.NumberFormat('he-IL', { maximumFractionDigits: 1 }).format(pct)}%`
   const revenueTrend = formatTrend(trend(metrics?.total_revenue, previousMetrics?.total_revenue))
   const ordersTrend = formatTrend(trend(metrics?.orders_count, previousMetrics?.orders_count))
+  // Mirror the time axis in RTL so the newest date is on the left (reading direction runs right-to-left).
+  const isRtl = isRtlLang(locale)
   const chartData = metrics?.data?.map((d) => ({
     date: formatUiChartDay(d.date, locale),
     Revenue: d.total_sales,
@@ -173,6 +176,7 @@ export function DashboardClient({
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
                     <XAxis
+                      reversed={isRtl}
                       dataKey="date"
                       axisLine={false}
                       tickLine={false}

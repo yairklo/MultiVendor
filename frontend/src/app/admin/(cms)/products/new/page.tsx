@@ -205,8 +205,9 @@ export default function NewProductPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {extraLangs.map((lang) => (
                   <div key={`name-${lang}`}>
-                    <label className="text-sm font-medium">{t('products.nameIn', { language: languageDisplayName(lang, locale) })}</label>
+                    <label htmlFor={`name-${lang}`} className="text-sm font-medium">{t('products.nameIn', { language: languageDisplayName(lang, locale) })}</label>
                     <Input
+                      id={`name-${lang}`}
                       className="mt-2"
                       value={extraNames[lang] || ''}
                       onChange={(e) => setExtraNames((prev) => ({ ...prev, [lang]: e.target.value }))}
@@ -261,8 +262,9 @@ export default function NewProductPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {extraLangs.map((lang) => (
                   <div key={`desc-${lang}`}>
-                    <label className="text-sm font-medium">{t('products.descriptionIn', { language: languageDisplayName(lang, locale) })}</label>
+                    <label htmlFor={`desc-${lang}`} className="text-sm font-medium">{t('products.descriptionIn', { language: languageDisplayName(lang, locale) })}</label>
                     <Input
+                      id={`desc-${lang}`}
                       className="mt-2"
                       value={extraDescs[lang] || ''}
                       onChange={(e) => setExtraDescs((prev) => ({ ...prev, [lang]: e.target.value }))}
