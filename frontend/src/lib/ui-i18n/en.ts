@@ -444,6 +444,9 @@ export const en: NestedDict = {
     noImage: 'No image',
     fileAttached: 'File attached',
     removeFile: 'Remove',
+    uploadTab: 'Upload File',
+    urlTab: 'Image URL',
+    pasteUrlPlaceholder: 'https://example.com/image.png',
   },
   marketplace: {
     title: 'The Market',

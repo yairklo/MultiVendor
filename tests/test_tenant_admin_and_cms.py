@@ -149,6 +149,32 @@ async def test_update_store_settings(async_client: AsyncClient, seed_tokens):
     response = await async_client.put("/api/v1/admin/store/tenant-a/settings", json=payload, headers=headers)
     assert response.status_code == 200
 
+
+@pytest.mark.asyncio
+async def test_update_store_settings_accepts_long_url(async_client: AsyncClient, seed_tokens):
+    headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+    # URL longer than the old 512-char limit (e.g. 1000 chars)
+    long_url = "https://example.com/assets/" + ("a" * 800) + ".png"
+    payload = {
+        "logo_url": long_url,
+    }
+    response = await async_client.put("/api/v1/admin/store/tenant-a/settings", json=payload, headers=headers)
+    assert response.status_code == 200
+    assert response.json()["logo_url"] == long_url
+
+
+@pytest.mark.asyncio
+async def test_update_store_settings_rejects_url_exceeding_2048(async_client: AsyncClient, seed_tokens):
+    headers = {"Authorization": seed_tokens["tenant_admin_a"]}
+    # URL exceeding 2048 chars
+    too_long_url = "https://example.com/" + ("b" * 2040) + ".png"
+    assert len(too_long_url) > 2048
+    payload = {
+        "logo_url": too_long_url,
+    }
+    response = await async_client.put("/api/v1/admin/store/tenant-a/settings", json=payload, headers=headers)
+    assert response.status_code == 422
+
 @pytest.mark.asyncio
 async def test_export_orders_csv(async_client: AsyncClient, seed_tokens):
     headers = {"Authorization": seed_tokens["tenant_admin_a"]}

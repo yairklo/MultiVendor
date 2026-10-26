@@ -444,6 +444,9 @@ export const he: NestedDict = {
     noImage: 'אין תמונה',
     fileAttached: 'הקובץ צורף',
     removeFile: 'הסרה',
+    uploadTab: 'העלאת קובץ',
+    urlTab: 'קישור לתמונה',
+    pasteUrlPlaceholder: 'https://example.com/image.png',
   },
   marketplace: {
     title: 'השוק',

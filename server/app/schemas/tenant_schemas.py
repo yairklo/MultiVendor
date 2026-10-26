@@ -35,7 +35,7 @@ class NavItemSchema(BaseModel):
     enabled: bool = True
     kind: Literal["home", "shop", "marketplace", "page", "custom"] = "page"
     page_key: Optional[str] = Field(None, max_length=100)
-    href: Optional[str] = Field(None, max_length=500)
+    href: Optional[str] = Field(None, max_length=2048)
     label: Dict[str, str] = Field(default_factory=dict)
 
     @field_validator("href")

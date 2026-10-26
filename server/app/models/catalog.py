@@ -26,7 +26,7 @@ class Product(TenantScoped, Base):
     # (a store-wide opt-out can still be overridden product-by-product).
     show_in_marketplace = Column(Boolean, nullable=False, default=False)
     product_type = Column(Enum('physical', 'digital', 'service'), default='physical')
-    digital_file_url = Column(String(512), nullable=True)
+    digital_file_url = Column(String(2048), nullable=True)
     download_limit = Column(Integer, nullable=True)
     is_bundle = Column(Boolean, default=False)
     created_at = Column(DateTime, default=func.now())

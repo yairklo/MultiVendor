@@ -176,13 +176,7 @@ export function SettingsPageClient({
                 hint={t('settings.logoHint')}
                 value={formData.logo_url}
                 onChange={(url) => setFormData({ ...formData, logo_url: url })}
-              />
-              <input
-                type="url"
-                placeholder={t('settings.orPasteUrl')}
-                className="w-full px-4 py-2 border border-input rounded-lg bg-background focus:ring-2 focus:ring-ring"
-                value={formData.logo_url}
-                onChange={(e) => setFormData({ ...formData, logo_url: e.target.value })}
+                allowUrlInput
               />
             </div>
             <div className="space-y-3">
@@ -192,13 +186,7 @@ export function SettingsPageClient({
                 hint={t('settings.bannerHint')}
                 value={formData.banner_url}
                 onChange={(url) => setFormData({ ...formData, banner_url: url })}
-              />
-              <input
-                type="url"
-                placeholder={t('settings.orPasteUrl')}
-                className="w-full px-4 py-2 border border-input rounded-lg bg-background focus:ring-2 focus:ring-ring"
-                value={formData.banner_url}
-                onChange={(e) => setFormData({ ...formData, banner_url: e.target.value })}
+                allowUrlInput
               />
             </div>
           </div>

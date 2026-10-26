@@ -83,12 +83,9 @@ async def add_to_cart(
         return result
     except HTTPException:
         raise
-    except Exception as e:
-        logger.exception("Failed to add item to cart for tenant %s, cart %s: %s", tenant_slug, cart_id, e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to add item to cart: {type(e).__name__}: {str(e)}"
-        )
+    except Exception:
+        logger.exception("Failed to add item to cart for tenant %s, cart %s", tenant_slug, cart_id)
+        raise
 
 @cart_router.get(
     "/cart/{cart_id}",
