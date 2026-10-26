@@ -210,6 +210,7 @@ async def get_cart_service(
             id=item.id,
             variant_id=variant.id,
             product_name=product_name,
+            product_name_i18n=product.name if isinstance(product.name, dict) else None,
             product_type=product.product_type,
             sku=variant.sku,
             attributes=variant.attributes_json or {},

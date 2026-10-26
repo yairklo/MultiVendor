@@ -54,6 +54,8 @@ class MarketplaceCartItemResponse(BaseModel):
     tenant_name: str
     variant_id: int
     product_name: str
+    # Additive: the product's full per-language name so clients can localize; `product_name` stays as-is.
+    product_name_i18n: Optional[Dict[str, str]] = None
     sku: str
     unit_price: Decimal
     quantity: int

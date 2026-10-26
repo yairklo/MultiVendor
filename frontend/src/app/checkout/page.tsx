@@ -15,6 +15,7 @@ import { DigitalDownloads } from '@/components/orders/DigitalDownloads'
 import { useUiLocale } from '@/context/UiLocaleContext'
 import { errorMessage } from '@/lib/errors'
 import type { Order, Coupon } from '@/lib/types'
+import { cartItemName } from '@/lib/i18n-text'
 
 // SSR/hydration-safe cookie read to enforce login before checkout
 function subscribeNoop(): () => void {
@@ -34,7 +35,7 @@ function getLoggedInServerSnapshot(): boolean | null {
 const CHECKOUT_DRAFT_KEY = 'checkout_shipping_draft'
 
 export default function CheckoutPage() {
-  const { t } = useUiLocale()
+  const { t, locale } = useUiLocale()
   const shippingOptions = [
     { id: 1, name: t('checkout.standardShipping'), price: 5 },
     { id: 2, name: t('checkout.expressShipping'), price: 15 }
@@ -398,7 +399,7 @@ export default function CheckoutPage() {
             <h2 className="text-xl font-semibold mb-4 text-foreground">{t('checkout.itemSummary')}</h2>
             {cart.items.map(item => (
               <div key={item.id} className="flex justify-between items-center py-2 border-b border-border last:border-0 text-foreground/80">
-                <span>{item.product_name} &times; {item.quantity}</span>
+                <span>{cartItemName(item, locale)} &times; {item.quantity}</span>
                 <span className="font-medium text-foreground tabular-nums">{formatCurrency(Number(item.total_price))}</span>
               </div>
             ))}
@@ -435,6 +436,8 @@ export default function CheckoutPage() {
                   <input
                     id="checkoutEmail"
                     type="email"
+                    dir="ltr"
+                    autoComplete="email"
                     className="w-full border border-input rounded-lg px-3 py-2 focus:ring-2 focus:ring-ring outline-none text-foreground transition-shadow"
                     value={email}
                     onChange={e => setEmail(e.target.value)}

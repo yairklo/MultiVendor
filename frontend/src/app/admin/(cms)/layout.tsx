@@ -60,8 +60,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
         <NavLinks />
         <div className="border-t border-sidebar-border p-4">
-          <AdminLogoutButton className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-destructive transition-colors duration-150 hover:bg-destructive/10">
-            <LogOut className="w-5 h-5" strokeWidth={2} />
+          <AdminLogoutButton className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sidebar-foreground transition-colors duration-150 hover:bg-sidebar-accent">
+            <LogOut className="w-5 h-5 text-red-300" strokeWidth={2} />
             <span>{t('common.logout')}</span>
           </AdminLogoutButton>
         </div>
@@ -78,8 +78,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
           }
           logoutButtonDrawer={
-            <AdminLogoutButton className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-destructive transition-colors duration-150 hover:bg-destructive/10">
-              <LogOut className="w-5 h-5" strokeWidth={2} />
+            <AdminLogoutButton className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sidebar-foreground transition-colors duration-150 hover:bg-sidebar-accent">
+              <LogOut className="w-5 h-5 text-red-300" strokeWidth={2} />
               <span>{t('common.logout')}</span>
             </AdminLogoutButton>
           }

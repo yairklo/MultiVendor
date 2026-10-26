@@ -122,7 +122,7 @@ export default function AdminLoginPage() {
               <div>
                 <div className="mb-2 flex items-center justify-between">
                   <label htmlFor="password" className="block text-xs font-medium text-muted-foreground">{t('auth.password')}</label>
-                  <a href="/forgot-password" className="text-xs font-medium text-foreground/70 hover:underline">
+                  <a href="/forgot-password" className="text-xs font-medium text-muted-foreground hover:underline">
                     {t('auth.forgotPasswordLink')}
                   </a>
                 </div>

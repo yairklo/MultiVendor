@@ -1,12 +1,14 @@
-from fastapi import APIRouter, Depends, Query, Path
-from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
+
+from fastapi import APIRouter, Depends, Query, Path
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.db.session import get_db
 from app.deps import get_current_tenant, get_tenant_customer
-from app.models.user import User
-from app.schemas.tenant_schemas import TenantSettingsSchema, StoreConfigResponse
-from sqlalchemy import select
 from app.models.tenant import Tenant
+from app.models.user import User
+from app.schemas.tenant_schemas import StoreConfigResponse
 from app.schemas.catalog_schemas import (
     PaginatedProductResponse, ProductResponse, ProductReviewResponse, ProductReviewCreateRequest,
     CategoryResponse
@@ -40,7 +42,8 @@ async def get_store_config(
 ):
     settings = await get_store_config_service(tenant_slug, db)
     name = (await db.execute(select(Tenant.name).where(Tenant.slug == tenant_slug))).scalar_one_or_none()
-    return StoreConfigResponse(**settings.model_dump(), name=name)
+    settings_data = settings if isinstance(settings, dict) else settings.model_dump()
+    return StoreConfigResponse(**settings_data, name=name)
 
 @storefront_router.get(
     "/{tenant_slug}/categories",

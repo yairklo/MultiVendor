@@ -12,6 +12,7 @@ import { StripeCardForm } from '@/components/checkout/StripeCardForm'
 import { DigitalDownloads } from '@/components/orders/DigitalDownloads'
 import { useUiLocale } from '@/context/UiLocaleContext'
 import { errorMessage } from '@/lib/errors'
+import { cartItemName } from '@/lib/i18n-text'
 
 // Same SSR/hydration-safe cookie read as useTenantSlug -- see that hook for why
 // a plain useEffect+useState pair isn't used here. Server/first-client-render
@@ -57,7 +58,7 @@ interface MasterOrder {
 export default function MarketplaceCheckoutPage() {
   const { cart, loading, clear } = useMarketplaceCart()
   const { formatCurrency } = useCurrency()
-  const { t } = useUiLocale()
+  const { t, locale } = useUiLocale()
   const router = useRouter()
 
   const isLoggedIn = useSyncExternalStore(subscribeNoop, getLoggedInSnapshot, getLoggedInServerSnapshot)
@@ -320,7 +321,7 @@ export default function MarketplaceCheckoutPage() {
             {cart.items.map(item => (
               <div key={item.id} className="flex justify-between items-center py-2 border-b border-border last:border-0 text-foreground/80">
                 <span>
-                  {item.product_name} &times; {item.quantity}
+                  {cartItemName(item, locale)} &times; {item.quantity}
                   <span className="ms-2 text-xs text-muted-foreground">({item.tenant_name})</span>
                 </span>
                 <span className="font-medium text-foreground tabular-nums">{formatCurrency(Number(item.total_price))}</span>

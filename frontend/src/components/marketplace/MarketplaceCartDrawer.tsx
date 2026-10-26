@@ -8,13 +8,14 @@ import { useCurrency } from '@/hooks/useCurrency'
 import { MarketplaceCartItem } from '@/lib/marketplace-cart'
 import { resolveImageUrl } from '@/lib/media'
 import { useUiLocale } from '@/context/UiLocaleContext'
+import { cartItemName } from '@/lib/i18n-text'
 
 /** Cross-vendor equivalent of cart/CartDrawer, grouped by vendor so it's visually
  * obvious up front that checkout will split into one order per store. */
 export function MarketplaceCartDrawer() {
   const { cart, isOpen, closeDrawer, incrementItem, decrementItem, removeItem, pendingItemIds } = useMarketplaceCart()
   const { formatCurrency } = useCurrency()
-  const { t } = useUiLocale()
+  const { t, locale } = useUiLocale()
   const router = useRouter()
 
   if (!isOpen) return null
@@ -70,18 +71,18 @@ export function MarketplaceCartDrawer() {
                       // Arbitrary vendor-supplied URLs with no host allowlist, same
                       // reasoning as storefront/ProductCard.
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={resolveImageUrl(item.image_url)} alt={item.product_name} className="w-16 h-16 object-cover rounded-lg flex-shrink-0" />
+                      <img src={resolveImageUrl(item.image_url)} alt={cartItemName(item, locale)} className="w-16 h-16 object-cover rounded-lg flex-shrink-0" />
                     ) : (
                       <div
                         role="img"
-                        aria-label={item.product_name}
+                        aria-label={cartItemName(item, locale)}
                         className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center text-xs text-muted-foreground flex-shrink-0"
                       >
                         {t('common.noImage')}
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-foreground truncate">{item.product_name}</div>
+                      <div className="font-semibold text-foreground truncate">{cartItemName(item, locale)}</div>
                       <div className="text-muted-foreground tabular-nums">{formatCurrency(Number(item.unit_price))}</div>
                       <div className="flex items-center gap-2 mt-2">
                         <button

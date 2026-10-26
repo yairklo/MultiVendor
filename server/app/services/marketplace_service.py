@@ -147,6 +147,7 @@ async def get_marketplace_cart_service(
             tenant_name=tenant.name,
             variant_id=variant.id,
             product_name=_resolve_product_name(product.name),
+            product_name_i18n=product.name if isinstance(product.name, dict) else None,
             sku=variant.sku,
             unit_price=unit_price,
             quantity=cart_item.quantity,

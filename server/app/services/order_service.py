@@ -19,7 +19,9 @@ from app.services.shipping_service import maybe_auto_fulfill_order
 
 logger = logging.getLogger(__name__)
 
-PAID_ORDER_STATUSES = ('processing', 'completed')
+# Statuses that represent real money. `shipped` is paid (it sits between processing and
+# completed), so it counts towards revenue/AOV like the other two.
+PAID_ORDER_STATUSES = ('processing', 'shipped', 'completed')
 PAID_DOWNLOAD_STATUSES = frozenset({'processing', 'shipped', 'completed'})
 
 ORDER_ITEMS_WITH_FILE = (

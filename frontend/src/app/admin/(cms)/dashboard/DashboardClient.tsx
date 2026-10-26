@@ -131,13 +131,13 @@ export function DashboardClient({
         <motion.div variants={prefersReducedMotion ? undefined : kpiCardVariants} className="px-0 py-6 md:px-6 md:py-8 first:ps-0">
           <p className="text-sm font-medium text-muted-foreground">{t('dashboard.totalRevenue')}</p>
           <p className="mt-3 font-heading text-3xl tabular-nums text-foreground md:text-4xl">{formatCurrency(metrics?.total_revenue || 0)}</p>
-          {revenueTrend && <p className="mt-2 text-xs text-muted-foreground tabular-nums"><span dir="ltr">{revenueTrend}</span> {t('dashboard.fromLastMonth')}</p>}
+          {revenueTrend && <p className="mt-2 text-xs text-muted-foreground tabular-nums"><span dir="ltr">{revenueTrend}</span> {t(`dashboard.vsPrev${rangeDays}`)}</p>}
         </motion.div>
 
         <motion.div variants={prefersReducedMotion ? undefined : kpiCardVariants} className="px-0 py-6 md:px-6 md:py-8">
           <p className="text-sm font-medium text-muted-foreground">{t('dashboard.totalOrders')}</p>
           <p className="mt-3 font-heading text-3xl tabular-nums text-foreground md:text-4xl">{(metrics?.orders_count || 0).toLocaleString('he-IL')}</p>
-          {ordersTrend && <p className="mt-2 text-xs text-muted-foreground tabular-nums"><span dir="ltr">{ordersTrend}</span> {t('dashboard.fromLastMonth')}</p>}
+          {ordersTrend && <p className="mt-2 text-xs text-muted-foreground tabular-nums"><span dir="ltr">{ordersTrend}</span> {t(`dashboard.vsPrev${rangeDays}`)}</p>}
         </motion.div>
 
         <motion.div variants={prefersReducedMotion ? undefined : kpiCardVariants} className="px-0 py-6 md:px-6 md:py-8">
@@ -220,7 +220,7 @@ export function DashboardClient({
                       <p className="text-sm font-medium leading-none truncate pe-4" title={p.product_name}>{p.product_name}</p>
                       <p className="text-sm text-muted-foreground">{t('dashboard.skuLine', { sku: p.sku || 'N/A', count: p.quantity_sold })}</p>
                     </div>
-                    <div className="ms-auto font-medium text-emerald-600">
+                    <div className="ms-auto font-medium text-emerald-700">
                       {formatCurrency(p.revenue)}
                     </div>
                   </div>
